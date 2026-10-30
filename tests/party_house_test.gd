@@ -3,7 +3,7 @@
 ## 用法：
 ##   godot --headless --script res://tests/party_house_test.gd
 ##
-## 对应 docs/MAP_REVIEW_ROUND3.md 的坐标表。
+## 对应 docs/deliverables/MAP_REVIEW_ROUND3.md 的坐标表。
 ##
 ## 阶段约定（重要）：
 ##   每个 step 的 _t_state 一律从 0 开始，由 _process 在步骤完成后统一归零。

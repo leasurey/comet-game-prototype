@@ -1,6 +1,6 @@
 ## HouseFurniture — 聚会住宅家具占位
 ##
-## 坐标基于第三轮核验的 13.4 × 9.4 布局（docs/MAP_REVIEW_ROUND3.md），
+## 坐标基于第三轮核验的 13.4 × 9.4 布局（docs/deliverables/MAP_REVIEW_ROUND3.md），
 ## 与 house_party.gd 的墙体划分严格对应：
 ##   客厅     x -6.50 ~ -1.00   z 3.86 ~ 9.20
 ##   餐厅     x -1.00 ~  3.40   z 3.86 ~ 9.20

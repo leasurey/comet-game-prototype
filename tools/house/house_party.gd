@@ -1,6 +1,6 @@
 ## HouseParty — 聚会住宅灰盒
 ##
-## 依据：docs/MAP_REVIEW_ROUND3.md（第三轮核验，commit 781c0c6）
+## 依据：docs/deliverables/MAP_REVIEW_ROUND3.md（第三轮核验，commit 781c0c6）
 ##
 ## 坐标约定（世界坐标，前门朝 -Z）：
 ##   外轮廓  x -6.70 ~ 6.70   z 0.00 ~ 9.40   13.4 × 9.4 = 125.96 m²

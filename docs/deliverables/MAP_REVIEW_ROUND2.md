@@ -1,6 +1,6 @@
 # COMET 地图架构第二轮审查报告
 
-**审查对象**：`docs/MAP_ARCHITECTURE_REDESIGN.md`（v1.0，commit `9a4f51b`）
+**审查对象**：`docs/deliverables/MAP_ARCHITECTURE_REDESIGN.md`（v1.0，commit `9a4f51b`）
 **本轮性质**：设计复核、数学核算、空间可行性验证
 **本轮不做**：不改代码、不改场景、不改 `locations.json`、不开发现实切换/导航/NPC、不建灰盒、不推 GitHub
 

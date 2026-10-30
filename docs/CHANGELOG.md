@@ -1,5 +1,41 @@
 # COMET — 版本记录
 
+> **文档位置变更**：八份阶段性交付物已移入 `docs/deliverables/`，并附索引 `README.md`。
+> 日常维护文档（架构、验收、已知问题、版本记录、会话日志、第三方许可）仍在 `docs/` 根目录。
+> 文内引用路径已同步更新，源码注释中的路径同样已改。
+
+## v0.5.0 — 黑暗区域区域触发穿越与现实切换时机
+
+第二轮系统整合的 A、B 两项。C（缺失变体警告）、D（玩家认知）、E（旧地点整合）、F（存档一致性）未做，
+原因记录在 `deliverables/INTEGRATION_FIX_ROUND2.md` 第八节：D 与 F 需改存档 schema，应先出迁移方案再动。
+
+- 新增 `core/auto_portal.gd`：走进 Area3D 即切换地点，不再需要按 E
+- `house_exterior` 的 `RoadToDark` 热点 → `DarkEntry` portal（z −19.2）
+- `dark_road` 的 `BackToHouse` 热点 → `DarkExit` portal（z −20.0）
+- 现实切换由 `enter_location: dark_road` 改为 `area_enter: dark_far_end`：
+  **进入黑暗时现实不变，走到尽头才切**
+- `main._on_portal_entered` 保证「先求值事件、再切场景」，避免新场景按旧现实闪一帧
+- 修复首帧误触发：`enter_location` 加场景那一刻玩家仍在旧坐标，会落进新场景 portal 检测区，
+  被连续踢出。`AutoPortal._ready()` 改为先关 `monitoring`，等两个物理帧再开
+
+测试 273 条断言全通过（新增 `dark_traverse_test` 25 条；三处旧测试同步到新时序，未删断言）。
+真实窗口：进入黑暗 `world=alpha`，走出尽头 `world=beta`，fps 55。
+
+## v0.4.1 — 第一轮系统整合修复：门级落点、交互距离、室外立面
+
+详见 `deliverables/INTEGRATION_FIX_ROUND1.md`。
+
+- **返回入口**：`house_exterior.DoorToInterior` 由 `living_room` 改为 `party_house`；
+  移除 `ExitToPartyHouse`（原语义是「另一栋房子」却回到自己家）
+- **门级落点**：`Hotspot` 新增 `use_target_spawn / target_spawn / target_yaw_deg`；
+  `main.gd` 用「挂起-消费」机制，`enter_location` 签名与 `go_back` 完全不变
+  - 前门 (0, −2.6) yaw 0°｜侧门 (8.6, 2.0) yaw −90°｜露台 (−4, 11) yaw 180°
+- **交互距离**：`MAX_INTERACT_DISTANCE = 2.5`，保留 60 m 射线（它承担遮挡判定），
+  聚焦与激活双重校验，防止「提示消失但仍能隔空按 E」
+- **室外立面**：`HouseBody` 6.6 × 5.2 → 13.4 × 9.4，前墙对齐 z=0，门窗与树位同步调整
+
+新增 `door_connection_test` 37 条。已知限制：侧门与露台门外没有独立回屋门，需绕回前门。
+
 ## v0.4.0 — 住宅灰盒重建（13.4 × 9.4）与性能验收
 
 按第三轮核验报告的坐标表重建聚会住宅，替换 v0.3.0 的 13×9 初版灰盒。
@@ -48,7 +84,7 @@ fps_input 29/0 · acceptance 58/0 · v2_p0 13/0
 加载 42 ms · 平均 57 FPS · 最低 41 FPS · 静态内存 57.5 MB · 显存 16.3 MB · 图元 344 · 绘制调用 13。
 CPU / GPU 占用率未能采集（Godot 无系统级 API），不计入"已优化"。
 
-详见 `docs/GREYBOX_ACCEPTANCE.md`。
+详见 `docs/deliverables/GREYBOX_ACCEPTANCE.md`。
 
 ## v0.3.1 — 开局改到聚会房屋 + 室外空间序列补全
 
@@ -133,7 +169,7 @@ GUI 实测（真实窗口，AMD Radeon 530 / OpenGL 3.3 Compatibility）：
 
 **全部尺寸与房间划分为游戏原创（证据等级 D）**。电影从未提供户型图，
 本布局只依据「这些空间在片中确实存在」这一 A 级事实 + 8 人聚会的功能需求推导。
-证据表与判断依据见 `docs/SCENE_ARCHAEOLOGY_PARTY_HOUSE.md`。
+证据表与判断依据见 `docs/deliverables/SCENE_ARCHAEOLOGY_PARTY_HOUSE.md`。
 
 **构建器拆分为多文件**
 
