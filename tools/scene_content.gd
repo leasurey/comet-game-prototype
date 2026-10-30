@@ -1,0 +1,543 @@
+## SceneContent — 三个地点的实际内容
+##
+## 由 tools/scene_builder.gd 调用，产出可被 Godot 编辑器直接打开的标准 .tscn。
+## 本文件是离线构建脚本，不属于游戏运行时代码。
+##
+## 构图前提：
+##   观察点固定在 (0, 1.62, 0)，初始朝向 -Z。所有内容围绕这个视点摆放。
+##
+## 世界差异的总原则（务必遵守）：
+##   差异必须写在对应的 Variant_world_* 节点里，或由热点的 visible_only_in_worlds 控制。
+##   绝不允许用一个「每次加载随机决定」的方式制造差异。
+
+class_name SceneContent
+extends RefCounted
+
+const S_HOTSPOT := "res://core/hotspot.gd"
+
+var _mats: Dictionary = {}
+
+
+# ------------------------------------------------------------------ helpers
+
+func _mat(key: String, color: Color, roughness: float = 0.92, metallic: float = 0.0,
+		emission: Color = Color(0, 0, 0), emission_energy: float = 1.0) -> StandardMaterial3D:
+	if _mats.has(key):
+		return _mats[key] as StandardMaterial3D
+	var m := StandardMaterial3D.new()
+	m.albedo_color = color
+	m.roughness = roughness
+	m.metallic = metallic
+	if emission.r > 0.0 or emission.g > 0.0 or emission.b > 0.0:
+		m.emission_enabled = true
+		m.emission = emission
+		m.emission_energy_multiplier = emission_energy
+	_mats[key] = m
+	return m
+
+
+func _n(parent: Node, node_name: String) -> Node3D:
+	var n := Node3D.new()
+	n.name = node_name
+	parent.add_child(n)
+	return n
+
+
+func _box(parent: Node, node_name: String, size: Vector3, pos: Vector3, mat: Material,
+		rot_y: float = 0.0, rot_z: float = 0.0) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = node_name
+	var bm := BoxMesh.new()
+	bm.size = size
+	mi.mesh = bm
+	mi.material_override = mat
+	var basis := Basis.IDENTITY
+	if absf(rot_y) > 0.0001:
+		basis = basis.rotated(Vector3.UP, rot_y)
+	if absf(rot_z) > 0.0001:
+		basis = basis.rotated(Vector3(0, 0, 1), rot_z)
+	mi.transform = Transform3D(basis, pos)
+	parent.add_child(mi)
+	return mi
+
+
+func _cyl(parent: Node, node_name: String, radius: float, height: float, pos: Vector3,
+		mat: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = node_name
+	var cm := CylinderMesh.new()
+	cm.top_radius = radius
+	cm.bottom_radius = radius
+	cm.height = height
+	mi.mesh = cm
+	mi.material_override = mat
+	mi.transform = Transform3D(Basis.IDENTITY, pos)
+	parent.add_child(mi)
+	return mi
+
+
+func _omni(parent: Node, node_name: String, pos: Vector3, color: Color, energy: float,
+		range_value: float = 12.0) -> OmniLight3D:
+	var light := OmniLight3D.new()
+	light.name = node_name
+	light.position = pos
+	light.light_color = color
+	light.light_energy = energy
+	light.omni_range = range_value
+	light.shadow_enabled = false
+	parent.add_child(light)
+	return light
+
+
+func _sun(parent: Node, node_name: String, yaw: float, pitch: float, color: Color,
+		energy: float) -> DirectionalLight3D:
+	var light := DirectionalLight3D.new()
+	light.name = node_name
+	light.rotation_degrees = Vector3(pitch, yaw, 0.0)
+	light.light_color = color
+	light.light_energy = energy
+	light.shadow_enabled = false
+	parent.add_child(light)
+	return light
+
+
+func _world_env(parent: Node, bg: Color, ambient: Color, fog_enabled: bool = false,
+		fog_color: Color = Color(0.03, 0.03, 0.04), fog_density: float = 0.02) -> void:
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = bg
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = ambient
+	env.ambient_light_sky_contribution = 0.0
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.fog_enabled = fog_enabled
+	if fog_enabled:
+		env.fog_light_color = fog_color
+		env.fog_density = fog_density
+	var we := WorldEnvironment.new()
+	we.name = "WorldEnvironment"
+	we.environment = env
+	parent.add_child(we)
+
+
+func _spot(parent: Node, node_name: String, pos: Vector3, display_name: String,
+		action_kind: String, examine_text: String, target: String = "",
+		worlds: Array = []) -> Area3D:
+	var spot := Area3D.new()
+	spot.name = node_name
+	spot.set_script(load(S_HOTSPOT))
+	spot.position = pos
+	spot.display_name = display_name
+	spot.action_kind = action_kind
+	spot.examine_text = examine_text
+	spot.target_location = target
+	spot.visible_only_in_worlds = worlds.duplicate()
+	parent.add_child(spot)
+	return spot
+
+
+## 给热点加显式碰撞盒。先加此再加热点入树，Hotspot 就不会再生成自动碰撞体。
+func _col(spot: Area3D, size: Vector3, offset: Vector3 = Vector3.ZERO) -> void:
+	var cs := CollisionShape3D.new()
+	cs.name = "HitShape"
+	cs.position = offset
+	var bs := BoxShape3D.new()
+	bs.size = size
+	cs.shape = bs
+	spot.add_child(cs)
+
+
+## 把热点带入树。必须在所有子节点（碰撞体、外壳）加完之后调用。
+func _commit(parent: Node, spot: Area3D) -> Area3D:
+	if spot.get_parent() == null:
+		parent.add_child(spot)
+	return spot
+
+
+# ================================================================== 1. 客厅
+
+func assemble_living_room(root: Node3D) -> void:
+	var env := _n(root, "Environment")
+	var shared := _n(env, "Shared")
+	var va := _n(env, "Variant_world_alpha")
+	var vb := _n(env, "Variant_world_beta")
+	var hotspots := _n(root, "Hotspots")
+
+	var m_wall := _mat("lr_wall", Color(0.70, 0.67, 0.61))
+	var m_floor := _mat("lr_floor", Color(0.40, 0.30, 0.21))
+	var m_ceil := _mat("lr_ceil", Color(0.60, 0.58, 0.55))
+	var m_carpet := _mat("lr_carpet", Color(0.34, 0.23, 0.25))
+	var m_sofa := _mat("lr_sofa", Color(0.27, 0.29, 0.33))
+	var m_wood := _mat("lr_wood", Color(0.23, 0.17, 0.13))
+	var m_metal := _mat("lr_metal", Color(0.52, 0.54, 0.57), 0.42, 0.6)
+	var m_frame := _mat("lr_frame", Color(0.17, 0.14, 0.11))
+	var m_photo := _mat("lr_photo", Color(0.74, 0.70, 0.62), 0.8, 0.0, Color(0.70, 0.66, 0.58), 0.28)
+	var m_lamp := _mat("lr_lamp", Color(1.0, 0.80, 0.48), 0.5, 0.0, Color(1.0, 0.78, 0.45), 2.2)
+	var m_tv_body := _mat("lr_tv_body", Color(0.12, 0.12, 0.13))
+	var m_tv_on := _mat("lr_tv_on", Color(0.10, 0.12, 0.15), 0.3, 0.0, Color(0.30, 0.42, 0.55), 0.9)
+	var m_tv_off := _mat("lr_tv_off", Color(0.04, 0.04, 0.05), 0.35)
+	var m_door := _mat("lr_door", Color(0.30, 0.21, 0.15))
+	var m_knob := _mat("lr_knob", Color(0.62, 0.55, 0.35), 0.35, 0.8)
+
+	# ---- 房间外壳（不随世界变化）
+	_box(shared, "Floor", Vector3(7.2, 0.12, 6.2), Vector3(0, -0.06, 0), m_floor)
+	_box(shared, "Ceiling", Vector3(7.2, 0.12, 6.2), Vector3(0, 2.76, 0), m_ceil)
+	_box(shared, "WallBack", Vector3(7.2, 2.7, 0.16), Vector3(0, 1.35, -3.10), m_wall)
+	_box(shared, "WallFront", Vector3(7.2, 2.7, 0.16), Vector3(0, 1.35, 3.10), m_wall)
+	_box(shared, "WallLeft", Vector3(0.16, 2.7, 6.2), Vector3(-3.60, 1.35, 0), m_wall)
+	_box(shared, "WallRight", Vector3(0.16, 2.7, 6.2), Vector3(3.60, 1.35, 0), m_wall)
+	_box(shared, "Rug", Vector3(3.4, 0.04, 2.6), Vector3(-0.3, 0.02, -1.2), m_carpet)
+
+	# ---- 家具
+	_box(shared, "SofaBase", Vector3(2.3, 0.42, 0.95), Vector3(-1.35, 0.24, -0.55), m_sofa)
+	_box(shared, "SofaBack", Vector3(2.3, 0.62, 0.20), Vector3(-1.35, 0.62, -0.95), m_sofa)
+	_box(shared, "SofaArmL", Vector3(0.22, 0.62, 0.95), Vector3(-2.38, 0.50, -0.55), m_sofa)
+	_box(shared, "SofaArmR", Vector3(0.22, 0.62, 0.95), Vector3(-0.32, 0.50, -0.55), m_sofa)
+	_box(shared, "TableTop", Vector3(1.3, 0.07, 0.75), Vector3(-0.30, 0.40, -1.25), m_wood)
+	_box(shared, "TableBase", Vector3(1.0, 0.36, 0.50), Vector3(-0.30, 0.22, -1.25), m_wood)
+	_box(shared, "TVCabinet", Vector3(2.4, 0.55, 0.55), Vector3(0, 0.28, -2.55), m_wood)
+	_box(shared, "TVBody", Vector3(1.64, 0.98, 0.10), Vector3(0, 1.10, -2.58), m_tv_body)
+	_box(shared, "LampPole", Vector3(0.06, 1.45, 0.06), Vector3(2.25, 0.72, -1.75), m_metal)
+	_cyl(shared, "LampShade", 0.24, 0.32, Vector3(2.25, 1.52, -1.75), m_lamp)
+	_box(shared, "ShelfBody", Vector3(0.44, 1.85, 1.70), Vector3(3.05, 0.92, -0.40), m_wood)
+	_box(shared, "ShelfBoard", Vector3(0.46, 0.04, 1.72), Vector3(3.05, 1.30, -0.40), m_wood)
+
+	# ---- 灯光（两版一致，保证「客厅变化」只体现在物件与屏幕）
+	_omni(shared, "RoomFill", Vector3(0.0, 2.30, 0.0), Color(0.95, 0.88, 0.80), 0.45, 16.0)
+	_omni(shared, "LampLight", Vector3(2.25, 1.52, -1.75), Color(1.0, 0.76, 0.44), 3.0, 9.0)
+
+	# ---- 差异一：书架上的相框。alpha 正面朝房间，beta 背面朝房间。
+	var frame_pos := Vector3(3.05, 1.62, -0.40)
+	var pa := _n(va, "PhotoFrame")
+	pa.transform = Transform3D(Basis.IDENTITY.rotated(Vector3.UP, deg_to_rad(-90.0)), frame_pos)
+	_box(pa, "FrameBody", Vector3(0.30, 0.36, 0.05), Vector3.ZERO, m_frame)
+	_box(pa, "PhotoFace", Vector3(0.25, 0.31, 0.02), Vector3(0, 0, 0.036), m_photo)
+
+	var pb := _n(vb, "PhotoFrame")
+	pb.transform = Transform3D(Basis.IDENTITY.rotated(Vector3.UP, deg_to_rad(90.0)), frame_pos)
+	_box(pb, "FrameBody", Vector3(0.30, 0.36, 0.05), Vector3.ZERO, m_frame)
+	_box(pb, "PhotoFace", Vector3(0.25, 0.31, 0.02), Vector3(0, 0, 0.036), m_photo)
+
+	# ---- 差异二：电视屏幕。alpha 有微光（还开着），beta 彻底黑掉。
+	_box(va, "TVScreen", Vector3(1.48, 0.84, 0.03), Vector3(0, 1.10, -2.515), m_tv_on)
+	_box(vb, "TVScreen", Vector3(1.48, 0.84, 0.03), Vector3(0, 1.10, -2.515), m_tv_off)
+
+	_world_env(root, Color(0.020, 0.020, 0.026), Color(0.17, 0.16, 0.15))
+
+	# ---- 热点
+	# 前门：位于前墙，玩家需要转身才能发现，这样能自然体会到「可以环视」
+	var door := Area3D.new()
+	door.name = "FrontDoor"
+	door.set_script(load(S_HOTSPOT))
+	door.position = Vector3(0, 1.15, 2.95)
+	door.display_name = "前门"
+	door.action_kind = "exit"
+	door.examine_text = ""
+	door.target_location = "house_exterior"
+	_box(door, "DoorPanel", Vector3(1.10, 2.15, 0.12), Vector3.ZERO, m_door)
+	_box(door, "DoorFrameTop", Vector3(1.24, 0.10, 0.18), Vector3(0, 1.16, 0.0), m_wood)
+	_box(door, "DoorKnob", Vector3(0.07, 0.07, 0.10), Vector3(0.40, 0.0, 0.09), m_knob)
+	_col(door, Vector3(1.4, 2.4, 0.5))
+	hotspots.add_child(door)
+
+	var tv := Area3D.new()
+	tv.name = "Television"
+	tv.set_script(load(S_HOTSPOT))
+	tv.position = Vector3(0, 1.10, -2.55)
+	tv.display_name = "那台没有声音的电视"
+	tv.action_kind = "examine"
+	tv.examine_text = "画面里是一片缓慢移动的光点。没有声音，也没有节目。"
+	_col(tv, Vector3(1.8, 1.2, 0.5))
+	hotspots.add_child(tv)
+
+	var pf := Area3D.new()
+	pf.name = "PhotoFrameSpot"
+	pf.set_script(load(S_HOTSPOT))
+	pf.position = frame_pos
+	pf.display_name = "书架上的相框"
+	pf.action_kind = "examine"
+	pf.examine_text = "一张压在玻璃下的旧合影。你记得它一直面朝房间放着。"
+	_col(pf, Vector3(0.5, 0.55, 0.5))
+	hotspots.add_child(pf)
+
+	var lamp := Area3D.new()
+	lamp.name = "FloorLamp"
+	lamp.set_script(load(S_HOTSPOT))
+	lamp.position = Vector3(2.25, 1.20, -1.75)
+	lamp.display_name = "落地灯"
+	lamp.action_kind = "examine"
+	lamp.examine_text = "灯罩边缘有一圈长期烘烤留下的黄痕。"
+	_col(lamp, Vector3(0.7, 1.9, 0.7))
+	hotspots.add_child(lamp)
+
+
+# ============================================================ 2. 房屋外部
+
+func assemble_house_exterior(root: Node3D) -> void:
+	var env := _n(root, "Environment")
+	var shared := _n(env, "Shared")
+	var va := _n(env, "Variant_world_alpha")
+	var vb := _n(env, "Variant_world_beta")
+	var hotspots := _n(root, "Hotspots")
+
+	var m_ground := _mat("he_ground", Color(0.23, 0.22, 0.19))
+	var m_house := _mat("he_house", Color(0.58, 0.54, 0.49))
+	var m_roof := _mat("he_roof", Color(0.19, 0.18, 0.19))
+	var m_path := _mat("he_path", Color(0.33, 0.31, 0.27))
+	var m_porch := _mat("he_porch", Color(0.35, 0.31, 0.27))
+	var m_win_glow := _mat("he_win_glow", Color(0.92, 0.72, 0.44), 0.5, 0.0, Color(1.0, 0.72, 0.38), 1.4)
+	var m_win_dark := _mat("he_win_dark", Color(0.045, 0.05, 0.065), 0.4)
+	var m_tree := _mat("he_tree", Color(0.085, 0.115, 0.095))
+	var m_trunk := _mat("he_trunk", Color(0.13, 0.10, 0.08))
+	var m_crate := _mat("he_crate", Color(0.44, 0.35, 0.26))
+	var m_metal_dark := _mat("he_metal", Color(0.28, 0.30, 0.32), 0.6, 0.5)
+	var m_glass := _mat("he_glass", Color(0.36, 0.66, 0.80), 0.22, 0.1, Color(0.22, 0.48, 0.62), 1.0)
+	var m_signboard := _mat("he_signboard", Color(0.74, 0.72, 0.66))
+	var m_porch_bulb := _mat("he_bulb_on", Color(1.0, 0.84, 0.55), 0.4, 0.0, Color(1.0, 0.80, 0.48), 2.4)
+	var m_porch_bulb_off := _mat("he_bulb_off", Color(0.14, 0.14, 0.15), 0.75)
+
+	# ---- 地形与房屋主体（不随世界变化）
+	_box(shared, "Ground", Vector3(40.0, 0.2, 40.0), Vector3(0, -0.10, -4.0), m_ground)
+	_box(shared, "Path", Vector3(2.9, 0.10, 16.0), Vector3(0, 0.02, -7.0), m_path)
+	_box(shared, "PorchFloor", Vector3(5.6, 0.20, 2.6), Vector3(0, 0.10, 0.55), m_porch)
+	_box(shared, "StepA", Vector3(3.8, 0.20, 0.70), Vector3(0, 0.10, -0.95), m_porch)
+	_box(shared, "StepB", Vector3(4.2, 0.10, 0.70), Vector3(0, 0.05, -1.62), m_porch)
+	_box(shared, "HouseBody", Vector3(6.6, 3.2, 5.2), Vector3(0, 1.60, 4.20), m_house)
+	_box(shared, "Roof", Vector3(7.4, 0.35, 6.0), Vector3(0, 3.38, 4.20), m_roof)
+	_box(shared, "WindowFrameL", Vector3(1.44, 1.20, 0.12), Vector3(-2.15, 1.65, 1.55), m_roof)
+	_box(shared, "WindowFrameR", Vector3(1.44, 1.20, 0.12), Vector3(2.15, 1.65, 1.55), m_roof)
+
+	# 门廊灯罩（灯具本体不随世界变化，只有灯泡亮灭变化）
+	_box(shared, "PorchFixture", Vector3(0.26, 0.26, 0.26), Vector3(0, 2.52, 1.30), m_metal_dark)
+
+	# 树：固定在几个坐标上，不使用随机，保证每次构建结果完全一致
+	var tree_positions: Array = [
+		Vector3(-6.5, 0.0, -2.0), Vector3(-8.2, 0.0, -7.5), Vector3(-7.0, 0.0, -13.0),
+		Vector3(6.8, 0.0, -3.5), Vector3(8.6, 0.0, -9.0), Vector3(7.2, 0.0, -15.0),
+		Vector3(-5.5, 0.0, 3.5), Vector3(5.8, 0.0, 4.2),
+	]
+	for i in tree_positions.size():
+		var p: Vector3 = tree_positions[i]
+		var height := 5.0 + float(i % 3) * 0.8
+		_cyl(shared, "Trunk%d" % i, 0.22, height, Vector3(p.x, height * 0.5, p.z), m_trunk)
+		_box(shared, "Crown%d" % i, Vector3(3.0, 2.6, 3.0), Vector3(p.x, height + 0.6, p.z), m_tree)
+
+	# 月光：两个世界的强弱与色温不同，这是「灯光变化」的一部分
+	_sun(va, "MoonlightAlpha", -35.0, -42.0, Color(0.62, 0.70, 0.92), 0.35)
+	_sun(vb, "MoonlightBeta", -35.0, -42.0, Color(0.52, 0.64, 0.98), 0.85)
+
+	# ---- 差异二（灯光）：alpha 门廊灯亮着、窗户透出暖光；beta 门廊灯熄灭、窗户全黑
+	_box(va, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, 1.30), m_porch_bulb)
+	_omni(va, "PorchLight", Vector3(0.0, 2.45, 1.15), Color(1.0, 0.78, 0.46), 5.5, 16.0)
+	_box(va, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-2.15, 1.65, 1.49), m_win_glow)
+	_box(va, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(2.15, 1.65, 1.49), m_win_glow)
+	_omni(va, "WindowSpill", Vector3(-2.15, 1.60, 1.00), Color(1.0, 0.72, 0.40), 1.2, 7.0)
+
+	_box(vb, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, 1.30), m_porch_bulb_off)
+	_box(vb, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-2.15, 1.65, 1.49), m_win_dark)
+	_box(vb, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(2.15, 1.65, 1.49), m_win_dark)
+
+	# ---- 差异一（物品位置）：木箱从右侧正立，变成左侧倾倒
+	var crate_a := _n(va, "Crate")
+	_box(crate_a, "CrateBody", Vector3(0.78, 0.58, 0.62), Vector3(1.60, 0.29, -1.60), m_crate, deg_to_rad(-14.0))
+	_box(crate_a, "CrateLid", Vector3(0.82, 0.06, 0.66), Vector3(1.60, 0.58, -1.60), m_crate, deg_to_rad(-14.0))
+
+	var crate_b := _n(vb, "Crate")
+	_box(crate_b, "CrateBody", Vector3(0.78, 0.58, 0.62), Vector3(-1.55, 0.26, -2.30), m_crate, deg_to_rad(22.0), deg_to_rad(38.0))
+	_box(crate_b, "CrateLid", Vector3(0.82, 0.06, 0.66), Vector3(-1.42, 0.55, -2.10), m_crate, deg_to_rad(22.0), deg_to_rad(38.0))
+
+	# ---- 差异三（新增线索）：beta 的台阶旁多出一滩碎玻璃，alpha 完全没有
+	var glass := _n(vb, "GlassShards")
+	_box(glass, "Shard1", Vector3(0.16, 0.02, 0.22), Vector3(-0.45, 0.21, -1.10), m_glass, deg_to_rad(18.0))
+	_box(glass, "Shard2", Vector3(0.12, 0.02, 0.16), Vector3(-0.18, 0.21, -1.32), m_glass, deg_to_rad(-42.0))
+	_box(glass, "Shard3", Vector3(0.10, 0.02, 0.13), Vector3(-0.62, 0.21, -1.38), m_glass, deg_to_rad(64.0))
+	_box(glass, "Shard4", Vector3(0.09, 0.02, 0.11), Vector3(-0.30, 0.21, -0.92), m_glass, deg_to_rad(-8.0))
+
+	# ---- 差异四（门牌歪斜）：同一个门牌，beta 里歪了
+	_box(va, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, 1.50), m_signboard)
+	_box(vb, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, 1.50), m_signboard, 0.0, deg_to_rad(24.0))
+
+	_world_env(root, Color(0.016, 0.018, 0.028), Color(0.13, 0.14, 0.19))
+
+	# ---- 热点
+	# 回屋的门：位于房子立面，玩家需要转身才能看到
+	var door := Area3D.new()
+	door.name = "DoorToInterior"
+	door.set_script(load(S_HOTSPOT))
+	door.position = Vector3(0, 1.15, 1.40)
+	door.display_name = "回屋的门"
+	door.action_kind = "exit"
+	door.target_location = "living_room"
+	_box(door, "DoorPanel", Vector3(1.10, 2.15, 0.12), Vector3.ZERO, m_metal_dark)
+	_col(door, Vector3(1.4, 2.4, 0.5))
+	hotspots.add_child(door)
+
+	# 通往黑暗区域：位于初始视野正前方
+	var road := Area3D.new()
+	road.name = "RoadToDark"
+	road.set_script(load(S_HOTSPOT))
+	road.position = Vector3(0, 0.95, -7.20)
+	road.display_name = "那条没有灯的路"
+	road.action_kind = "exit"
+	road.target_location = "dark_road"
+	_box(road, "SignPost", Vector3(0.10, 1.40, 0.10), Vector3(-0.55, 0.20, 0.0), m_metal_dark)
+	_box(road, "SignBoard", Vector3(0.90, 0.34, 0.05), Vector3(-0.10, 0.72, 0.0), m_signboard)
+	_col(road, Vector3(2.4, 2.4, 1.2))
+	hotspots.add_child(road)
+
+	# 木箱：位置随世界变化，因此按世界各放一个热点，互斥显示
+	var crate_spot_a := Area3D.new()
+	crate_spot_a.name = "CrateAlpha"
+	crate_spot_a.set_script(load(S_HOTSPOT))
+	crate_spot_a.position = Vector3(1.60, 0.45, -1.60)
+	crate_spot_a.display_name = "一只木箱"
+	crate_spot_a.action_kind = "examine"
+	crate_spot_a.examine_text = "装杂物用的旧木箱，盖子合得很严。"
+	crate_spot_a.visible_only_in_worlds = ["world_alpha"]
+	_col(crate_spot_a, Vector3(1.0, 0.9, 1.0))
+	hotspots.add_child(crate_spot_a)
+
+	var crate_spot_b := Area3D.new()
+	crate_spot_b.name = "CrateBeta"
+	crate_spot_b.set_script(load(S_HOTSPOT))
+	crate_spot_b.position = Vector3(-1.50, 0.42, -2.25)
+	crate_spot_b.display_name = "一只木箱"
+	crate_spot_b.action_kind = "examine"
+	crate_spot_b.examine_text = "同一只木箱。它刚才不在这个位置，而且现在是倒着的。"
+	crate_spot_b.visible_only_in_worlds = ["world_beta"]
+	_col(crate_spot_b, Vector3(1.2, 0.9, 1.2))
+	hotspots.add_child(crate_spot_b)
+
+	# 碎玻璃：初始世界不存在，穿越后才有
+	var shard := Area3D.new()
+	shard.name = "GlassShards"
+	shard.set_script(load(S_HOTSPOT))
+	shard.position = Vector3(-0.40, 0.30, -1.20)
+	shard.display_name = "一地的碎玻璃"
+	shard.action_kind = "examine"
+	shard.examine_text = "蓝色的碎片散在台阶旁。屋子里没有少任何一只杯子。"
+	shard.visible_only_in_worlds = ["world_beta"]
+	_col(shard, Vector3(1.1, 0.5, 1.1))
+	hotspots.add_child(shard)
+
+	# 邮箱：两个世界都在，用于锚定「这里确实是同一个地方」
+	var mailbox := Area3D.new()
+	mailbox.name = "Mailbox"
+	mailbox.set_script(load(S_HOTSPOT))
+	mailbox.position = Vector3(2.55, 1.15, -1.30)
+	mailbox.display_name = "邮箱"
+	mailbox.action_kind = "examine"
+	mailbox.examine_text = "空的。今天没有人来送信。"
+	_box(mailbox, "Post", Vector3(0.10, 1.20, 0.10), Vector3(0, -0.60, 0), m_trunk)
+	_box(mailbox, "Box", Vector3(0.42, 0.30, 0.58), Vector3.ZERO, m_metal_dark)
+	_col(mailbox, Vector3(0.8, 1.6, 0.9))
+	hotspots.add_child(mailbox)
+
+
+# ============================================================== 3. 黑暗区域
+
+func assemble_dark_road(root: Node3D) -> void:
+	var env := _n(root, "Environment")
+	var shared := _n(env, "Shared")
+	var va := _n(env, "Variant_world_alpha")
+	var vb := _n(env, "Variant_world_beta")
+	var hotspots := _n(root, "Hotspots")
+
+	var m_ground := _mat("dr_ground", Color(0.115, 0.115, 0.108))
+	var m_road := _mat("dr_road", Color(0.235, 0.228, 0.212))
+	var m_tree := _mat("dr_tree", Color(0.045, 0.062, 0.052))
+	var m_trunk := _mat("dr_trunk", Color(0.062, 0.052, 0.045))
+	var m_pole := _mat("dr_pole", Color(0.11, 0.11, 0.12))
+	var m_signboard := _mat("dr_signboard", Color(0.30, 0.29, 0.27))
+	var m_puddle := _mat("dr_puddle", Color(0.10, 0.17, 0.24), 0.12, 0.35, Color(0.20, 0.38, 0.52), 0.35)
+	var m_far := _mat("dr_far", Color(0.16, 0.19, 0.24), 0.5, 0.0, Color(0.28, 0.36, 0.46), 0.5)
+
+	# ---- 地形与道路
+	_box(shared, "Ground", Vector3(60.0, 0.2, 70.0), Vector3(0, -0.10, -20.0), m_ground)
+	_box(shared, "Road", Vector3(3.4, 0.08, 46.0), Vector3(0, 0.02, -18.0), m_road)
+	_box(shared, "RoadEdgeL", Vector3(0.30, 0.14, 46.0), Vector3(-1.85, 0.04, -18.0), m_tree)
+	_box(shared, "RoadEdgeR", Vector3(0.30, 0.14, 46.0), Vector3(1.85, 0.04, -18.0), m_tree)
+
+	# ---- 两侧树林（固定坐标，不使用随机）
+	var left_trees: Array = [-2.0, -6.5, -11.0, -16.5, -22.0, -28.0]
+	var right_trees: Array = [-3.5, -8.0, -13.5, -19.0, -25.0, -31.0]
+	for i in left_trees.size():
+		var z: float = left_trees[i]
+		var x: float = -3.6 - float(i % 3) * 1.1
+		var h: float = 6.0 + float(i % 4) * 0.7
+		_cyl(shared, "TrunkL%d" % i, 0.26, h, Vector3(x, h * 0.5, z), m_trunk)
+		_box(shared, "CrownL%d" % i, Vector3(3.6, 3.2, 3.6), Vector3(x, h + 1.0, z), m_tree)
+	for i in right_trees.size():
+		var z2: float = right_trees[i]
+		var x2: float = 3.6 + float(i % 3) * 1.1
+		var h2: float = 6.2 + float(i % 4) * 0.7
+		_cyl(shared, "TrunkR%d" % i, 0.26, h2, Vector3(x2, h2 * 0.5, z2), m_trunk)
+		_box(shared, "CrownR%d" % i, Vector3(3.6, 3.2, 3.6), Vector3(x2, h2 + 1.0, z2), m_tree)
+
+	# ---- 电线杆：一路延伸进黑暗
+	var poles: Array = [-4.0, -12.0, -20.0, -28.0]
+	for i in poles.size():
+		var pz: float = poles[i]
+		_cyl(shared, "Pole%d" % i, 0.13, 7.0, Vector3(-2.6, 3.5, pz), m_pole)
+		_box(shared, "Crossarm%d" % i, Vector3(1.50, 0.12, 0.14), Vector3(-2.6, 6.7, pz), m_pole)
+
+	# ---- 灯光：只有很弱的月光，营造「看不清远处」的压迫感
+	_sun(shared, "Moonlight", -25.0, -38.0, Color(0.50, 0.60, 0.90), 0.42)
+	_omni(shared, "PlayerPool", Vector3(0, 1.20, 0.5), Color(0.55, 0.62, 0.80), 0.55, 9.0)
+
+	# ---- 远方一点微光：暗示这条路确实通向别处
+	_box(shared, "FarGlow", Vector3(2.60, 0.60, 0.06), Vector3(0, 0.55, -36.0), m_far)
+
+	# ---- alpha：干燥的路面；beta：路面上出现一滩积水，反光明显
+	_box(vb, "Puddle1", Vector3(1.60, 0.02, 2.30), Vector3(-0.35, 0.07, -3.20), m_puddle, deg_to_rad(8.0))
+	_box(vb, "Puddle2", Vector3(1.10, 0.02, 1.60), Vector3(0.55, 0.07, -6.40), m_puddle, deg_to_rad(-14.0))
+	_box(vb, "Puddle3", Vector3(0.90, 0.02, 1.30), Vector3(-0.70, 0.07, -9.10), m_puddle, deg_to_rad(22.0))
+
+	_world_env(root, Color(0.008, 0.010, 0.016), Color(0.07, 0.08, 0.12), true,
+			Color(0.020, 0.024, 0.034), 0.055)
+
+	# ---- 热点
+	# 原路返回：位于玩家背后，必须转身才能找到
+	var back := Area3D.new()
+	back.name = "BackToHouse"
+	back.set_script(load(S_HOTSPOT))
+	back.position = Vector3(0, 1.10, 2.30)
+	back.display_name = "原路返回"
+	back.action_kind = "exit"
+	back.target_location = "house_exterior"
+	_box(back, "ReturnMarker", Vector3(2.20, 0.16, 0.10), Vector3(0, -0.85, 0), m_signboard, deg_to_rad(180.0))
+	_col(back, Vector3(3.2, 2.6, 1.0))
+	hotspots.add_child(back)
+
+	var sign := Area3D.new()
+	sign.name = "RoadSign"
+	sign.set_script(load(S_HOTSPOT))
+	sign.position = Vector3(1.95, 1.45, -2.60)
+	sign.display_name = "一块路牌"
+	sign.action_kind = "examine"
+	sign.examine_text = "牌面上的字被磨掉了，只剩下几道浅浅的划痕。"
+	_box(sign, "SignPost", Vector3(0.09, 1.50, 0.09), Vector3(0, -0.75, 0), m_pole)
+	_box(sign, "SignBoard", Vector3(0.62, 0.44, 0.05), Vector3.ZERO, m_signboard)
+	_col(sign, Vector3(0.9, 1.8, 0.6))
+	hotspots.add_child(sign)
+
+	var deep := Area3D.new()
+	deep.name = "DeeperIntoDark"
+	deep.set_script(load(S_HOTSPOT))
+	deep.position = Vector3(0, 0.95, -11.0)
+	deep.display_name = "更深的黑暗"
+	deep.action_kind = "examine"
+	deep.examine_text = "再往前就什么都看不见了。今晚不该走那么远。"
+	_col(deep, Vector3(3.4, 2.2, 1.0))
+	hotspots.add_child(deep)
+
+	var puddle := Area3D.new()
+	puddle.name = "PuddleSpot"
+	puddle.set_script(load(S_HOTSPOT))
+	puddle.position = Vector3(-0.35, 0.20, -3.20)
+	puddle.display_name = "积水"
+	puddle.action_kind = "examine"
+	puddle.examine_text = "路面洼处积着水，映着天光。来的时候这里是干的。"
+	puddle.visible_only_in_worlds = ["world_beta"]
+	_col(puddle, Vector3(2.0, 0.6, 2.6))
+	hotspots.add_child(puddle)

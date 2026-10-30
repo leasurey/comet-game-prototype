@@ -1,0 +1,23 @@
+# Godot 生成的缓存与导入目录
+.godot/
+
+# 用户存档（user:// 会落到引擎管理的目录，与仓库无关）
+*.save.json
+comet_save.json
+
+# 导出产物
+build/
+dist/
+*.exe
+*.p7b
+*.zip
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+__pycache__/
+*.tmp
+Thumbs.db
+.DS_Store
+
+# 注意：*.uid 是 Godot 4.4+ 的资源标识，**应当纳入版本控制**，不要忽略。

@@ -1,0 +1,389 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://core/location.gd" id="1_u0lct"]
+[ext_resource type="Script" path="res://core/hotspot.gd" id="2_cmyu2"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_34ro7"]
+albedo_color = Color(0.4, 0.3, 0.21, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_0ej82"]
+size = Vector3(7.2, 0.12, 6.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jmmdu"]
+albedo_color = Color(0.6, 0.58, 0.55, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_rkeyg"]
+size = Vector3(7.2, 0.12, 6.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o7nfg"]
+albedo_color = Color(0.7, 0.67, 0.61, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_ah6wv"]
+size = Vector3(7.2, 2.7, 0.16)
+
+[sub_resource type="BoxMesh" id="BoxMesh_y4qho"]
+size = Vector3(7.2, 2.7, 0.16)
+
+[sub_resource type="BoxMesh" id="BoxMesh_cybs6"]
+size = Vector3(0.16, 2.7, 6.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_r1kyh"]
+size = Vector3(0.16, 2.7, 6.2)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_04553"]
+albedo_color = Color(0.34, 0.23, 0.25, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_qf0xe"]
+size = Vector3(3.4, 0.04, 2.6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jjctl"]
+albedo_color = Color(0.27, 0.29, 0.33, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_j3qrp"]
+size = Vector3(2.3, 0.42, 0.95)
+
+[sub_resource type="BoxMesh" id="BoxMesh_2o18k"]
+size = Vector3(2.3, 0.62, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_hi70j"]
+size = Vector3(0.22, 0.62, 0.95)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ej4wj"]
+size = Vector3(0.22, 0.62, 0.95)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bwwij"]
+albedo_color = Color(0.23, 0.17, 0.13, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_rpkun"]
+size = Vector3(1.3, 0.07, 0.75)
+
+[sub_resource type="BoxMesh" id="BoxMesh_me8ss"]
+size = Vector3(1, 0.36, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_7c3qx"]
+size = Vector3(2.4, 0.55, 0.55)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cpfnu"]
+albedo_color = Color(0.12, 0.12, 0.13, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_5d573"]
+size = Vector3(1.64, 0.98, 0.1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_qllt7"]
+albedo_color = Color(0.52, 0.54, 0.57, 1)
+metallic = 0.6
+roughness = 0.42
+
+[sub_resource type="BoxMesh" id="BoxMesh_4hvoc"]
+size = Vector3(0.06, 1.45, 0.06)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_f3e4l"]
+albedo_color = Color(1, 0.8, 0.48, 1)
+roughness = 0.5
+emission_enabled = true
+emission = Color(1, 0.78, 0.45, 1)
+emission_energy_multiplier = 2.2
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_4wun0"]
+top_radius = 0.24
+bottom_radius = 0.24
+height = 0.32
+
+[sub_resource type="BoxMesh" id="BoxMesh_51r61"]
+size = Vector3(0.44, 1.85, 1.7)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ifk0f"]
+size = Vector3(0.46, 0.04, 1.72)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_em7th"]
+albedo_color = Color(0.17, 0.14, 0.11, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_1mlju"]
+size = Vector3(0.3, 0.36, 0.05)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b2md2"]
+albedo_color = Color(0.74, 0.7, 0.62, 1)
+roughness = 0.8
+emission_enabled = true
+emission = Color(0.7, 0.66, 0.58, 1)
+emission_energy_multiplier = 0.28
+
+[sub_resource type="BoxMesh" id="BoxMesh_u027k"]
+size = Vector3(0.25, 0.31, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ft0pt"]
+albedo_color = Color(0.1, 0.12, 0.15, 1)
+roughness = 0.3
+emission_enabled = true
+emission = Color(0.3, 0.42, 0.55, 1)
+emission_energy_multiplier = 0.9
+
+[sub_resource type="BoxMesh" id="BoxMesh_qjb3b"]
+size = Vector3(1.48, 0.84, 0.03)
+
+[sub_resource type="BoxMesh" id="BoxMesh_xp2ye"]
+size = Vector3(0.3, 0.36, 0.05)
+
+[sub_resource type="BoxMesh" id="BoxMesh_0m13b"]
+size = Vector3(0.25, 0.31, 0.02)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bvvyv"]
+albedo_color = Color(0.04, 0.04, 0.05, 1)
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="BoxMesh_6s11k"]
+size = Vector3(1.48, 0.84, 0.03)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_cep82"]
+albedo_color = Color(0.3, 0.21, 0.15, 1)
+roughness = 0.92
+
+[sub_resource type="BoxMesh" id="BoxMesh_ubkm2"]
+size = Vector3(1.1, 2.15, 0.12)
+
+[sub_resource type="BoxMesh" id="BoxMesh_2tqfl"]
+size = Vector3(1.24, 0.1, 0.18)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_rk5xx"]
+albedo_color = Color(0.62, 0.55, 0.35, 1)
+metallic = 0.8
+roughness = 0.35
+
+[sub_resource type="BoxMesh" id="BoxMesh_8dep0"]
+size = Vector3(0.07, 0.07, 0.1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_usjyq"]
+size = Vector3(1.4, 2.4, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_kp4j4"]
+size = Vector3(1.8, 1.2, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ibg48"]
+size = Vector3(0.5, 0.55, 0.5)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_6xedd"]
+size = Vector3(0.7, 1.9, 0.7)
+
+[sub_resource type="Environment" id="Environment_icqw0"]
+background_mode = 1
+background_color = Color(0.02, 0.02, 0.026, 1)
+ambient_light_source = 2
+ambient_light_color = Color(0.17, 0.16, 0.15, 1)
+ambient_light_sky_contribution = 0.0
+tonemap_mode = 2
+
+[node name="living_room" type="Node3D" unique_id=66677148]
+script = ExtResource("1_u0lct")
+
+[node name="Environment" type="Node3D" parent="." unique_id=942562871]
+
+[node name="Shared" type="Node3D" parent="Environment" unique_id=312413351]
+
+[node name="Floor" type="MeshInstance3D" parent="Environment/Shared" unique_id=829076757]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.06, 0)
+material_override = SubResource("StandardMaterial3D_34ro7")
+mesh = SubResource("BoxMesh_0ej82")
+
+[node name="Ceiling" type="MeshInstance3D" parent="Environment/Shared" unique_id=177248216]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.76, 0)
+material_override = SubResource("StandardMaterial3D_jmmdu")
+mesh = SubResource("BoxMesh_rkeyg")
+
+[node name="WallBack" type="MeshInstance3D" parent="Environment/Shared" unique_id=862280327]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, -3.1)
+material_override = SubResource("StandardMaterial3D_o7nfg")
+mesh = SubResource("BoxMesh_ah6wv")
+
+[node name="WallFront" type="MeshInstance3D" parent="Environment/Shared" unique_id=818085550]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 3.1)
+material_override = SubResource("StandardMaterial3D_o7nfg")
+mesh = SubResource("BoxMesh_y4qho")
+
+[node name="WallLeft" type="MeshInstance3D" parent="Environment/Shared" unique_id=1295613795]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6, 1.35, 0)
+material_override = SubResource("StandardMaterial3D_o7nfg")
+mesh = SubResource("BoxMesh_cybs6")
+
+[node name="WallRight" type="MeshInstance3D" parent="Environment/Shared" unique_id=1416177078]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 1.35, 0)
+material_override = SubResource("StandardMaterial3D_o7nfg")
+mesh = SubResource("BoxMesh_r1kyh")
+
+[node name="Rug" type="MeshInstance3D" parent="Environment/Shared" unique_id=1540238228]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.02, -1.2)
+material_override = SubResource("StandardMaterial3D_04553")
+mesh = SubResource("BoxMesh_qf0xe")
+
+[node name="SofaBase" type="MeshInstance3D" parent="Environment/Shared" unique_id=514117291]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0.24, -0.55)
+material_override = SubResource("StandardMaterial3D_jjctl")
+mesh = SubResource("BoxMesh_j3qrp")
+
+[node name="SofaBack" type="MeshInstance3D" parent="Environment/Shared" unique_id=1653927537]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0.62, -0.95)
+material_override = SubResource("StandardMaterial3D_jjctl")
+mesh = SubResource("BoxMesh_2o18k")
+
+[node name="SofaArmL" type="MeshInstance3D" parent="Environment/Shared" unique_id=143939035]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.38, 0.5, -0.55)
+material_override = SubResource("StandardMaterial3D_jjctl")
+mesh = SubResource("BoxMesh_hi70j")
+
+[node name="SofaArmR" type="MeshInstance3D" parent="Environment/Shared" unique_id=1605759678]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.5, -0.55)
+material_override = SubResource("StandardMaterial3D_jjctl")
+mesh = SubResource("BoxMesh_ej4wj")
+
+[node name="TableTop" type="MeshInstance3D" parent="Environment/Shared" unique_id=509171249]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.4, -1.25)
+material_override = SubResource("StandardMaterial3D_bwwij")
+mesh = SubResource("BoxMesh_rpkun")
+
+[node name="TableBase" type="MeshInstance3D" parent="Environment/Shared" unique_id=872279167]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.22, -1.25)
+material_override = SubResource("StandardMaterial3D_bwwij")
+mesh = SubResource("BoxMesh_me8ss")
+
+[node name="TVCabinet" type="MeshInstance3D" parent="Environment/Shared" unique_id=1964944739]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, -2.55)
+material_override = SubResource("StandardMaterial3D_bwwij")
+mesh = SubResource("BoxMesh_7c3qx")
+
+[node name="TVBody" type="MeshInstance3D" parent="Environment/Shared" unique_id=1979238846]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.58)
+material_override = SubResource("StandardMaterial3D_cpfnu")
+mesh = SubResource("BoxMesh_5d573")
+
+[node name="LampPole" type="MeshInstance3D" parent="Environment/Shared" unique_id=437177159]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 0.72, -1.75)
+material_override = SubResource("StandardMaterial3D_qllt7")
+mesh = SubResource("BoxMesh_4hvoc")
+
+[node name="LampShade" type="MeshInstance3D" parent="Environment/Shared" unique_id=1988484750]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 1.52, -1.75)
+material_override = SubResource("StandardMaterial3D_f3e4l")
+mesh = SubResource("CylinderMesh_4wun0")
+
+[node name="ShelfBody" type="MeshInstance3D" parent="Environment/Shared" unique_id=1720044437]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.05, 0.92, -0.4)
+material_override = SubResource("StandardMaterial3D_bwwij")
+mesh = SubResource("BoxMesh_51r61")
+
+[node name="ShelfBoard" type="MeshInstance3D" parent="Environment/Shared" unique_id=1166740429]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.05, 1.3, -0.4)
+material_override = SubResource("StandardMaterial3D_bwwij")
+mesh = SubResource("BoxMesh_ifk0f")
+
+[node name="RoomFill" type="OmniLight3D" parent="Environment/Shared" unique_id=1662463715]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
+light_color = Color(0.95, 0.88, 0.8, 1)
+light_energy = 0.45
+omni_range = 16.0
+
+[node name="LampLight" type="OmniLight3D" parent="Environment/Shared" unique_id=919451441]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 1.52, -1.75)
+light_color = Color(1, 0.76, 0.44, 1)
+light_energy = 3.0
+omni_range = 9.0
+
+[node name="Variant_world_alpha" type="Node3D" parent="Environment" unique_id=25501475]
+
+[node name="PhotoFrame" type="Node3D" parent="Environment/Variant_world_alpha" unique_id=1963369425]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 3.05, 1.62, -0.4)
+
+[node name="FrameBody" type="MeshInstance3D" parent="Environment/Variant_world_alpha/PhotoFrame" unique_id=1101824774]
+material_override = SubResource("StandardMaterial3D_em7th")
+mesh = SubResource("BoxMesh_1mlju")
+
+[node name="PhotoFace" type="MeshInstance3D" parent="Environment/Variant_world_alpha/PhotoFrame" unique_id=1440836635]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.036)
+material_override = SubResource("StandardMaterial3D_b2md2")
+mesh = SubResource("BoxMesh_u027k")
+
+[node name="TVScreen" type="MeshInstance3D" parent="Environment/Variant_world_alpha" unique_id=1993961776]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.515)
+material_override = SubResource("StandardMaterial3D_ft0pt")
+mesh = SubResource("BoxMesh_qjb3b")
+
+[node name="Variant_world_beta" type="Node3D" parent="Environment" unique_id=71388572]
+
+[node name="PhotoFrame" type="Node3D" parent="Environment/Variant_world_beta" unique_id=614792095]
+transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 3.05, 1.62, -0.4)
+
+[node name="FrameBody" type="MeshInstance3D" parent="Environment/Variant_world_beta/PhotoFrame" unique_id=1957410799]
+material_override = SubResource("StandardMaterial3D_em7th")
+mesh = SubResource("BoxMesh_xp2ye")
+
+[node name="PhotoFace" type="MeshInstance3D" parent="Environment/Variant_world_beta/PhotoFrame" unique_id=1281182529]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.036)
+material_override = SubResource("StandardMaterial3D_b2md2")
+mesh = SubResource("BoxMesh_0m13b")
+
+[node name="TVScreen" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=1325614516]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.515)
+material_override = SubResource("StandardMaterial3D_bvvyv")
+mesh = SubResource("BoxMesh_6s11k")
+
+[node name="Hotspots" type="Node3D" parent="." unique_id=1320094133]
+
+[node name="FrontDoor" type="Area3D" parent="Hotspots" unique_id=461168996]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 2.95)
+script = ExtResource("2_cmyu2")
+display_name = "前门"
+action_kind = "exit"
+target_location = "house_exterior"
+
+[node name="DoorPanel" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=1714962149]
+material_override = SubResource("StandardMaterial3D_cep82")
+mesh = SubResource("BoxMesh_ubkm2")
+
+[node name="DoorFrameTop" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=230299861]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.16, 0)
+material_override = SubResource("StandardMaterial3D_bwwij")
+mesh = SubResource("BoxMesh_2tqfl")
+
+[node name="DoorKnob" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=390261901]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0.09)
+material_override = SubResource("StandardMaterial3D_rk5xx")
+mesh = SubResource("BoxMesh_8dep0")
+
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/FrontDoor" unique_id=410557725]
+shape = SubResource("BoxShape3D_usjyq")
+
+[node name="Television" type="Area3D" parent="Hotspots" unique_id=771811165]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.55)
+script = ExtResource("2_cmyu2")
+display_name = "那台没有声音的电视"
+examine_text = "画面里是一片缓慢移动的光点。没有声音，也没有节目。"
+
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/Television" unique_id=302333786]
+shape = SubResource("BoxShape3D_kp4j4")
+
+[node name="PhotoFrameSpot" type="Area3D" parent="Hotspots" unique_id=1581493610]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.05, 1.62, -0.4)
+script = ExtResource("2_cmyu2")
+display_name = "书架上的相框"
+examine_text = "一张压在玻璃下的旧合影。你记得它一直面朝房间放着。"
+
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/PhotoFrameSpot" unique_id=213649441]
+shape = SubResource("BoxShape3D_ibg48")
+
+[node name="FloorLamp" type="Area3D" parent="Hotspots" unique_id=2044447223]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 1.2, -1.75)
+script = ExtResource("2_cmyu2")
+display_name = "落地灯"
+examine_text = "灯罩边缘有一圈长期烘烤留下的黄痕。"
+
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/FloorLamp" unique_id=596105935]
+shape = SubResource("BoxShape3D_6xedd")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=678673384]
+environment = SubResource("Environment_icqw0")

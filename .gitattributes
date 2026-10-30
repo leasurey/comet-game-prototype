@@ -1,0 +1,21 @@
+# Godot 项目推荐配置：仓库内统一使用 LF，
+# 检出时也不做自动转换，避免 .tscn / .gd 在不同系统上产生无意义的行尾差异。
+* text=auto eol=lf
+
+# 文本格式
+*.gd text
+*.tscn text
+*.json text
+*.md text
+*.cfg text
+*.godot text project
+
+# 二进制资源
+*.png binary
+*.jpg binary
+*.webp binary
+*.svg text
+*.ttf binary
+*.woff binary
+*.ogg binary
+*.wav binary

@@ -1,0 +1,19 @@
+{
+  "initial_world": "world_alpha",
+  "transitions": [
+    {
+      "id": "evt_cross_dark_road",
+      "type": "fixed",
+      "once": true,
+      "trigger": {
+        "kind": "enter_location",
+        "location_id": "dark_road"
+      },
+      "require_from_world": "world_alpha",
+      "to_world": "world_beta",
+      "seed": 0,
+      "candidate_worlds": [],
+      "log": "你踏上了没有路灯的那条路。风停了一瞬。回家时，一切应当照旧。"
+    }
+  ]
+}

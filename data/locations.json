@@ -1,0 +1,57 @@
+{
+  "start_location": "living_room",
+  "locations": [
+    {
+      "id": "living_room",
+      "display_name": "客厅",
+      "scene": "res://scenes/locations/living_room.tscn",
+      "ambient": "只开了一盏落地灯的暖色房间。",
+      "exits": [
+        {
+          "target": "house_exterior",
+          "label": "前门"
+        }
+      ],
+      "variants": [
+        "world_alpha",
+        "world_beta"
+      ]
+    },
+    {
+      "id": "house_exterior",
+      "display_name": "房屋外部",
+      "scene": "res://scenes/locations/house_exterior.tscn",
+      "ambient": "门廊灯亮着，夜风很轻。",
+      "exits": [
+        {
+          "target": "living_room",
+          "label": "回到屋内"
+        },
+        {
+          "target": "dark_road",
+          "label": "走向那条没有灯的路"
+        }
+      ],
+      "variants": [
+        "world_alpha",
+        "world_beta"
+      ]
+    },
+    {
+      "id": "dark_road",
+      "display_name": "黑暗区域",
+      "scene": "res://scenes/locations/dark_road.tscn",
+      "ambient": "没有路灯的一段夜路，尽头什么都看不见。",
+      "exits": [
+        {
+          "target": "house_exterior",
+          "label": "原路返回"
+        }
+      ],
+      "variants": [
+        "world_alpha",
+        "world_beta"
+      ]
+    }
+  ]
+}

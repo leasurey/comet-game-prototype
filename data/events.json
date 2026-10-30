@@ -1,0 +1,18 @@
+{
+  "events": [
+    {
+      "id": "evt_cross_dark_road",
+      "label": "穿越黑暗道路",
+      "kind": "fixed",
+      "repeatable": false,
+      "narrative_hint": "这条路比你记忆里的更长。"
+    },
+    {
+      "id": "evt_return_to_house",
+      "label": "返回房屋外部",
+      "kind": "conditional",
+      "repeatable": true,
+      "narrative_hint": ""
+    }
+  ]
+}

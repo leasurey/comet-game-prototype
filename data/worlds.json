@@ -1,0 +1,17 @@
+{
+  "initial_world": "world_alpha",
+  "worlds": [
+    {
+      "id": "world_alpha",
+      "label": "Alpha timeline",
+      "descriptor": "玩家穿越黑暗道路之前所处的时间线",
+      "origin": ""
+    },
+    {
+      "id": "world_beta",
+      "label": "Beta timeline",
+      "descriptor": "穿越黑暗道路之后落入的时间线，房屋外部已出现可观察差异",
+      "origin": "world_alpha"
+    }
+  ]
+}
