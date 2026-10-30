@@ -53,6 +53,9 @@ var ui = null
 var is_ready: bool = false
 var bootstrap_error: String = ""
 
+## 统一数据校验的错误清单。启动失败时可直接读它定位到「文件 + 对象 + 字段 + 原因」。
+var data_errors: Array = []
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -96,14 +99,16 @@ func _bootstrap() -> void:
 	_inject_services()
 	_wire_signals()
 
+	# 四份数据先全部读出来，再**统一交叉校验**，最后才交给各 Manager。
+	#
+	# 顺序很重要：各 Manager 的 load_from_data 只校验自己那份数据内部是否自洽，
+	# 跨文件引用（variants 指向不存在的现实、transitions 的 to_world 拼错、
+	# area_enter 忘写 area_id）它看不见。先validate再load，错误能在启动时就暴露，
+	# 而不是等到玩家穿过黑暗发现现实没变。
 	var worlds_result := DataLoader.load_dictionary(PATH_WORLDS)
 	if not bool(worlds_result.get("ok", false)):
 		_fail(str(worlds_result.get("error", "未知错误")))
 		return
-	if not world_manager.load_from_data(worlds_result.get("data", {}), errors):
-		_fail(errors[0] if errors.size() > 0 else "世界数据载入失败")
-		return
-
 	var events_result := DataLoader.load_dictionary(PATH_EVENTS)
 	if not bool(events_result.get("ok", false)):
 		_fail(str(events_result.get("error", "未知错误")))
@@ -112,15 +117,33 @@ func _bootstrap() -> void:
 	if not bool(transitions_result.get("ok", false)):
 		_fail(str(transitions_result.get("error", "未知错误")))
 		return
+	var locations_result := DataLoader.load_dictionary(PATH_LOCATIONS)
+	if not bool(locations_result.get("ok", false)):
+		_fail(str(locations_result.get("error", "未知错误")))
+		return
+
+	var report: Dictionary = DataValidator.validate(
+		worlds_result.get("data", {}),
+		events_result.get("data", {}),
+		transitions_result.get("data", {}),
+		locations_result.get("data", {})
+	)
+	data_errors = report.get("errors", [])
+	if not bool(report.get("ok", false)):
+		var first := str((data_errors as Array)[0]) if not (data_errors as Array).is_empty() else "数据校验失败"
+		_fail("数据校验未通过（共 %d 项）: %s" % [(data_errors as Array).size(), first])
+		return
+
+	errors.clear()
+	if not world_manager.load_from_data(worlds_result.get("data", {}), errors):
+		_fail(errors[0] if errors.size() > 0 else "世界数据载入失败")
+		return
+
 	errors.clear()
 	if not event_manager.load_from_data(events_result.get("data", {}), transitions_result.get("data", {}), errors):
 		_fail(errors[0] if errors.size() > 0 else "事件数据载入失败")
 		return
 
-	var locations_result := DataLoader.load_dictionary(PATH_LOCATIONS)
-	if not bool(locations_result.get("ok", false)):
-		_fail(str(locations_result.get("error", "未知错误")))
-		return
 	errors.clear()
 	if not scene_manager.load_from_data(locations_result.get("data", {}), errors):
 		_fail(errors[0] if errors.size() > 0 else "地点数据载入失败")
