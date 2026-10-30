@@ -126,6 +126,8 @@ func step_setup() -> bool:
 			_record(false, "setup. GameServices 可用")
 			return true
 		if _services.is_ready and _services.save_manager != null:
+			# 先切到本测试专用存档路径，绝不动玩家的正式存档（P0 / BUG-002）
+			_services.save_manager.use_test_path("party_house")
 			_services.save_manager.delete_save()
 		var packed: PackedScene = load("res://scenes/main.tscn") as PackedScene
 		if packed == null:

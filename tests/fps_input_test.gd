@@ -199,6 +199,8 @@ func step_setup_main() -> bool:
 
 	# 清掉上次遗留存档，保证从干净状态开始
 	if _services.is_ready and _services.save_manager != null:
+		# 先切到本测试专用存档路径，绝不动玩家的正式存档（P0 / BUG-002）
+		_services.save_manager.use_test_path("fps_input")
 		_services.save_manager.delete_save()
 
 	var packed_res := load("res://scenes/main.tscn")

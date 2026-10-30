@@ -26,6 +26,28 @@ func set_path(path: String) -> void:
 	_path = path
 
 
+## 测试专用：切到独立的临时存档路径，永不触碰正式存档。
+##
+## 为什么必须存在这个入口：
+##   此前 5 个测试直接对**默认路径**调用 delete_save()，
+##   跑一次测试就会删掉玩家的真实进度，且没有任何提示。
+##   靠"每个测试记得先 set_path"不可靠（已经漏过一次），
+##   因此提供语义明确的 test 路径，名字本身就写着用途。
+##
+## tag 会做文件名净化，避免不同测试互相覆盖。
+func use_test_path(tag: String) -> void:
+	var safe := tag.strip_edges()
+	if safe.is_empty():
+		safe = "default"
+	for ch in ["/", "\\", ":", "*", "?", "\"", "<", ">", "|", " ", "."]:
+		safe = safe.replace(ch, "_")
+	_path = "user://_test_%s.json" % safe
+
+
+func is_default_path() -> bool:
+	return _path == DEFAULT_PATH
+
+
 func get_path() -> String:
 	return _path
 

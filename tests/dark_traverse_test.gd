@@ -120,6 +120,8 @@ func step_setup() -> bool:
 			_record(false, "setup. GameServices 可用")
 			return true
 		if _svc.is_ready and _svc.save_manager != null:
+			# 先切到本测试专用存档路径，绝不动玩家的正式存档（P0 / BUG-002）
+			_svc.save_manager.use_test_path("dark_traverse")
 			_svc.save_manager.delete_save()
 		var packed: PackedScene = load("res://scenes/main.tscn") as PackedScene
 		if packed == null:
