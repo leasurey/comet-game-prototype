@@ -20,6 +20,8 @@ const TYPE_PSEUDO_RANDOM := "pseudo_random"
 
 const TRIGGER_ENTER_LOCATION := "enter_location"
 const TRIGGER_INTERACT := "interact"
+## 区域触发：玩家走进某个 Area3D 即触发（黑暗区域穿越用，替代按键）
+const TRIGGER_AREA_ENTER := "area_enter"
 
 var _definitions: Dictionary = {}
 var _transitions: Array = []
@@ -95,7 +97,8 @@ func load_from_data(events_data: Dictionary, transitions_data: Dictionary, out_e
 			return false
 		var trigger: Dictionary = trigger_raw
 		var kind := str(trigger.get("kind", "")).strip_edges()
-		if kind != TRIGGER_ENTER_LOCATION and kind != TRIGGER_INTERACT:
+		if kind != TRIGGER_ENTER_LOCATION and kind != TRIGGER_INTERACT \
+				and kind != TRIGGER_AREA_ENTER:
 			out_error.append("transition %s 使用了未知 trigger.kind: %s" % [tid, kind])
 			return false
 

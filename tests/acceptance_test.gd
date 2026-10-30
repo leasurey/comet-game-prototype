@@ -327,16 +327,31 @@ func step_04_to_dark_road() -> bool:
 	_check(ok, "4. 可进入黑暗区域")
 	_check(_scene_mgr.get_current_location_id() == "dark_road", "4. 当前地点为黑暗区域")
 
+	# 第二轮改变了现实切换时机：进入黑暗只是「开始穿越」，现实必须保持不变。
+	# 变化发生在玩家走到黑暗尽头（dark_far_end 区域）之后。
 	var after_world: String = _world_mgr.get_current_world_id()
-	_check(after_world != before_world, "5. 进入黑暗区域后世界发生变化",
+	_check(after_world == before_world, "5. 进入黑暗区域时现实不变（第二轮新时序）",
 			"%s -> %s" % [before_world, after_world])
-	_check(after_world == "world_beta", "5. 世界按预设规则切到 world_beta", "got=%s" % after_world)
+	_check(_world_mgr.get_change_count() == change_before,
+			"5. 进入黑暗不产生世界变更记录")
+
+	# 模拟玩家走到尽头：显式求值 area_enter 事件（等价于 DarkExit 区域被触发）
+	var errs: Array = []
+	_event_mgr.evaluate("area_enter", {"area_id": "dark_far_end"}, _world_mgr, errs)
+	var final_world: String = _world_mgr.get_current_world_id()
+	_check(final_world == "world_beta", "5. 到达黑暗尽头后现实切到 world_beta",
+			"got=%s errs=%s" % [final_world, str(errs)])
 	_check(_world_mgr.get_change_count() == change_before + 1, "5. 世界变化被记录一次",
 			"change_count=%d" % _world_mgr.get_change_count())
 	_check(_event_mgr.has_occurred("evt_cross_dark_road"), "5. 对应事件写入历史")
 
+	# 真实运行时由 main._on_portal_entered 在切场景前完成这一步；
+	# 本测试直接求值事件，因此手动补上场景刷新
+	var inst0: Node = _scene_mgr.get_current_instance()
+	(inst0 as GameLocation).apply_world(final_world)
+
 	var inst: Node = _scene_mgr.get_current_instance()
-	_check((inst as GameLocation).get_applied_world_id() == after_world,
+	_check((inst as GameLocation).get_applied_world_id() == final_world,
 			"5. 当前场景已按新世界重刷",
 			"applied=%s" % (inst as GameLocation).get_applied_world_id())
 	return true

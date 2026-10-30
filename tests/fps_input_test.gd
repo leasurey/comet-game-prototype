@@ -224,6 +224,11 @@ func step_setup_main() -> bool:
 	_check(_rig != null, "setup. CameraRig 已装配", str(_rig != null))
 	_check(_camera != null, "setup. Camera3D 已装配")
 	_check(_interaction != null, "setup. InteractionManager 已装配")
+
+	# 本测试覆盖「世界切换后热点仍可识别」（T12 需要 beta 世界的 CrateBeta）。
+	# 第二轮后现实变化由区域触发，测试里直接提交一次切换，避免依赖穿越路径。
+	if _world_mgr != null and _world_mgr.get_current_world_id() != "world_beta":
+		_world_mgr.apply_transition("world_beta", "fps_test_setup")
 	return true
 
 

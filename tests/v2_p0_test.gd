@@ -333,5 +333,13 @@ func _run_end_to_end() -> void:
 	services.go_to("house_exterior")
 	services.go_to("dark_road")
 
+	# 第二轮改了现实切换时机：进入黑暗不再触发变化，改由「到达尽头」触发。
+	# 这里显式求值该事件，等价于玩家走出 DarkExit 区域。
+	var em_bus = services.get("event_manager")
+	var wm_bus = services.get("world_manager")
+	if em_bus != null and wm_bus != null:
+		var errs_bus: Array = []
+		em_bus.evaluate("area_enter", {"area_id": "dark_far_end"}, wm_bus, errs_bus)
+
 	bus.event_triggered.disconnect(handler)
 	_rec(received.size() >= 1, "T-BUS-01 事件信号经总线转接可达", "收到 %d 次" % received.size())

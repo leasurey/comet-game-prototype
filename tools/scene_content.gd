@@ -490,20 +490,22 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_col(door, Vector3(1.6, 2.4, 0.5))
 	hotspots.add_child(door)
 
-	# 通往黑暗区域：移到街道对面、路缘断口之后，
-	# 这样玩家的动线是「门廊 → 车道 → 横穿街道 → 没有灯的那段路」，
-	# 而不是在车道中途就被传送走。
-	var road := Area3D.new()
-	road.name = "RoadToDark"
-	road.set_script(load(S_HOTSPOT))
-	road.position = Vector3(0, 0.95, -19.20)
-	road.display_name = "那条没有灯的路"
-	road.action_kind = "exit"
-	road.target_location = "dark_road"
-	_box(road, "SignPost", Vector3(0.10, 1.40, 0.10), Vector3(-0.55, 0.20, 0.0), m_metal_dark)
-	_box(road, "SignBoard", Vector3(0.90, 0.34, 0.05), Vector3(-0.10, 0.72, 0.0), m_signboard)
-	_col(road, Vector3(2.4, 2.4, 1.2))
-	hotspots.add_child(road)
+	# 黑暗区域入口：改为区域触发（AutoPortal），走进去即进入，不再需要按 E。
+	# 位置仍是街道西端 z=-19.20，动线「门廊 → 车道 → 横穿街道 → 走进黑暗」不变。
+	# 用 portal 而不是 hotspot 的原因：黑暗穿越必须是「走过去」，按键那一刻就不是穿越了。
+	var dark_entry := Area3D.new()
+	dark_entry.name = "DarkEntry"
+	dark_entry.set_script(load("res://core/auto_portal.gd"))
+	dark_entry.position = Vector3(0, 1.10, -19.20)
+	dark_entry.portal_id = "dark_entry"
+	dark_entry.target_location = "dark_road"
+	dark_entry.use_target_spawn = true
+	dark_entry.target_spawn = Vector3(0.0, 0.05, 4.0)
+	dark_entry.target_yaw_deg = 0.0
+	_box(dark_entry, "SignPost", Vector3(0.10, 1.40, 0.10), Vector3(-0.55, 0.20, 0.0), m_metal_dark)
+	_box(dark_entry, "SignBoard", Vector3(0.90, 0.34, 0.05), Vector3(-0.10, 0.72, 0.0), m_signboard)
+	_col(dark_entry, Vector3(2.4, 2.4, 1.2))
+	shared.add_child(dark_entry)
 
 	# 车道上的车：影片中人物曾出门绕到车边检查
 	var car_spot := Area3D.new()
@@ -649,16 +651,22 @@ func assemble_dark_road(root: Node3D) -> void:
 
 	# ---- 热点
 	# 原路返回：位于玩家背后，必须转身才能找到
-	var back := Area3D.new()
-	back.name = "BackToHouse"
-	back.set_script(load(S_HOTSPOT))
-	back.position = Vector3(0, 1.10, 2.30)
-	back.display_name = "原路返回"
-	back.action_kind = "exit"
-	back.target_location = "house_exterior"
-	_box(back, "ReturnMarker", Vector3(2.20, 0.16, 0.10), Vector3(0, -0.85, 0), m_signboard, deg_to_rad(180.0))
-	_col(back, Vector3(3.2, 2.6, 1.0))
-	hotspots.add_child(back)
+	# 黑暗尽头：走出这段路即完成穿越。
+	# 这里同时做两件事：切到街对面、触发现实变化（规则见 world_transitions.json），
+	# 顺序由 main.gd 保证——先求值事件（换现实），再切场景，避免闪一帧旧世界。
+	var dark_exit := Area3D.new()
+	dark_exit.name = "DarkExit"
+	dark_exit.set_script(load("res://core/auto_portal.gd"))
+	dark_exit.position = Vector3(0, 1.10, -20.0)
+	dark_exit.portal_id = "dark_far_end"
+	dark_exit.target_location = "house_exterior"
+	dark_exit.use_target_spawn = true
+	dark_exit.target_spawn = Vector3(0.0, 0.05, -24.0)
+	dark_exit.target_yaw_deg = 0.0
+	dark_exit.event_kind = "area_enter"
+	dark_exit.event_keys = {"area_id": "dark_far_end"}
+	_col(dark_exit, Vector3(3.4, 2.6, 2.0))
+	shared.add_child(dark_exit)
 
 	var sign := Area3D.new()
 	sign.name = "RoadSign"

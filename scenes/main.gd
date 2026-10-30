@@ -244,6 +244,60 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 		else:
 			pc.reset_to_spawn(GameServices.scene_manager.get_location_spawn(location_id))
 
+	# 本场景新建的 portal 需要重新连接（旧实例的连接已随实例销毁）
+	_connect_portals(GameServices.scene_manager.get_current_instance())
+
+
+## 连接本场景内的所有 AutoPortal。
+## 每次进入地点后必须重连：场景实例是新建的，旧连接随旧实例一起销毁。
+func _connect_portals(root_node: Node) -> void:
+	if root_node == null:
+		return
+	for c in _collect_nodes(root_node):
+		if c is AutoPortal:
+			var portal := c as AutoPortal
+			if not portal.player_entered.is_connected(_on_portal_entered):
+				portal.player_entered.connect(_on_portal_entered)
+
+
+func _collect_nodes(n: Node) -> Array:
+	var out: Array = []
+	for c in n.get_children():
+		out.append(c)
+		out.append_array(_collect_nodes(c))
+	return out
+
+
+## 区域触发（黑暗区域穿越）。
+##
+## 顺序至关重要：先求值事件（可能切换现实），再切场景。
+## 反过来的话，新场景会先按旧现实加载一帧，再刷新成新现实——玩家会看到画面「闪一下」，
+## 那正是我们想避免的「像加载」的观感。
+func _on_portal_entered(portal: AutoPortal) -> void:
+	if portal == null:
+		return
+
+	if not portal.event_kind.is_empty() and GameServices.event_manager != null:
+		var errs: Array = []
+		GameServices.event_manager.evaluate(
+			portal.event_kind, portal.event_keys,
+			GameServices.world_manager, errs)
+		for e in errs:
+			push_warning("区域事件求值: %s" % str(e))
+
+	if portal.target_location.is_empty():
+		return
+
+	if portal.use_target_spawn:
+		_pending_spawn = portal.target_spawn
+		_pending_yaw_deg = portal.target_yaw_deg
+	else:
+		_pending_spawn = null
+
+	if not GameServices.go_to(portal.target_location):
+		_pending_spawn = null
+		_notify("这里走不通。")
+
 
 func _on_location_failed(_location_id: String, error: String) -> void:
 	push_error("COMET 地点切换失败: %s" % error)
