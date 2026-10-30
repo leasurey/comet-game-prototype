@@ -336,9 +336,73 @@ func assemble_house_exterior(root: Node3D) -> void:
 	var m_porch_bulb := _mat("he_bulb_on", Color(1.0, 0.84, 0.55), 0.4, 0.0, Color(1.0, 0.80, 0.48), 2.4)
 	var m_porch_bulb_off := _mat("he_bulb_off", Color(0.14, 0.14, 0.15), 0.75)
 
+	# —— 室外空间序列（车道 / 街道 / 街对面）所需材质
+	var m_driveway := _mat("he_driveway", Color(0.26, 0.25, 0.23), 0.95)
+	var m_asphalt := _mat("he_asphalt", Color(0.085, 0.088, 0.095), 0.88)
+	var m_lane := _mat("he_lane", Color(0.52, 0.50, 0.42), 0.8)
+	var m_curb := _mat("he_curb", Color(0.38, 0.36, 0.33), 0.9)
+	var m_far_house := _mat("he_far_house", Color(0.13, 0.13, 0.15), 0.94)
+	var m_far_win := _mat("he_far_win", Color(0.95, 0.76, 0.46), 0.5, 0.0, Color(1.0, 0.74, 0.42), 1.6)
+	var m_car := _mat("he_car", Color(0.16, 0.17, 0.21), 0.42, 0.45)
+	var m_car_glass := _mat("he_car_glass", Color(0.05, 0.06, 0.08), 0.18, 0.10)
+	var m_tire := _mat("he_tire", Color(0.075, 0.075, 0.085), 0.98)
+	var m_lamp_post := _mat("he_lamp_post", Color(0.19, 0.19, 0.21), 0.68, 0.40)
+	var m_lamp_on := _mat("he_lamp_on", Color(1.0, 0.86, 0.58), 0.4, 0.0, Color(1.0, 0.78, 0.46), 2.2)
+	var m_lamp_off := _mat("he_lamp_off", Color(0.12, 0.12, 0.13), 0.8)
+
 	# ---- 地形与房屋主体（不随世界变化）
-	_solid(shared, "Ground", Vector3(40.0, 0.2, 40.0), Vector3(0, -0.10, -4.0), m_ground)
-	_box(shared, "Path", Vector3(2.9, 0.10, 16.0), Vector3(0, 0.02, -7.0), m_path)
+	# 地面需要覆盖车道、横向街道与街对面的房屋，因此由 40x40 扩到 56x60
+	_solid(shared, "Ground", Vector3(56.0, 0.2, 60.0), Vector3(0, -0.10, -12.0), m_ground)
+
+	# ---- 室外空间序列：门廊 → 台阶 → 车道 → 街道 → 黑暗路段
+	# 这条轴线与玩家出门朝向一致（门廊朝 -Z），一路直走即可抵达黑暗区域，
+	# 与影片中人物离开房子、穿过车道、走上街道、再走向没有灯那段路的动线对应。
+	_box(shared, "Driveway", Vector3(6.4, 0.08, 9.6), Vector3(0, 0.01, -6.80), m_driveway)
+	_box(shared, "Street", Vector3(44.0, 0.06, 6.5), Vector3(0, 0.02, -15.00), m_asphalt)
+	_box(shared, "LaneCenter", Vector3(44.0, 0.02, 0.12), Vector3(0, 0.055, -15.00), m_lane)
+	# 路缘在「车道口」和「黑暗路段口」两处断开，否则玩家会被那圈凸起挡住
+	_box(shared, "CurbNearL", Vector3(18.8, 0.16, 0.24), Vector3(-12.60, 0.07, -11.70), m_curb)
+	_box(shared, "CurbNearR", Vector3(18.8, 0.16, 0.24), Vector3(12.60, 0.07, -11.70), m_curb)
+	_box(shared, "CurbFarL", Vector3(20.2, 0.16, 0.24), Vector3(-11.90, 0.07, -18.30), m_curb)
+	_box(shared, "CurbFarR", Vector3(20.2, 0.16, 0.24), Vector3(11.90, 0.07, -18.30), m_curb)
+	# 街道对面通往黑暗区域的路段：没有任何照明，与亮着灯的街道形成对比
+	_box(shared, "DarkRoadMouth", Vector3(3.4, 0.08, 12.0), Vector3(0, 0.02, -24.00), m_path)
+
+	# ---- 街对面那栋房子：影片里始终亮着窗的「别人的房子」
+	_solid(shared, "FarHouse", Vector3(7.2, 3.6, 6.2), Vector3(-10.50, 1.80, -27.00), m_far_house)
+	_box(shared, "FarHouseRoof", Vector3(8.0, 0.32, 7.0), Vector3(-10.50, 3.72, -27.00), m_roof)
+	_box(shared, "FarWindowL", Vector3(1.15, 0.95, 0.06), Vector3(-12.20, 1.85, -23.85), m_far_win)
+	_box(shared, "FarWindowR", Vector3(1.15, 0.95, 0.06), Vector3(-8.80, 1.85, -23.85), m_far_win)
+	_omni(shared, "FarWindowGlow", Vector3(-10.50, 1.85, -23.40), Color(1.0, 0.78, 0.45), 1.6, 10.0)
+
+	# ---- 停在车道上的车：影片中人物曾出门检查车辆
+	# 车必须靠右侧停放，把 x≈0 这条主通路整条让出来。
+	# 实测教训：车宽 1.8、最初停在 x=1.55 时，与玩家路径只剩 33cm 余量，
+	# 玩家蹭上车身后会被 move_and_slide 一路滑到离轴线 4.3m 的草地上。
+	_solid(shared, "CarBody", Vector3(1.76, 0.58, 4.20), Vector3(2.10, 0.40, -6.10), m_car)
+	_solid(shared, "CarRoof", Vector3(1.58, 0.52, 2.10), Vector3(2.10, 0.95, -6.30), m_car)
+	_box(shared, "CarGlassFront", Vector3(1.50, 0.34, 0.10), Vector3(2.10, 0.97, -5.24), m_car_glass)
+	_box(shared, "CarGlassBack", Vector3(1.50, 0.34, 0.10), Vector3(2.10, 0.97, -7.36), m_car_glass)
+	_box(shared, "WheelFL", Vector3(0.18, 0.54, 0.54), Vector3(1.24, 0.27, -4.68), m_tire)
+	_box(shared, "WheelFR", Vector3(0.18, 0.54, 0.54), Vector3(2.96, 0.27, -4.68), m_tire)
+	_box(shared, "WheelRL", Vector3(0.18, 0.54, 0.54), Vector3(1.24, 0.27, -7.52), m_tire)
+	_box(shared, "WheelRR", Vector3(0.18, 0.54, 0.54), Vector3(2.96, 0.27, -7.52), m_tire)
+
+	# ---- 街道照明：灯柱本体固定，灯头亮度随世界变化
+	# 影片的停电是全区域的，所以 beta 世界里连路灯也熄灭，只剩月光。
+	_cyl(shared, "LampPostA", 0.09, 4.8, Vector3(-8.00, 2.40, -18.55), m_lamp_post)
+	_box(shared, "LampArmA", Vector3(1.30, 0.10, 0.10), Vector3(-7.40, 4.72, -18.55), m_lamp_post)
+	_cyl(shared, "LampPostB", 0.09, 4.8, Vector3(8.00, 2.40, -18.55), m_lamp_post)
+	_box(shared, "LampArmB", Vector3(1.30, 0.10, 0.10), Vector3(7.40, 4.72, -18.55), m_lamp_post)
+
+	_box(va, "LampHeadA", Vector3(0.34, 0.16, 0.34), Vector3(-6.80, 4.62, -18.55), m_lamp_on)
+	_omni(va, "StreetLightA", Vector3(-6.80, 4.45, -18.55), Color(1.0, 0.74, 0.40), 4.5, 26.0)
+	_box(va, "LampHeadB", Vector3(0.34, 0.16, 0.34), Vector3(6.80, 4.62, -18.55), m_lamp_on)
+	_omni(va, "StreetLightB", Vector3(6.80, 4.45, -18.55), Color(1.0, 0.74, 0.40), 4.5, 26.0)
+
+	_box(vb, "LampHeadA", Vector3(0.34, 0.16, 0.34), Vector3(-6.80, 4.62, -18.55), m_lamp_off)
+	_box(vb, "LampHeadB", Vector3(0.34, 0.16, 0.34), Vector3(6.80, 4.62, -18.55), m_lamp_off)
+
 	_solid(shared, "PorchFloor", Vector3(5.6, 0.20, 2.6), Vector3(0, 0.10, 0.55), m_porch)
 	_solid(shared, "StepA", Vector3(3.8, 0.20, 0.70), Vector3(0, 0.10, -0.95), m_porch)
 	_solid(shared, "StepB", Vector3(4.2, 0.10, 0.70), Vector3(0, 0.05, -1.62), m_porch)
@@ -412,11 +476,13 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_col(door, Vector3(1.4, 2.4, 0.5))
 	hotspots.add_child(door)
 
-	# 通往黑暗区域：位于初始视野正前方
+	# 通往黑暗区域：移到街道对面、路缘断口之后，
+	# 这样玩家的动线是「门廊 → 车道 → 横穿街道 → 没有灯的那段路」，
+	# 而不是在车道中途就被传送走。
 	var road := Area3D.new()
 	road.name = "RoadToDark"
 	road.set_script(load(S_HOTSPOT))
-	road.position = Vector3(0, 0.95, -7.20)
+	road.position = Vector3(0, 0.95, -19.20)
 	road.display_name = "那条没有灯的路"
 	road.action_kind = "exit"
 	road.target_location = "dark_road"
@@ -424,6 +490,28 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_box(road, "SignBoard", Vector3(0.90, 0.34, 0.05), Vector3(-0.10, 0.72, 0.0), m_signboard)
 	_col(road, Vector3(2.4, 2.4, 1.2))
 	hotspots.add_child(road)
+
+	# 车道上的车：影片中人物曾出门绕到车边检查
+	var car_spot := Area3D.new()
+	car_spot.name = "ParkedCar"
+	car_spot.set_script(load(S_HOTSPOT))
+	car_spot.position = Vector3(2.10, 0.95, -6.10)
+	car_spot.display_name = "停在车道上的车"
+	car_spot.action_kind = "examine"
+	car_spot.examine_text = "车门锁着，钥匙在屋里。仪表盘上那点微光还亮着，说明电瓶没断。"
+	_col(car_spot, Vector3(2.2, 1.8, 4.6))
+	hotspots.add_child(car_spot)
+
+	# 街对面始终亮着窗的房子：影片里那个「另一扇亮着的窗」
+	var far_spot := Area3D.new()
+	far_spot.name = "FarHouseWindow"
+	far_spot.set_script(load(S_HOTSPOT))
+	far_spot.position = Vector3(-10.50, 1.85, -23.70)
+	far_spot.display_name = "街对面亮着窗的房子"
+	far_spot.action_kind = "examine"
+	far_spot.examine_text = "同一排的房子，同样的窗。那扇窗里的灯一直没灭过，而这一片已经停电了。"
+	_col(far_spot, Vector3(5.0, 2.4, 1.0))
+	hotspots.add_child(far_spot)
 
 	# 木箱：位置随世界变化，因此按世界各放一个热点，互斥显示
 	var crate_spot_a := Area3D.new()

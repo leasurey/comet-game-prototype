@@ -205,8 +205,14 @@ func step_01_bootstrap() -> bool:
 	_save_mgr.delete_save()
 	var entered: bool = _scene_mgr.enter_location(_scene_mgr.get_start_location_id(), false)
 	_check(entered, "1. 可进入起始地点", "start=%s" % _scene_mgr.get_start_location_id())
-	_check(_scene_mgr.get_current_location_id() == "living_room", "1. 起始地点为客厅",
+	# v0.3.1 起开局故意落在聚会房屋（玩家身份 Emily 所在的那栋房子），
+	# 因此这里同时验证「实际进入地点 == 配置的起始地点」与「配置值确为 party_house」，
+	# 后者是设计约定，前者防止配置与实现脱节。
+	_check(_scene_mgr.get_current_location_id() == _scene_mgr.get_start_location_id(),
+			"1. 实际进入地点与配置的起始地点一致",
 			"current=%s" % _scene_mgr.get_current_location_id())
+	_check(_scene_mgr.get_start_location_id() == "party_house", "1. 起始地点为聚会房屋",
+			"start=%s" % _scene_mgr.get_start_location_id())
 
 	var main_res := load("res://scenes/main.tscn")
 	var main_packed: PackedScene = main_res as PackedScene

@@ -189,6 +189,12 @@ func step_setup() -> bool:
 		if not InputMap.has_action(a):
 			actions_ok = false
 	_check(actions_ok, "setup. WASD 输入动作已注册")
+
+	# 本测试的撞墙/家具断言绑定的是客厅的实际墙体坐标，
+	# 因此必须显式进入客厅，而不是依赖 start_location 的配置值。
+	# （v0.3.1 起初始地点改为聚会房屋，若沿用开场地点，T11/T12 会拿客厅的
+	#   墙面坐标去判定一个布局完全不同的房间，属于测试前提失效而非功能故障。）
+	_scene_mgr.enter_location("living_room", false)
 	return true
 
 
