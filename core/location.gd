@@ -41,24 +41,28 @@ func apply_world(world_id: String) -> void:
 	if env != null:
 		var target_name := VARIANT_PREFIX + world_id
 		var matched := false
-		var fallback_node: Node = null
+		var default_node: Node = null
+		var first_node: Node = null
 		for child in env.get_children():
 			var candidate := child as Node
 			# 只有 Variant_ 前缀的节点才参与世界切换。
 			# 其余节点属于共享内容（地面、房屋主体等），必须保持原状，否则会被误隐藏。
 			if not candidate.name.begins_with(VARIANT_PREFIX):
 				continue
+			if first_node == null:
+				first_node = candidate
+			if candidate.name == VARIANT_PREFIX + "default":
+				default_node = candidate
 			if candidate.name == target_name:
 				candidate.visible = true
 				matched = true
 			else:
 				candidate.visible = false
-			if candidate.name == VARIANT_PREFIX + "default":
-				fallback_node = candidate
-			elif fallback_node == null or fallback_node.name == target_name:
-				fallback_node = candidate
-		if not matched and fallback_node != null:
-			(fallback_node as Node).visible = true
+		# 找不到匹配 variant 时的回退优先级：Variant_default > 列表中的第一个 variant
+		if not matched:
+			var chosen: Node = default_node if default_node != null else first_node
+			if chosen != null:
+				chosen.visible = true
 
 	# 热点可见性同样由世界驱动
 	for spot in _iter_hotspots():

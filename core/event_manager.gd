@@ -25,7 +25,16 @@ var _definitions: Dictionary = {}
 var _transitions: Array = []
 var _history: Dictionary = {}
 var _sequence: Array = []
+var _flags: Dictionary = {}
+var _phase_id: String = ""
 var _is_ready := false
+
+## 随机源。未注入时内部自建（种子 0），保证 EventManager 始终可用且结果可复现。
+var rng_service = null
+## 提供 get_visited_locations() 的对象，通常为 SceneManager 或 GameServices。
+var visit_provider = null
+## 提供 get_tick() 的对象，通常为 TimeService。
+var tick_provider = null
 
 
 ## 载入 data/events.json 与 data/world_transitions.json 解析后的内容。
@@ -101,6 +110,23 @@ func load_from_data(events_data: Dictionary, transitions_data: Dictionary, out_e
 				out_error.append("pseudo_random transition %s 必须提供非空的 candidate_worlds" % tid)
 				return false
 
+		# 条件在载入期就校验谓词白名单。未知谓词一律拒绝，
+		# 避免「写错了条件、运行时静默当作无条件」这类最难排查的缺陷。
+		if not ConditionEvaluator.validate(t.get("requires", null), out_error,
+				"transition %s.requires" % tid):
+			return false
+
+		# 转移规则 id 补登记进事件定义表。
+		# 二者原本分表，导致「规则只在 world_transitions.json 中定义」时，
+		# 该规则自身产生的存档在重新载入时被 restore 拒绝——实测已复现。
+		if not _definitions.has(tid):
+			_definitions[tid] = {
+				"label": str(t.get("label", tid)),
+				"kind": ttype,
+				"repeatable": not bool(t.get("once", false)),
+				"narrative_hint": "",
+			}
+
 		_transitions.append(t.duplicate(true))
 
 	_is_ready = true
@@ -156,6 +182,19 @@ func evaluate(kind: String, context: Dictionary, world_mgr, out_error: Array = [
 		out_error.append("evaluate 缺少 WorldManager")
 		return fired
 
+	# 快照语义：本次求值内所有规则都基于「进入时」的状态判定。
+	# 早期实现在循环内直接改世界，后一条规则看到的是被前一条改过的世界，
+	# 使结果依赖规则在数组中的排列顺序。
+	var snapshot_world := str(world_mgr.get_current_world_id())
+	var base_ctx: Dictionary = {
+		"world_id": snapshot_world,
+		"phase_id": _phase_id,
+		"tick": _current_tick(),
+		"flags": _flags,
+		"visited": _collect_visited(),
+		"event_history": _history,
+	}
+
 	for t in _transitions:
 		var rule: Dictionary = t
 		var trigger: Dictionary = rule.get("trigger", {})
@@ -182,7 +221,12 @@ func evaluate(kind: String, context: Dictionary, world_mgr, out_error: Array = [
 			continue
 
 		var required_from := str(rule.get("require_from_world", ""))
-		if not required_from.is_empty() and str(world_mgr.get_current_world_id()) != required_from:
+		if not required_from.is_empty() and snapshot_world != required_from:
+			continue
+
+		# requires 求值。此前 conditional 类型声明了 requires 却从不求值，
+		# 实测可复现：条件不成立时事件照样触发。
+		if not ConditionEvaluator.evaluate(rule.get("requires", null), base_ctx):
 			continue
 
 		var target_world_id := _resolve_target_world(rule, out_error)
@@ -227,13 +271,20 @@ func _resolve_target_world(rule: Dictionary, out_error: Array) -> String:
 			var candidates: Array = candidates_raw
 			if candidates.is_empty():
 				return ""
-			# 伪随机：结果必须落在允许范围内，且由「规则种子 + 触发序号」决定。
-			# 相同输入必然得到相同结果，可复现，不是全书意义的随机。
-			var rule_seed := int(rule.get("seed", 0))
-			var rng := RandomNumberGenerator.new()
-			rng.seed = rule_seed + _sequence.size()
-			var pick: int = rng.randi() % candidates.size()
-			return str(candidates[pick]).strip_edges()
+			# 伪随机改为具名流：结果只由 (master_seed, 流名, 该流已取次数) 决定。
+			# 此前用「规则种子 + 全局事件序列长度」当种子，导致无关事件的发生次数
+			# 会改变本规则的取值——实测已复现。
+			_ensure_rng()
+			var stream_name := str(rule.get("rng_stream", "")).strip_edges()
+			if stream_name.is_empty():
+				stream_name = "transition:" + str(rule.get("id", ""))
+			var weights_raw: Variant = rule.get("weights", [])
+			var weights: Array = weights_raw if typeof(weights_raw) == TYPE_ARRAY else []
+			var pick_index: int = rng_service.pick_weighted(stream_name, candidates, weights)
+			if pick_index < 0 or pick_index >= candidates.size():
+				out_error.append("伪随机取值越界: %s" % str(rule.get("id", "")))
+				return ""
+			return str(candidates[pick_index]).strip_edges()
 		_:
 			out_error.append("未知 transition type: %s" % ttype)
 	return ""
@@ -249,11 +300,72 @@ func _record(event_id: String) -> void:
 	rec["last_index"] = index
 
 
+## 历史记录中保存的 id 是否仍能被识别。
+## 历史里存的是 transfer rule 的 id，与 events.json 定义的 id 不一定同集合，两边都要认。
+func _is_known_event_id(event_id: String) -> bool:
+	if _definitions.has(event_id):
+		return true
+	for t in _transitions:
+		if str((t as Dictionary).get("id", "")) == event_id:
+			return true
+	return false
+
+
 func serialize() -> Dictionary:
-	return {
+	var payload: Dictionary = {
 		"history": _history.duplicate(true),
 		"sequence": _sequence.duplicate(),
+		"flags": _flags.duplicate(true),
+		"phase_id": _phase_id,
 	}
+	if rng_service != null and rng_service.has_method("get_counters"):
+		payload["rng_counters"] = rng_service.get_counters()
+	return payload
+
+
+# ---------------------------------------------------------------- 旗标与阶段
+
+func set_flag(name: String, value: Variant) -> void:
+	if name.is_empty():
+		return
+	_flags[name] = value
+
+
+func get_flag(name: String, default_value: Variant = null) -> Variant:
+	return _flags.get(name, default_value)
+
+
+func has_flag(name: String) -> bool:
+	return _flags.has(name)
+
+
+func set_phase(phase_id: String) -> void:
+	_phase_id = phase_id
+
+
+func get_phase() -> String:
+	return _phase_id
+
+
+# ---------------------------------------------------------------- 内部
+
+func _ensure_rng() -> void:
+	if rng_service != null:
+		return
+	rng_service = RngService.new()
+	rng_service.set_seed(0)
+
+
+func _current_tick() -> int:
+	if tick_provider != null and tick_provider.has_method("get_tick"):
+		return int(tick_provider.get_tick())
+	return 0
+
+
+func _collect_visited() -> Array:
+	if visit_provider != null and visit_provider.has_method("get_visited_locations"):
+		return visit_provider.get_visited_locations()
+	return []
 
 
 func restore(state: Dictionary, out_error: Array = []) -> bool:
@@ -270,15 +382,38 @@ func restore(state: Dictionary, out_error: Array = []) -> bool:
 		out_error.append("sequence 格式错误")
 		return false
 
-	# 校验历史中出现的事件 id 都还在当前定义集合内，
-	# 防止旧存档引用已删除的事件导致后续判定错乱
+	# 校验历史中出现的 id 是否仍然可知。
+	# 注意：历史记录里存的是 transfer rule 的 id，未必等于 events.json 中定义的 id，
+	# 因此两者都要认；两侧都不认识的旧存档必须拒绝，否则后续判定会错乱。
 	var history: Dictionary = raw_history
 	for eid in history.keys():
-		if not _definitions.has(str(eid)):
+		if not _is_known_event_id(str(eid)):
 			out_error.append("存档引用了未定义的事件: %s" % str(eid))
 			return false
 
+	var flags_raw: Variant = state.get("flags", {})
+	if typeof(flags_raw) != TYPE_DICTIONARY:
+		out_error.append("flags 格式错误")
+		return false
+
 	_history = history.duplicate(true)
 	_sequence = (raw_sequence as Array).duplicate()
+	_flags = (flags_raw as Dictionary).duplicate(true)
+	_phase_id = str(state.get("phase_id", ""))
+
+	# 只恢复计数，不覆盖主种子——主种子属于存档的 meta 区，由 GameServices 负责。
+	if rng_service != null and state.has("rng_counters"):
+		var counters_raw: Variant = state.get("rng_counters", {})
+		if typeof(counters_raw) != TYPE_DICTIONARY:
+			out_error.append("rng_counters 格式错误")
+			return false
+		var rng_err: Array = []
+		if not rng_service.restore({
+			"master_seed": rng_service.master_seed,
+			"counters": counters_raw,
+		}, rng_err):
+			out_error.append_array(rng_err)
+			return false
+
 	_is_ready = true
 	return true

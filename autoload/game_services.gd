@@ -16,13 +16,21 @@ signal bootstrap_failed(reason: String)
 signal save_completed(ok: bool, message: String)
 signal load_completed(ok: bool, message: String)
 
-const CLOCK_SCALE := 1.0 / 6.0
+# 时钟用「整数 tick」表示，且由玩家动作离散推进（见 advance_tick），
+# 不再由真实时间 delta 驱动——否则同一操作序列在不同游玩速度下会得到不同 tick，
+# 「重放一致性」无法成立。
 const START_CLOCK_MINUTES := 1360
+const DEFAULT_MINUTES_PER_TICK := 1
+# 新游戏默认种子固定，保证默认路径可复现；需要不同周目时调用 set_master_seed()。
+const DEFAULT_MASTER_SEED := 0
 
 const PATH_WORLDS := "res://data/worlds.json"
 const PATH_TRANSITIONS := "res://data/world_transitions.json"
 const PATH_EVENTS := "res://data/events.json"
 const PATH_LOCATIONS := "res://data/locations.json"
+
+# 输入动作名。集中定义在此，避免各脚本各自硬编码字符串。
+const ACTION_INTERACT := "interact"
 
 var world_manager: WorldManager = null
 var event_manager: EventManager = null
@@ -30,13 +38,16 @@ var save_manager: SaveManager = null
 var scene_manager: SceneManager = null
 var interaction_manager: InteractionManager = null
 
+# L0 核心服务：时钟、随机、信号总线。三者都不含业务规则，可被任意层使用。
+var time_service: TimeService = null
+var rng_service: RngService = null
+var event_bus: EventBus = null
+
 var player_controller = null
 var ui = null
 
 var is_ready: bool = false
 var bootstrap_error: String = ""
-
-var _clock_minutes: float = float(START_CLOCK_MINUTES)
 
 
 func _ready() -> void:
@@ -45,16 +56,23 @@ func _ready() -> void:
 	_bootstrap()
 
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	if not is_ready:
 		return
-	_clock_minutes += delta * CLOCK_SCALE
+	# 时钟已改为动作驱动，这里只负责把当前值同步到 UI。
 	if ui != null and ui.has_method("set_clock"):
 		ui.set_clock(get_clock_text())
 
 
 func _bootstrap() -> void:
 	var errors: Array = []
+	_ensure_input_actions()
+
+	time_service = TimeService.new()
+	time_service.configure(DEFAULT_MINUTES_PER_TICK, START_CLOCK_MINUTES)
+	rng_service = RngService.new()
+	rng_service.set_seed(DEFAULT_MASTER_SEED)
+	event_bus = EventBus.new()
 
 	world_manager = WorldManager.new()
 	event_manager = EventManager.new()
@@ -70,6 +88,9 @@ func _bootstrap() -> void:
 	scene_manager.world_manager = world_manager
 	scene_manager.event_manager = event_manager
 	scene_manager.interaction_manager = interaction_manager
+
+	_inject_services()
+	_wire_signals()
 
 	var worlds_result := DataLoader.load_dictionary(PATH_WORLDS)
 	if not bool(worlds_result.get("ok", false)):
@@ -105,6 +126,29 @@ func _bootstrap() -> void:
 	bootstrap_completed.emit()
 
 
+## 注册本项目需要的输入动作。
+##
+## 采用运行时注册而非写进 project.godot，是为了避开手写输入映射序列化的格式风险；
+## 同时用 InputMap.has_action() 做幂等保护，
+## 因此既不会与既有映射重复定义，也不会在重复 bootstrap 时报错。
+##
+## 交互键使用 E：项目目前不存在任何输入映射（已核实），不存在冲突。
+func _ensure_input_actions() -> void:
+	if not InputMap.has_action(ACTION_INTERACT):
+		InputMap.add_action(ACTION_INTERACT, 0.2)
+
+	# 仅在尚未绑定任何按键时才补充，避免重复添加
+	var has_key := false
+	for e in InputMap.action_get_events(ACTION_INTERACT):
+		if e is InputEventKey:
+			has_key = true
+			break
+	if not has_key:
+		var key_event := InputEventKey.new()
+		key_event.physical_keycode = KEY_E
+		InputMap.action_add_event(ACTION_INTERACT, key_event)
+
+
 func _fail(reason: String) -> void:
 	is_ready = false
 	bootstrap_error = reason
@@ -112,9 +156,53 @@ func _fail(reason: String) -> void:
 	bootstrap_failed.emit(reason)
 
 
+## 把 L0 服务注入需要它们的模块。
+## 依赖关系集中在这里显式可见，而不是让各模块在内部互相寻找。
+func _inject_services() -> void:
+	if event_manager == null:
+		return
+	event_manager.rng_service = rng_service
+	event_manager.tick_provider = time_service
+	event_manager.visit_provider = scene_manager
+
+
+## 把各模块的状态变化转接到总线。表现层只订阅总线，不直接连每个 Manager。
+func _wire_signals() -> void:
+	if world_manager != null and not world_manager.world_changed.is_connected(_on_world_changed):
+		world_manager.world_changed.connect(_on_world_changed)
+	if event_manager != null and not event_manager.event_triggered.is_connected(_on_event_triggered):
+		event_manager.event_triggered.connect(_on_event_triggered)
+	if scene_manager != null:
+		if not scene_manager.location_entered.is_connected(_on_location_entered):
+			scene_manager.location_entered.connect(_on_location_entered)
+		if not scene_manager.location_failed.is_connected(_on_location_failed):
+			scene_manager.location_failed.connect(_on_location_failed)
+
+
+func _on_world_changed(from_id: String, to_id: String, reason_id: String) -> void:
+	if event_bus != null:
+		event_bus.world_changed.emit(from_id, to_id, reason_id)
+
+
+func _on_event_triggered(event_id: String, from_id: String, to_id: String, log_text: String) -> void:
+	if event_bus != null:
+		event_bus.event_triggered.emit(event_id, from_id, to_id, log_text)
+
+
+func _on_location_entered(location_id: String, display_name: String) -> void:
+	if event_bus != null:
+		event_bus.location_entered.emit(location_id, display_name)
+
+
+func _on_location_failed(location_id: String, error: String) -> void:
+	if event_bus != null:
+		event_bus.location_failed.emit(location_id, error)
+
+
 # ---------------------------------------------------------------- 新局 / 读档
 
-func new_game() -> bool:
+## 开新局。seed_value 为负数时使用默认固定种子，保证默认路径可复现。
+func new_game(seed_value: int = -1) -> bool:
 	if not is_ready:
 		return false
 	world_manager = WorldManager.new()
@@ -131,7 +219,16 @@ func new_game() -> bool:
 
 	scene_manager.world_manager = world_manager
 	scene_manager.event_manager = event_manager
-	_clock_minutes = float(START_CLOCK_MINUTES)
+
+	if time_service != null:
+		time_service.reset()
+	if rng_service != null:
+		rng_service.set_seed(seed_value if seed_value >= 0 else DEFAULT_MASTER_SEED)
+
+	# world_manager / event_manager 被重建，注入与连线必须重做
+	_inject_services()
+	_wire_signals()
+
 	return scene_manager.enter_location(scene_manager.get_start_location_id(), false)
 
 
@@ -160,6 +257,8 @@ func continue_game() -> bool:
 	var event_state := {
 		"history": data.get("event_history", {}),
 		"sequence": data.get("event_sequence", []),
+		"flags": data.get("event_flags", {}),
+		"phase_id": str(data.get("phase_id", "")),
 	}
 	if not event_manager.restore(event_state, event_errors):
 		load_completed.emit(false, event_errors[0] if event_errors.size() > 0 else "事件历史恢复失败")
@@ -175,7 +274,23 @@ func continue_game() -> bool:
 		load_completed.emit(false, scene_errors[0] if scene_errors.size() > 0 else "地点恢复失败")
 		return false
 
-	_clock_minutes = float(data.get("game_clock_minutes", float(START_CLOCK_MINUTES)))
+	# 时钟：只恢复整数 tick，浮点累加器不入档，因此不存在跨设备漂移
+	if time_service != null:
+		var clock_err: Array = []
+		time_service.restore({
+			"tick": _read_clock_ticks(data),
+			"minutes_per_tick": time_service.minutes_per_tick,
+			"start_minutes": time_service.start_minutes,
+		}, clock_err)
+
+	# 随机流：主种子与计数一并恢复，保证读档后下一次取值与存档前一致
+	if rng_service != null and data.has("rng_master_seed"):
+		rng_service.set_seed(int(data.get("rng_master_seed", DEFAULT_MASTER_SEED)))
+		var rng_err: Array = []
+		rng_service.restore({
+			"master_seed": rng_service.master_seed,
+			"counters": data.get("rng_counters", {}),
+		}, rng_err)
 
 	var target := str(data.get("location_id", scene_manager.get_start_location_id()))
 	if not scene_manager.enter_location(target, false):
@@ -202,7 +317,12 @@ func save_game() -> bool:
 		"triggered_events": event_manager.get_sequence(),
 		"event_history": event_manager.get_history(),
 		"event_sequence": event_manager.get_sequence(),
-		"game_clock_minutes": _clock_minutes,
+		"game_clock_ticks": get_tick(),
+		"game_clock_minutes": get_clock_minutes(),
+		"rng_master_seed": rng_service.master_seed if rng_service != null else 0,
+		"rng_counters": rng_service.get_counters() if rng_service != null else {},
+		"event_flags": (event_manager.serialize().get("flags", {}) if event_manager != null else {}),
+		"phase_id": (event_manager.get_phase() if event_manager != null else ""),
 		"player_view": player_controller.serialize_view() if player_controller != null and player_controller.has_method("serialize_view") else {},
 	}
 
@@ -229,12 +349,14 @@ func has_save() -> bool:
 func go_to(location_id: String) -> bool:
 	if not is_ready:
 		return false
+	advance_tick(1)
 	return scene_manager.enter_location(location_id, true)
 
 
 func go_back() -> bool:
 	if not is_ready:
 		return false
+	advance_tick(1)
 	return scene_manager.go_back()
 
 
@@ -252,15 +374,43 @@ func get_current_world_id() -> String:
 
 # ---------------------------------------------------------------- 时钟
 
-func get_clock_minutes() -> float:
-	return _clock_minutes
+## 推进时钟。节点式探索没有连续移动，时间随玩家动作离散前进。
+func advance_tick(steps: int = 1) -> void:
+	if time_service == null:
+		return
+	time_service.advance(steps)
+	if event_bus != null:
+		event_bus.tick_advanced.emit(time_service.get_tick())
+
+
+func get_tick() -> int:
+	return time_service.get_tick() if time_service != null else 0
+
+
+func get_clock_minutes() -> int:
+	return time_service.get_clock_minutes() if time_service != null else START_CLOCK_MINUTES
 
 
 func get_clock_text() -> String:
-	var total := int(_clock_minutes) % 1440
-	var hours: int = total / 60
-	var minutes: int = total % 60
-	return "%02d:%02d" % [hours, minutes]
+	return time_service.get_clock_text() if time_service != null else "00:00"
+
+
+func set_master_seed(value: int) -> void:
+	if rng_service != null:
+		rng_service.set_seed(value)
+
+
+func get_master_seed() -> int:
+	return rng_service.master_seed if rng_service != null else DEFAULT_MASTER_SEED
+
+
+## 读取存档中的时钟。优先读整数 tick，旧格式回退到浮点分钟后再取整。
+func _read_clock_ticks(data: Dictionary) -> int:
+	if data.has("game_clock_ticks"):
+		return maxi(int(data.get("game_clock_ticks", 0)), 0)
+	if data.has("game_clock_minutes"):
+		return maxi(int(data.get("game_clock_minutes", START_CLOCK_MINUTES)) - START_CLOCK_MINUTES, 0)
+	return 0
 
 
 ## 世界已经发生过变化的次数，用于 UI 或测试判定。

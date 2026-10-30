@@ -216,40 +216,35 @@ func step_02_look_around() -> bool:
 	_check(spots.size() >= 2, "2. 客厅存在可交互内容", "count=%d" % spots.size())
 	_check(_camera.is_inside_tree(), "2. 第一人称相机在场景中")
 
+	# 视角控制已由「按住左键拖动」升级为「鼠标捕获后直接移动」。
+	# 断言强度不变：仍然验证 yaw/pitch 确实变化、且 pitch 不越过 ±75°。
+	_rig.capture_mouse()
+	_check(_rig.is_mouse_captured(), "2. 鼠标捕获已启用")
+
 	var yaw_before: float = _rig.yaw
 	var pitch_before: float = _rig.pitch
 
-	var down := InputEventMouseButton.new()
-	down.button_index = MOUSE_BUTTON_LEFT
-	down.pressed = true
-	down.position = Vector2(640, 360)
-	_rig._input(down)
-
 	var motion := InputEventMouseMotion.new()
-	motion.position = Vector2(860, 300)
+	motion.relative = Vector2(220.0, -60.0)
 	_rig._input(motion)
-
-	var up := InputEventMouseButton.new()
-	up.button_index = MOUSE_BUTTON_LEFT
-	up.pressed = false
-	up.position = Vector2(860, 300)
-	_rig._input(up)
 
 	_check(absf(_rig.yaw - yaw_before) > 0.0001, "2. 水平视角可改变",
 			"delta=%.4f rad" % (_rig.yaw - yaw_before))
 	_check(absf(_rig.pitch - pitch_before) > 0.0001, "2. 垂直视角可改变",
-			"delta=%.4f deg" % (_rig.pitch - pitch_before))
+			"delta=%.4f rad (%.2f deg)" % [
+				_rig.pitch - pitch_before, _rig.get_pitch_degrees()])
 
 	# 垂直视角限位：灌入极大位移，验证不会翻转
 	for _i in 40:
 		var m1 := InputEventMouseMotion.new()
-		m1.position = Vector2(640, 0)
+		m1.relative = Vector2(0.0, -600.0)
 		_rig._input(m1)
 		var m2 := InputEventMouseMotion.new()
-		m2.position = Vector2(640, 4000)
+		m2.relative = Vector2(0.0, 600.0)
 		_rig._input(m2)
-	var pitch_ok: bool = _rig.pitch <= 75.001 and _rig.pitch >= -75.001
-	_check(pitch_ok, "2. 垂直视角受限不翻转", "pitch=%.3f deg (限制 ±75)" % _rig.pitch)
+	var pitch_deg: float = _rig.get_pitch_degrees()
+	var pitch_ok: bool = pitch_deg <= 75.001 and pitch_deg >= -75.001
+	_check(pitch_ok, "2. 垂直视角受限不翻转", "pitch=%.3f deg (限制 ±75)" % pitch_deg)
 
 	_rig.reset_view()
 	return true

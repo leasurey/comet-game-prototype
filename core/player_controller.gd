@@ -1,35 +1,67 @@
-## PlayerController — 第一人称环视
+## PlayerController — 第一人称视角控制（鼠标捕获式）
 ##
 ## 职责边界：
-##   只把鼠标拖动翻译成 yaw/pitch，不做任何交互判定，不读世界状态。
+##   只把鼠标移动翻译成 yaw/pitch，不做任何交互判定，不读世界状态。
 ##
-## 实现取向：
-##   yaw 施加在自身（Y 轴），pitch 施加在子 Camera3D 的 X 轴。
-##   分开两层可以避免欧拉角耦合导致的视角翻转；
-##   pitch 额外做硬性限位，双保险。
+## 输入机制：
+##   使用 Godot 原生的鼠标捕获（Input.MOUSE_MODE_CAPTURED）。
+##   捕获后系统光标隐藏、指针被锁定，引擎在 InputEventMouseMotion.relative
+##   中直接给出「本次移动了多少」，无需自行做屏幕坐标补偿，
+##   鼠标移到窗口边缘也不会中断。
+##
+## 节点分工（沿用既有结构，未重建）：
+##   本节点（CameraRig）负责 yaw —— rotation.y
+##   子 Camera3D         负责 pitch —— rotation.x
+##   Camera3D 同时负责画面渲染
+##   两层分离可以避免欧拉角耦合造成的翻转/倾斜。
+##
+## 单位约定：yaw 与 pitch 一律使用**弧度**。
+##   历史上曾出现「按弧度累加、按度数使用」的单位混乱，
+##   导致垂直方向灵敏度比水平低约 57 倍。本文件内所有角度计算统一为弧度，
+##   只有在需要展示时才转换。
 
 class_name PlayerController
 extends Node3D
 
 const MAX_PITCH_DEGREES := 75.0
+## 75° 换算后的弧度值。这里写成字面量而不用 deg_to_rad()，
+## 因为 GDScript 的 const 初始化不允许调用全局函数。
+const MAX_PITCH_RADIANS := 1.30900
 
-@export var mouse_sensitivity: float = 0.0035
-@export var eye_height: float = 1.62
+## 灵敏度默认值。这是全项目唯一的灵敏度来源，其他脚本不得重复定义。
+## 单位：弧度 / 像素。0.0035 表示鼠标移动 1000 像素约转 3.5 弧度（约 200°）。
+const DEFAULT_SENSITIVITY_X := 0.0035
+const DEFAULT_SENSITIVITY_Y := 0.0035
+
+@export_group("鼠标灵敏度")
+@export_range(0.0002, 0.02, 0.0001) var sensitivity_x: float = DEFAULT_SENSITIVITY_X
+@export_range(0.0002, 0.02, 0.0001) var sensitivity_y: float = DEFAULT_SENSITIVITY_Y
 @export var invert_y: bool = false
+
+@export_group("视角")
+@export var eye_height: float = 1.62
 
 var input_enabled: bool = true
 var yaw: float = 0.0
 var pitch: float = 0.0
 
+## 逻辑上的捕获状态。
+## 单独维护而不只读 Input.mouse_mode，是为了在 headless（无真实窗口）下
+## 也能被测试可靠地断言；运行时两者保持同步。
+var _mouse_captured: bool = false
+
 var _camera: Camera3D = null
-var _is_dragging: bool = false
-var _last_mouse_pos := Vector2.ZERO
 
 
 func _ready() -> void:
 	_discover_camera()
 	position.y = eye_height
 	_apply_rotation()
+
+
+func _exit_tree() -> void:
+	# 退出时必须把鼠标交还系统，避免残留捕获状态
+	release_mouse()
 
 
 func _discover_camera() -> void:
@@ -46,43 +78,55 @@ func _discover_camera() -> void:
 			return
 
 
+# ------------------------------------------------------------------ 鼠标捕获
+
+func capture_mouse() -> void:
+	_mouse_captured = true
+	if Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+func release_mouse() -> void:
+	_mouse_captured = false
+	if Input.mouse_mode != Input.MOUSE_MODE_VISIBLE:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+
+func is_mouse_captured() -> bool:
+	return _mouse_captured
+
+
+# ------------------------------------------------------------------ 输入处理
+
 func _input(event: InputEvent) -> void:
 	if not input_enabled:
 		return
-
-	if event is InputEventMouseButton:
-		var mb := event as InputEventMouseButton
-		if mb.button_index == MOUSE_BUTTON_LEFT:
-			if mb.pressed:
-				_is_dragging = true
-				_last_mouse_pos = mb.position
-			else:
-				_is_dragging = false
-
-	elif event is InputEventMouseMotion:
-		if not _is_dragging:
-			return
+	if not _mouse_captured:
+		return
+	if event is InputEventMouseMotion:
 		var mm := event as InputEventMouseMotion
-		var delta := mm.position - _last_mouse_pos
-		_last_mouse_pos = mm.position
-		yaw -= delta.x * mouse_sensitivity
-		var pitch_delta := delta.y * mouse_sensitivity
-		if invert_y:
-			pitch -= pitch_delta
-		else:
-			pitch += pitch_delta
-		_apply_rotation()
+		_apply_look(mm.relative)
+
+
+## 把一次鼠标位移转成视角增量。单独抽出便于测试直接调用。
+func _apply_look(relative: Vector2) -> void:
+	yaw -= relative.x * sensitivity_x
+	var pitch_delta := relative.y * sensitivity_y
+	if invert_y:
+		pitch -= pitch_delta
+	else:
+		pitch += pitch_delta
+	_apply_rotation()
 
 
 func _apply_rotation() -> void:
-	pitch = clampf(pitch, -MAX_PITCH_DEGREES, MAX_PITCH_DEGREES)
-	if pitch > MAX_PITCH_DEGREES:
-		pitch = MAX_PITCH_DEGREES
-	elif pitch < -MAX_PITCH_DEGREES:
-		pitch = -MAX_PITCH_DEGREES
-	rotation_degrees.y = rad_to_deg(yaw)
+	pitch = clampf(pitch, -MAX_PITCH_RADIANS, MAX_PITCH_RADIANS)
+	# 把 yaw 收敛回 [-PI, PI]，避免长时间游玩后浮点精度下降。
+	# -PI 与 +PI 是同一朝向，因此视觉上连续，不会出现跳变或突然回正。
+	yaw = wrapf(yaw, -PI, PI)
+	rotation.y = yaw
 	if _camera != null and is_instance_valid(_camera):
-		_camera.rotation_degrees.x = -pitch
+		_camera.rotation.x = -pitch
 
 
 func get_camera() -> Camera3D:
@@ -91,7 +135,8 @@ func get_camera() -> Camera3D:
 	return _camera
 
 
-## 供存档与动作序列化使用：外部可直接还原视角。
+# ------------------------------------------------------------------ 存档
+
 func serialize_view() -> Dictionary:
 	return {"yaw": yaw, "pitch": pitch}
 
@@ -106,3 +151,12 @@ func reset_view() -> void:
 	yaw = 0.0
 	pitch = 0.0
 	_apply_rotation()
+
+
+## 以度数返回当前俯仰，仅用于日志与测试断言。
+func get_pitch_degrees() -> float:
+	return rad_to_deg(pitch)
+
+
+func get_yaw_degrees() -> float:
+	return rad_to_deg(yaw)

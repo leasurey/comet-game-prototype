@@ -89,10 +89,23 @@ enter_location(id)
 
 ### 5. PlayerController — 第一人称观察控制
 
-**负责**：把鼠标拖动翻译成 yaw / pitch。
+**负责**：把鼠标移动翻译成 yaw / pitch。
+
+**输入机制**：使用原生鼠标捕获 `Input.MOUSE_MODE_CAPTURED`。
+捕获后引擎在 `InputEventMouseMotion.relative` 中直接给出本次位移量，
+因此不需要任何屏幕坐标补偿，鼠标移到窗口边缘也不会中断。
+`capture_mouse()` / `release_mouse()` 由 `main.gd` 在启动、ESC、退出时调用；
+`_exit_tree()` 里还会再释放一次，作为兜底。
 
 **实现要点**：yaw 施加在自身 Y 轴，pitch 施加在子 `Camera3D` 的 X 轴。
 分成两层可以避免欧拉角耦合导致的视角翻转；pitch 额外做 ±75° 硬限位，双保险。
+
+**单位约定**：yaw 与 pitch 一律使用**弧度**。
+早期版本曾出现「按弧度累加、按度数使用」的单位混乱，
+使垂直灵敏度比水平低约 57 倍；v0.1.4 已全链路统一，并有测试守护两者比值为 1.00。
+
+**yaw 收敛**：`yaw` 每次应用后 `wrapf` 到 `[-π, π]`，避免长时间游玩后浮点精度下降。
+`-π` 与 `+π` 是同一朝向，视觉连续，不会出现跳变或突然回正。
 
 ### 6. UIManager — 界面与提示
 
