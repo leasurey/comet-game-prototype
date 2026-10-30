@@ -2,6 +2,30 @@
   "start_location": "living_room",
   "locations": [
     {
+      "id": "party_house",
+      "display_name": "聚会房屋",
+      "scene": "res://scenes/locations/party_house.tscn",
+      "ambient": "刚有人来过的房子，走廊里还留着外面的冷气。",
+      "spawn": {
+        "position": [
+          0.0,
+          0.05,
+          3.4
+        ],
+        "yaw": 0.0
+      },
+      "exits": [
+        {
+          "target": "house_exterior",
+          "label": "走出前门"
+        }
+      ],
+      "variants": [
+        "world_alpha",
+        "world_beta"
+      ]
+    },
+    {
       "id": "living_room",
       "display_name": "客厅",
       "scene": "res://scenes/locations/living_room.tscn",

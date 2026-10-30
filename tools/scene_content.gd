@@ -473,6 +473,21 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_col(mailbox, Vector3(0.8, 1.6, 0.9))
 	hotspots.add_child(mailbox)
 
+	# 通往「另一栋房子」的入口。
+	# 叙事上这是一栋与本宅几乎一样的房子——影片的核心设定正是「同一栋房子的不同版本」。
+	# 灰盒阶段它的内部由 tools/house/ 单独构建，不在本文件里。
+	# 位置必须落在房子主体之外（HouseBody 占 x -3.3~3.3, z 1.6~6.8），
+	# 否则热点会被墙体包住，射线永远打在墙上而无法聚焦。
+	var other_house := Area3D.new()
+	other_house.name = "ExitToPartyHouse"
+	other_house.set_script(load(S_HOTSPOT))
+	other_house.position = Vector3(3.9, 1.10, 1.20)
+	other_house.display_name = "另一栋房子的前门"
+	other_house.action_kind = "exit"
+	other_house.target_location = "party_house"
+	_col(other_house, Vector3(1.2, 2.4, 1.2))
+	hotspots.add_child(other_house)
+
 
 # ============================================================== 3. 黑暗区域
 

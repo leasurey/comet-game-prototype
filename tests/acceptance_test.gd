@@ -194,8 +194,13 @@ func step_01_bootstrap() -> bool:
 	_check(_world_mgr.is_ready(), "1. WorldManager 初始化",
 			"current=%s" % _world_mgr.get_current_world_id())
 	_check(_event_mgr.is_ready(), "1. EventManager 初始化")
-	_check(_scene_mgr.get_location_ids().size() == 3, "1. 地点表载入三个地点",
-			str(_scene_mgr.get_location_ids()))
+	# 地点数量随「聚会房屋」加入由 3 变为 4。
+	# 这里同时校验数量与关键成员，比原来只判断数量更严格。
+	var loc_ids: Array = _scene_mgr.get_location_ids()
+	_check(loc_ids.size() == 4, "1. 地点表载入四个地点", str(loc_ids))
+	_check(loc_ids.has("party_house") and loc_ids.has("living_room")
+			and loc_ids.has("house_exterior") and loc_ids.has("dark_road"),
+			"1. 地点表包含全部预期地点", str(loc_ids))
 
 	_save_mgr.delete_save()
 	var entered: bool = _scene_mgr.enter_location(_scene_mgr.get_start_location_id(), false)

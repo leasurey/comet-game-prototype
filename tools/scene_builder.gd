@@ -29,37 +29,56 @@ func _initialize() -> void:
 	var failures: Array = []
 	var content = content_script.new()
 
-	var targets: Array = [
-		["living_room", "assemble_living_room"],
-		["house_exterior", "assemble_house_exterior"],
-		["dark_road", "assemble_dark_road"],
+	# 新场景（聚会房屋）走 tools/house/ 的多文件结构，不复用 scene_content.gd，
+	# 以保证三个旧场景完全不被动到，零回归风险。
+	var geom_script: Script = load("res://tools/lib/geom.gd")
+	var party_script: Script = load("res://tools/house/house_party.gd")
+
+	var build_party := func(root: Node) -> void:
+		var geom = geom_script.new()
+		var party = party_script.new(geom)
+		party.build(root)
+
+	var jobs: Array = [
+		["living_room", Callable(content, "assemble_living_room")],
+		["house_exterior", Callable(content, "assemble_house_exterior")],
+		["dark_road", Callable(content, "assemble_dark_road")],
+		["party_house", build_party],
 	]
 
-	for pair in targets:
-		var scene_name: String = pair[0]
-		var method: String = pair[1]
-		if not content.has_method(method):
-			push_error("缺少构建方法: %s" % method)
+	for job in jobs:
+		var scene_name: String = job[0]
+		var builder: Callable = job[1]
+		if not builder.is_valid():
+			push_error("构建器无效: %s" % scene_name)
 			failures.append(scene_name)
 			continue
-		if not _write_scene(content, scene_name, method):
+		if not _write_scene(builder, scene_name):
 			failures.append(scene_name)
 
 	if failures.is_empty():
-		print("COMET scene builder: 3/3 scenes written to %s" % OUT_DIR)
+		print("COMET scene builder: %d/%d scenes written to %s" % [jobs.size(), jobs.size(), OUT_DIR])
 		quit(0)
 		return
 	print("COMET scene builder FAILED for: %s" % str(failures))
 	quit(1)
 
 
-func _write_scene(content, scene_name: String, method: String) -> bool:
+func _write_scene(builder: Callable, scene_name: String) -> bool:
 	var root := Node3D.new()
 	root.name = scene_name
 	var loc_script: Script = load(S_LOCATION)
 	root.set_script(loc_script)
 
-	content.call(method, root)
+	builder.call(root)
+
+	# 防御：构建器内部若出错（例如脚本解析失败、依赖类未索引），root 会是空的。
+	# 这种情况下 pack 依然会成功，会产出「空场景」而日志却显示已生成——
+	# 实测踩到过一次（party_house 生成了 0 个碰撞体、0 个热点却报成功）。
+	if root.get_child_count() == 0:
+		push_error("构建器未产生任何节点，场景为空: %s（检查依赖脚本是否解析失败）" % scene_name)
+		root.free()
+		return false
 
 	# 只给后代设置 owner；root 自身不能把 owner 设成自己，否则引擎会报错。
 	_claim_children(root, root)

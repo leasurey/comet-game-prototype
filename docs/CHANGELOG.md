@@ -1,5 +1,84 @@
 # COMET — 版本记录
 
+## v0.3.0 — 聚会房屋灰盒（场景考古第一阶段）
+
+### 新增
+
+**聚会房屋灰盒场景 `party_house`**
+
+按用户确认的 13.0 × 9.0 m 尺寸构建，含客厅、餐厅、厨房、走廊、卫生间、露台、
+室外地面。共 89 个静态碰撞体、8 个交互热点、两套灯光（有电 / 停电）。
+
+**全部尺寸与房间划分为游戏原创（证据等级 D）**。电影从未提供户型图，
+本布局只依据「这些空间在片中确实存在」这一 A 级事实 + 8 人聚会的功能需求推导。
+证据表与判断依据见 `docs/SCENE_ARCHAEOLOGY_PARTY_HOUSE.md`。
+
+**构建器拆分为多文件**
+
+```
+tools/lib/geom.gd     几何原语（含 wall_with_opening、room_shell）
+tools/lib/light.gd    灯光与环境原语
+tools/lib/props.gd    家具体块原语（沙发/餐桌/椅/岛台/壁炉/书桌等）
+tools/house/house_party.gd      墙体与房间布局
+tools/house/house_furniture.gd  家具摆放
+tools/house/house_lighting.gd   两套灯光
+```
+
+`tools/scene_content.gd`（三个旧场景）**完全未动**，零回归风险。
+
+**`wall_with_opening()` —— 带洞口的墙**
+
+做房间的关键原语。整块盒子的墙无法开门窗，直接留缺口又会漏光、玩家能穿出。
+实现方式是把墙沿长度切成「左段 + 门楣 + 右段」（窗洞再加窗台段），
+每段独立带碰撞。附 24 条专项测试，用物理射线逐点验证洞口通透、门楣实心、
+边界无缝隙。
+
+### 修复
+
+**1. 构建器「假成功」**
+构建器脚本解析失败时，`PackedScene.pack()` 仍会成功，产出空场景而日志显示"已生成"。
+实测踩到一次（party_house 生成了 0 个碰撞体、0 个热点却报成功）。
+现增加空节点检测，构建器未产生任何节点即判为失败。
+
+**2. 新入口热点嵌在建筑内部**
+`ExitToPartyHouse` 初始位置 (3.2, *, 2.6) 落在房子主体范围（z 1.6~6.8）内，
+被墙体完全包住，射线永远打在墙上而无法聚焦。已移到 (3.9, *, 1.2)。
+
+**3. 测试阶段变量跨步骤污染**
+`party_house_test` 曾把 `_t_state` 在步骤间链式传递，导致 setup 结束后 P01 的
+初始化分支被整段跳过，`enter_location` 从未执行——**测的其实是 living_room**，
+表现为「热点名字全是旧场景的」。现改为每步独立从 0 开始，由外层统一归零。
+
+### 连通性
+
+`house_exterior` 新增出口热点 `ExitToPartyHouse`，叙事上是「另一栋几乎一样的房子」，
+呼应影片「同一栋房子的不同版本」的核心设定。`party_house` 前门可返回 `house_exterior`。
+
+### 验证
+
+| 测试 | 结果 |
+| --- | --- |
+| `wall_geometry_test`（新增） | **PASS=24 FAIL=0** |
+| `party_house_test`（新增） | **PASS=23 FAIL=0** |
+| `player_movement_test` | **PASS=34 FAIL=0** |
+| `fps_input_test` | **PASS=29 FAIL=0** |
+| `acceptance_test` | **PASS=55 FAIL=0** |
+| `v2_p0_test` | **PASS=13 FAIL=0** |
+
+合计 **178 条断言，0 失败**。主场景 headless 200 帧零报错。
+
+**GUI 实测**：进入 `party_house` 成功，`on_floor=true`，位置 (0, 0, 3.4)。
+**帧率 33 fps**（旧三个场景为 60）——见下方已知问题。
+
+### 已知问题（本次新增）
+
+- **聚会房屋帧率偏低（33 fps）**：室内 12 盏灯 + 89 个碰撞体，Compatibility
+  (OpenGL) 前向渲染对多光源较吃力。仅启动初期采样，未做长时间稳定测量。
+  后续可减少同时点亮的灯数量，或改用更少、范围更大的光源。
+- 门内外地面等高（无台阶），灰盒简化，非影片依据。
+
+---
+
 ## v0.2.0 — WASD 地面移动
 
 ### 新增
