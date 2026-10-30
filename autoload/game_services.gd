@@ -280,6 +280,10 @@ func continue_game() -> bool:
 
 	var result := save_manager.load_state(scene_manager.get_location_ids(), world_manager.get_world_ids())
 	if not bool(result.get("ok", false)):
+		# 隔离损坏存档：否则每次启动都会失败一次再回退新局，玩家永远看不到真正的"新开始"
+		var moved := save_manager.quarantine_corrupt()
+		if not moved.is_empty():
+			push_warning("COMET: 损坏存档已隔离到 %s" % moved)
 		load_completed.emit(false, str(result.get("error", "读档失败")))
 		return false
 
@@ -338,11 +342,47 @@ func continue_game() -> bool:
 		load_completed.emit(false, "恢复地点失败: %s" % target)
 		return false
 
+	# 位置：存档里有就恢复到存档位置，没有才沿用地点 spawn（v1 存档就走这条路）。
+	# 恢复前做一次胶囊重叠检测：若存档位置落在墙体/家具内部（改了布局后的旧档），
+	# 宁可退回 spawn 也不要让玩家卡在几何里。
+	var restored_pos := false
+	var raw_pos: Variant = data.get("player_position", [])
+	if typeof(raw_pos) == TYPE_ARRAY and (raw_pos as Array).size() == 3:
+		var pos := Vector3(float((raw_pos as Array)[0]),
+			float((raw_pos as Array)[1]), float((raw_pos as Array)[2]))
+		if _is_position_free(pos):
+			player_controller.reset_to_spawn(pos)
+			restored_pos = true
+		else:
+			push_warning("COMET: 存档位置 %s 被占用，回退到地点出生点" % str(pos))
+
 	if player_controller != null and player_controller.has_method("restore_view"):
 		player_controller.restore_view(data.get("player_view", {}))
 
-	load_completed.emit(true, "已恢复到 %s" % scene_manager.get_location_name(target))
+	load_completed.emit(true, "已恢复到 %s%s" % [
+		scene_manager.get_location_name(target), "" if restored_pos else "（位置已回退）"])
 	return true
+
+
+## 判断某个脚底位置是否可站立：胶囊与 layer 1（环境）不重叠即可。
+func _is_position_free(pos: Vector3) -> bool:
+	if player_controller == null or not is_instance_valid(player_controller):
+		return true
+	var world: World3D = player_controller.get_world_3d()
+	if world == null:
+		return true
+	var space: PhysicsDirectSpaceState3D = world.direct_space_state
+	if space == null:
+		return true
+	var shape := CapsuleShape3D.new()
+	shape.radius = 0.30
+	shape.height = 1.66
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = shape
+	q.transform = Transform3D(Basis.IDENTITY, pos + Vector3(0, 0.86, 0))
+	q.collision_mask = 1
+	q.exclude = [player_controller.get_rid()]
+	return space.intersect_shape(q, 1).is_empty()
 
 
 func save_game() -> bool:
@@ -365,6 +405,12 @@ func save_game() -> bool:
 		"event_flags": (event_manager.serialize().get("flags", {}) if event_manager != null else {}),
 		"phase_id": (event_manager.get_phase() if event_manager != null else ""),
 		"player_view": player_controller.serialize_view() if player_controller != null and player_controller.has_method("serialize_view") else {},
+		# 位置必须单独存：serialize_view 只含朝向。
+		# 缺失时读档会把玩家送回地点出生点，玩家会以为"进度丢了"。
+		"player_position": _serialize_player_position(),
+		# 返回栈此前只写不读：payload 里根本没有这个键，而 continue_game 在读它，
+		# 导致读档后"返回"按钮永远置灰。
+		"visit_stack": (scene_manager.serialize().get("visit_stack", []) if scene_manager != null else []),
 	}
 
 	var result := save_manager.save(payload)
@@ -377,6 +423,13 @@ func delete_save() -> bool:
 	if not is_ready:
 		return false
 	return bool(save_manager.delete_save().get("ok", false))
+
+
+func _serialize_player_position() -> Array:
+	if player_controller == null or not is_instance_valid(player_controller):
+		return []
+	var p: Vector3 = player_controller.global_position
+	return [p.x, p.y, p.z]
 
 
 # ---------------------------------------------------------------- 导航 API
