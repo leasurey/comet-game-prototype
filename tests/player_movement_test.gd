@@ -552,6 +552,9 @@ func step_t15_raycast_while_moving() -> bool:
 			_record(false, "T15 移动中中心射线交互正常", "未找到 Mailbox")
 			return true
 		_rig.capture_mouse()
+		# 交互距离上限 2.5 m：站到目标前 1.2 m 再测「移动中射线仍能命中」
+		_rig.reset_to_spawn(Vector3(target.global_position.x, 0.05,
+				target.global_position.z - 1.2))
 		var dir: Vector3 = (target.global_position - _camera.global_position).normalized()
 		_rig.yaw = atan2(-dir.x, -dir.z)
 		_rig.pitch = -asin(clampf(dir.y, -1.0, 1.0))

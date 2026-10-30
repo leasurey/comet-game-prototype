@@ -144,6 +144,33 @@ func _key(kc: int) -> InputEventKey:
 ## 实测出现「已对准但射线没命中」的不一致。
 ## 这里改为解算 yaw/pitch 再交给 _apply_rotation()，
 ## 与真实玩家用鼠标把视角转到目标上的路径完全一致。
+## 把玩家放到热点附近的可站位置。
+##
+## 交互距离上限 2.5 m 之后，「站在远处看」不再成立；但也不能简单「前方 1.2 m」
+## ——邮箱、汽车这类热点的碰撞盒比 1.2 m 还大，硬放会让玩家嵌进盒内，
+## 射线起点跑进盒子反而聚焦不到。这里按四个水平方向试放，取第一个不重叠的。
+func _place_near(spot: Hotspot, dist: float) -> void:
+	if spot == null or _rig == null or _camera == null:
+		return
+	var base: Vector3 = spot.global_position
+	var space: PhysicsDirectSpaceState3D = _camera.get_world_3d().direct_space_state
+	var shape := CapsuleShape3D.new()
+	shape.radius = 0.30
+	shape.height = 1.66
+	for d in [Vector3(0, 0, -1), Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 0)]:
+		var p: Vector3 = base + d * dist
+		p.y = maxf(base.y - 1.0, 0.05)
+		var q := PhysicsShapeQueryParameters3D.new()
+		q.shape = shape
+		q.transform = Transform3D(Basis.IDENTITY, p + Vector3(0, 0.90, 0))
+		q.collision_mask = 1
+		q.exclude = [_rig.get_rid()]
+		if space.intersect_shape(q, 2).is_empty():
+			_rig.reset_to_spawn(p)
+			return
+	_rig.reset_to_spawn(Vector3(base.x, 0.05, base.z - dist))
+
+
 func _aim_at(target_pos: Vector3) -> void:
 	if _rig == null or _camera == null:
 		return
@@ -197,6 +224,11 @@ func step_setup_main() -> bool:
 	_check(_rig != null, "setup. CameraRig 已装配", str(_rig != null))
 	_check(_camera != null, "setup. Camera3D 已装配")
 	_check(_interaction != null, "setup. InteractionManager 已装配")
+
+	# 本测试覆盖「世界切换后热点仍可识别」（T12 需要 beta 世界的 CrateBeta）。
+	# 第二轮后现实变化由区域触发，测试里直接提交一次切换，避免依赖穿越路径。
+	if _world_mgr != null and _world_mgr.get_current_world_id() != "world_beta":
+		_world_mgr.apply_transition("world_beta", "fps_test_setup")
 	return true
 
 
@@ -359,6 +391,8 @@ func step_t08_focus() -> bool:
 			_record(false, "T08 屏幕中心识别热点", "未找到测试目标热点 Mailbox")
 			return true
 		_rig.capture_mouse()
+		# 交互距离上限 2.5 m：必须站到热点附近才能聚焦
+		_place_near(_t08_target, 1.8)
 		_aim_at(_t08_target.global_position)
 		_t08_done = true
 		return false
@@ -457,6 +491,8 @@ func step_t10_interact_key() -> bool:
 		return true
 
 	_rig.capture_mouse()
+	# 交互距离上限 2.5 m：必须站到热点附近，且不能嵌进热点碰撞盒
+	_place_near(target, 1.8)
 	_aim_at(target.global_position)
 	if _ticks < 4:
 		return false

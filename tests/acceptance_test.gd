@@ -117,6 +117,30 @@ func _check(condition: bool, label: String, detail: String = "") -> void:
 
 # ------------------------------------------------------------------ 场景装配
 
+## 把玩家放到热点附近的可站位置（四方向探测，避开热点自身的碰撞盒）。
+## 交互距离上限 2.5 m 后，远距离聚焦不再成立；而「前方 1.2 m」也不可靠
+## ——车与邮箱的碰撞盒比 1.2 m 大，硬放会让射线起点落进盒内。
+func _place_near(spot: Hotspot, dist: float) -> void:
+	if spot == null or _rig == null or _camera == null:
+		return
+	var base: Vector3 = spot.global_position
+	var space: PhysicsDirectSpaceState3D = _camera.get_world_3d().direct_space_state
+	var shape := CapsuleShape3D.new()
+	shape.radius = 0.30
+	shape.height = 1.66
+	for d in [Vector3(0, 0, -1), Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 0)]:
+		var p: Vector3 = base + d * dist
+		p.y = _rig.global_position.y
+		var q := PhysicsShapeQueryParameters3D.new()
+		q.shape = shape
+		q.transform = Transform3D(Basis.IDENTITY, p + Vector3(0, 0.90, 0))
+		q.collision_mask = 1
+		if space.intersect_shape(q, 2).is_empty():
+			_rig.global_position = p
+			return
+	_rig.global_position = Vector3(base.x, _rig.global_position.y, base.z - dist)
+
+
 func step_setup() -> bool:
 	_container = Node3D.new()
 	_container.name = "TestLocationContainer"
@@ -303,16 +327,31 @@ func step_04_to_dark_road() -> bool:
 	_check(ok, "4. 可进入黑暗区域")
 	_check(_scene_mgr.get_current_location_id() == "dark_road", "4. 当前地点为黑暗区域")
 
+	# 第二轮改变了现实切换时机：进入黑暗只是「开始穿越」，现实必须保持不变。
+	# 变化发生在玩家走到黑暗尽头（dark_far_end 区域）之后。
 	var after_world: String = _world_mgr.get_current_world_id()
-	_check(after_world != before_world, "5. 进入黑暗区域后世界发生变化",
+	_check(after_world == before_world, "5. 进入黑暗区域时现实不变（第二轮新时序）",
 			"%s -> %s" % [before_world, after_world])
-	_check(after_world == "world_beta", "5. 世界按预设规则切到 world_beta", "got=%s" % after_world)
+	_check(_world_mgr.get_change_count() == change_before,
+			"5. 进入黑暗不产生世界变更记录")
+
+	# 模拟玩家走到尽头：显式求值 area_enter 事件（等价于 DarkExit 区域被触发）
+	var errs: Array = []
+	_event_mgr.evaluate("area_enter", {"area_id": "dark_far_end"}, _world_mgr, errs)
+	var final_world: String = _world_mgr.get_current_world_id()
+	_check(final_world == "world_beta", "5. 到达黑暗尽头后现实切到 world_beta",
+			"got=%s errs=%s" % [final_world, str(errs)])
 	_check(_world_mgr.get_change_count() == change_before + 1, "5. 世界变化被记录一次",
 			"change_count=%d" % _world_mgr.get_change_count())
 	_check(_event_mgr.has_occurred("evt_cross_dark_road"), "5. 对应事件写入历史")
 
+	# 真实运行时由 main._on_portal_entered 在切场景前完成这一步；
+	# 本测试直接求值事件，因此手动补上场景刷新
+	var inst0: Node = _scene_mgr.get_current_instance()
+	(inst0 as GameLocation).apply_world(final_world)
+
 	var inst: Node = _scene_mgr.get_current_instance()
-	_check((inst as GameLocation).get_applied_world_id() == after_world,
+	_check((inst as GameLocation).get_applied_world_id() == final_world,
 			"5. 当前场景已按新世界重刷",
 			"applied=%s" % (inst as GameLocation).get_applied_world_id())
 	return true
@@ -503,6 +542,10 @@ func step_08_hotspot_raycast() -> bool:
 		_aim_target = _snapshot_visible.pop_back() as Hotspot
 		# 每次换目标都要重新计时，否则会读到上一个目标遗留的聚焦结果
 		_aim_ticks = 0
+		# 交互距离上限 2.5 m：必须站到热点附近才能聚焦。
+		# 站点不能简单取「前方 1.2 m」——车、邮箱这类热点碰撞盒比 1.2 m 大，
+		# 硬放会让射线起点跑进盒内。这里四方向探测，取第一个不重叠的位置。
+		_place_near(_aim_target, 1.8)
 
 	_camera.look_at(_aim_target.global_position, Vector3.UP)
 

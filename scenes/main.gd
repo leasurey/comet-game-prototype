@@ -23,6 +23,13 @@ extends Node3D
 
 var _started := false
 
+## 待消费的门级落点。热点带 use_target_spawn 时，在 go_to() 之前写入这里，
+## 由 _on_location_entered 取用后立即清空。
+## 用「挂起—消费」而不是给 SceneManager 加参数，是为了让 enter_location 的
+## 旧签名与所有既有调用（含测试、go_back、读档）保持完全不变。
+var _pending_spawn: Variant = null
+var _pending_yaw_deg: float = 0.0
+
 
 func _ready() -> void:
 	randomize()
@@ -188,11 +195,19 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 			if spot.target_location.is_empty():
 				_notify("这里走不通。")
 				return
+			# 门级落点：热点自带出现位置与朝向。没有则清空挂起值，
+			# 保证「从非门热点 / 程序化切换」仍走地点 spawn。
+			if spot.use_target_spawn:
+				_pending_spawn = spot.target_spawn
+				_pending_yaw_deg = spot.target_yaw_deg
+			else:
+				_pending_spawn = null
 			var label := GameServices.scene_manager.get_exit_label(
 				GameServices.get_current_location_id(), spot.target_location
 			)
 			_notify(label)
 			if not GameServices.go_to(spot.target_location):
+				_pending_spawn = null
 				_notify("无法前往那里。")
 		"examine":
 			var text := spot.examine_text
@@ -211,11 +226,77 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 		_ui.set_back_enabled(GameServices.scene_manager.can_go_back())
 		_ui.set_focus_text("")
 
-	# 把玩家放到该地点自己的出生点。
-	# 否则从 A 点走到边缘再切到 B 点，玩家会带着 A 的坐标落进 B 的墙体里。
+	# 把玩家放到落点。
+	# 优先消费门级落点：从哪扇门出来就落在对应位置、面朝对应方向。
+	# 没有门级落点时才回退到地点 spawn——这是读档、go_back、首次开局等
+	# 非穿门路径的唯一正确行为。
 	var pc = GameServices.player_controller
 	if pc != null and pc.has_method("reset_to_spawn"):
-		pc.reset_to_spawn(GameServices.scene_manager.get_location_spawn(location_id))
+		if _pending_spawn != null:
+			var pos: Vector3 = _pending_spawn
+			var yaw_deg: float = _pending_yaw_deg
+			_pending_spawn = null
+			_pending_yaw_deg = 0.0
+			pc.reset_to_spawn(pos)
+			pc.yaw = deg_to_rad(yaw_deg)
+			pc.pitch = 0.0
+			pc._apply_rotation()
+		else:
+			pc.reset_to_spawn(GameServices.scene_manager.get_location_spawn(location_id))
+
+	# 本场景新建的 portal 需要重新连接（旧实例的连接已随实例销毁）
+	_connect_portals(GameServices.scene_manager.get_current_instance())
+
+
+## 连接本场景内的所有 AutoPortal。
+## 每次进入地点后必须重连：场景实例是新建的，旧连接随旧实例一起销毁。
+func _connect_portals(root_node: Node) -> void:
+	if root_node == null:
+		return
+	for c in _collect_nodes(root_node):
+		if c is AutoPortal:
+			var portal := c as AutoPortal
+			if not portal.player_entered.is_connected(_on_portal_entered):
+				portal.player_entered.connect(_on_portal_entered)
+
+
+func _collect_nodes(n: Node) -> Array:
+	var out: Array = []
+	for c in n.get_children():
+		out.append(c)
+		out.append_array(_collect_nodes(c))
+	return out
+
+
+## 区域触发（黑暗区域穿越）。
+##
+## 顺序至关重要：先求值事件（可能切换现实），再切场景。
+## 反过来的话，新场景会先按旧现实加载一帧，再刷新成新现实——玩家会看到画面「闪一下」，
+## 那正是我们想避免的「像加载」的观感。
+func _on_portal_entered(portal: AutoPortal) -> void:
+	if portal == null:
+		return
+
+	if not portal.event_kind.is_empty() and GameServices.event_manager != null:
+		var errs: Array = []
+		GameServices.event_manager.evaluate(
+			portal.event_kind, portal.event_keys,
+			GameServices.world_manager, errs)
+		for e in errs:
+			push_warning("区域事件求值: %s" % str(e))
+
+	if portal.target_location.is_empty():
+		return
+
+	if portal.use_target_spawn:
+		_pending_spawn = portal.target_spawn
+		_pending_yaw_deg = portal.target_yaw_deg
+	else:
+		_pending_spawn = null
+
+	if not GameServices.go_to(portal.target_location):
+		_pending_spawn = null
+		_notify("这里走不通。")
 
 
 func _on_location_failed(_location_id: String, error: String) -> void:

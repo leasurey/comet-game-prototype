@@ -8,7 +8,7 @@
 
 ## 一、实施范围
 
-严格按 `docs/MAP_REVIEW_ROUND3.md` 的坐标表建造，未扩大房屋面积、未新增无功能走廊。
+严格按 `docs/deliverables/MAP_REVIEW_ROUND3.md` 的坐标表建造，未扩大房屋面积、未新增无功能走廊。
 
 | 项目 | 数值 |
 | --- | --- |

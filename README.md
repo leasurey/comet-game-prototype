@@ -117,29 +117,49 @@ comet-game-prototype/
 ├── scenes/
 │   ├── main.gd / main.tscn        主场景：装配各模块
 │   ├── locations/
-│   │   ├── living_room.tscn       客厅
-│   │   ├── house_exterior.tscn    房屋外部
-│   │   └── dark_road.tscn         黑暗区域
+│   │   ├── party_house.tscn       聚会住宅（13.4 × 9.4，主线场景）
+│   │   ├── house_exterior.tscn    住宅外部：门廊 / 车道 / 街道
+│   │   ├── dark_road.tscn         黑暗路段（穿越区）
+│   │   └── living_room.tscn       第一阶段遗留客厅（仍被部分测试引用）
 │   └── ui/
 │       └── hud.tscn               界面根节点
 │
-├── tools/                         ---------- 离线构建脚本 ----------
-│   ├── scene_builder.gd           场景构建驱动器
-│   └── scene_content.gd           三个地点的实际内容
+├── tools/                         ---------- 离线构建脚本（不进运行时）----------
+│   ├── scene_builder.gd           构建驱动器：四个地点
+│   ├── scene_content.gd           旧三地点的内容
+│   ├── lib/
+│   │   ├── geom.gd                几何原语（含带洞口墙体 wall_with_opening）
+│   │   ├── light.gd               灯光与环境
+│   │   └── props.gd               家具占位体块
+│   └── house/
+│       ├── house_party.gd         住宅墙体、门洞、热点
+│       ├── house_furniture.gd     家具布置
+│       └── house_lighting.gd      有电 / 停电两套灯光
 │
 ├── assets/
 │   └── icon.svg                   项目图标（手写 SVG）
 │
-├── tests/
-│   └── acceptance_test.gd        headless 验收测试（10 项验收条目）
+├── tests/                         ---------- headless 自动化测试（8 个）----------
+│   ├── acceptance_test.gd         地点/世界/存档核心验收
+│   ├── v2_p0_test.gd              时间/随机/信号总线等地基
+│   ├── fps_input_test.gd          鼠标捕获视角 T01–T13
+│   ├── player_movement_test.gd    WASD 移动与碰撞 T01–T16
+│   ├── party_house_test.gd        住宅几何、连通性与灯光
+│   ├── wall_geometry_test.gd      带洞口墙体原语
+│   ├── door_connection_test.gd    门级落点与交互距离
+│   └── dark_traverse_test.gd      黑暗区域穿越与现实切换时机
 │
 ├── docs/
 │   ├── ARCHITECTURE.md            技术架构说明
 │   ├── ACCEPTANCE.md              实际测试结果
 │   ├── KNOWN_ISSUES.md            已知问题
 │   ├── CHANGELOG.md               版本记录
-│   └── THIRD_PARTY.md             第三方素材与许可证
+│   ├── SESSION_LOG.md             完整工作日志
+│   ├── THIRD_PARTY.md             第三方素材与许可证
+│   └── deliverables/              阶段性交付物归档（8 份 + 索引）
 │
+├── start_game.bat                 双击运行游戏
+├── open_editor.bat                用 Godot 编辑器打开项目
 ├── LICENSE                        MIT
 └── README.md
 ```

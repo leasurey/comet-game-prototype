@@ -1,6 +1,6 @@
 ## HouseParty — 聚会住宅灰盒
 ##
-## 依据：docs/MAP_REVIEW_ROUND3.md（第三轮核验，commit 781c0c6）
+## 依据：docs/deliverables/MAP_REVIEW_ROUND3.md（第三轮核验，commit 781c0c6）
 ##
 ## 坐标约定（世界坐标，前门朝 -Z）：
 ##   外轮廓  x -6.70 ~ 6.70   z 0.00 ~ 9.40   13.4 × 9.4 = 125.96 m²
@@ -285,20 +285,29 @@ func _build_outdoor(parent: Node, mat: Material) -> void:
 # ------------------------------------------------------------------ 热点
 
 func _build_hotspots(parent: Node) -> void:
-	# 出门去室外（前门）
+	# 三扇门各自携带门级落点与朝向。落点全部落在 house_exterior 场景的
+	# 地面（顶面 y=0）上，且避开该场景的建筑、车、路缘：
+	#   前门  → 车道口 (0, -2.6)，朝 -Z（朝前院/车道）
+	#   侧门  → 房屋东侧 (8.6, 2.0)，朝 +X（朝东）
+	#   露台  → 后院 (-4.0, 11.0)，朝 +Z（朝后院深处）
+	# 朝向换算：PlayerController 的 forward 为 -Z，故 yaw=0 面朝 -Z，
+	# yaw=-90° 面朝 +X，yaw=180° 面朝 +Z。
 	_add_exit(parent, "FrontDoor", Vector3(0.0, FLOOR_Y + 0.95, 0.0),
-			"前门", "house_exterior")
+			"前门", "house_exterior",
+			Vector3(0.0, 0.05, -2.60), 0.0)
 
-	# 侧门去侧院（同一室外场景，通过侧院返回）
 	_add_exit(parent, "SideDoor", Vector3(OUT_X - 0.15, FLOOR_Y + 0.95, 2.0),
-			"侧门", "house_exterior")
+			"侧门", "house_exterior",
+			Vector3(8.60, 0.05, 2.00), -90.0)
 
-	# 露台推拉门
 	_add_exit(parent, "PatioDoor", Vector3(-4.0, FLOOR_Y + 0.95, OUT_Z1 - 0.15),
-			"通往后院的推拉门", "house_exterior")
+			"通往后院的推拉门", "house_exterior",
+			Vector3(-4.00, 0.05, 11.00), 180.0)
 
 	# 建筑内的可查看对象（灰盒阶段只有骨架，文字先描述结构而非陈设）
-	_add_examine(parent, "DiningTableSpot", Vector3(1.0, FLOOR_Y + 0.65, 6.5),
+	# 注意：餐桌热点必须浮在桌面之上。原位置 (1.0, y=0.85, 6.5) 正好落在桌体内部
+	# （桌体 x 0.80~1.85 / z 5.18~7.78 / 桌面顶 0.95），射线会先命中桌子而无法聚焦。
+	_add_examine(parent, "DiningTableSpot", Vector3(1.325, FLOOR_Y + 0.95, 6.48),
 			"餐桌的位置", "长桌上还留着杯子的水痕。八把椅子，有一把被推得离桌很远。")
 	_add_examine(parent, "FireplaceSpot", Vector3(-5.0, FLOOR_Y + 0.95, 9.0),
 			"壁炉", "壁炉是冷的。灰烬很平，像是很久没有人用过。")
@@ -309,7 +318,8 @@ func _build_hotspots(parent: Node) -> void:
 
 
 func _add_exit(parent: Node, node_name: String, pos: Vector3,
-		display_name: String, target: String) -> void:
+		display_name: String, target: String,
+		spawn_pos: Vector3, spawn_yaw_deg: float) -> void:
 	var spot := Area3D.new()
 	spot.name = node_name
 	spot.set_script(load("res://core/hotspot.gd"))
@@ -317,6 +327,9 @@ func _add_exit(parent: Node, node_name: String, pos: Vector3,
 	spot.display_name = display_name
 	spot.action_kind = "exit"
 	spot.target_location = target
+	spot.use_target_spawn = true
+	spot.target_spawn = spawn_pos
+	spot.target_yaw_deg = spawn_yaw_deg
 	_col(spot, Vector3(1.2, 2.2, 0.8))
 	parent.add_child(spot)
 

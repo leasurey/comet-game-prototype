@@ -57,14 +57,14 @@
       "spawn": {
         "position": [
           0.0,
-          0.3,
-          0.0
+          0.05,
+          -2.6
         ],
         "yaw": 0.0
       },
       "exits": [
         {
-          "target": "living_room",
+          "target": "party_house",
           "label": "回到屋内"
         },
         {
@@ -81,21 +81,16 @@
       "id": "dark_road",
       "display_name": "黑暗区域",
       "scene": "res://scenes/locations/dark_road.tscn",
-      "ambient": "没有路灯的一段夜路，尽头什么都看不见。",
+      "ambient": "没有路灯的一段夜路。走进去以后，身后很快就什么都看不见了。",
       "spawn": {
         "position": [
           0.0,
           0.05,
-          0.0
+          4.0
         ],
         "yaw": 0.0
       },
-      "exits": [
-        {
-          "target": "house_exterior",
-          "label": "原路返回"
-        }
-      ],
+      "exits": [],
       "variants": [
         "world_alpha",
         "world_beta"

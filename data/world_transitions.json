@@ -6,14 +6,14 @@
       "type": "fixed",
       "once": true,
       "trigger": {
-        "kind": "enter_location",
-        "location_id": "dark_road"
+        "kind": "area_enter",
+        "area_id": "dark_far_end"
       },
       "require_from_world": "world_alpha",
       "to_world": "world_beta",
       "seed": 0,
       "candidate_worlds": [],
-      "log": "你踏上了没有路灯的那条路。风停了一瞬。回家时，一切应当照旧。"
+      "log": "\u4f60\u8d70\u51fa\u4e86\u90a3\u6bb5\u6ca1\u6709\u706f\u7684\u8def\u3002\u8eab\u540e\u7684\u98ce\u58f0\u505c\u4e86\uff0c\u524d\u9762\u90a3\u680b\u623f\u5b50\u7684\u7a97\uff0c\u597d\u50cf\u4e00\u76f4\u90fd\u4eae\u7740\u3002"
     }
   ]
 }
