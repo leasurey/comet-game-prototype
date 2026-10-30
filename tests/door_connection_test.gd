@@ -50,6 +50,7 @@ func _initialize() -> void:
 		Callable(self, "step_t08_far_no_focus"),
 		Callable(self, "step_t09_far_no_activate"),
 		Callable(self, "step_t10_through_wall"),
+		Callable(self, "step_t11_round_trip"),
 		Callable(self, "step_report"),
 	]
 
@@ -510,6 +511,83 @@ func _is_embedded(p: Vector3) -> bool:
 	q.collision_mask = 1
 	q.exclude = [_rig.get_rid()]
 	return not space.intersect_shape(q, 4).is_empty()
+
+
+# ------------------------------------------------------------------ T11 三扇门往返
+
+## 此前只测了"出去"，没测"回来"——侧门与露台门在室外根本没有回程入口，
+## 玩家出去后必须绕到正面门廊才能进屋。本步骤补齐三扇门的双向验证。
+func step_t11_round_trip() -> bool:
+	if _t_state == 0:
+		_sm.enter_location("party_house", false)
+		_t_state = 1
+		return false
+	if _t_state == 1:
+		if not _wait_physics(3):
+			return false
+		var inst: Node = _sm.get_current_instance()
+		var side := _find(inst, "SideDoor")
+		_check(side != null, "T11 侧门热点存在")
+		_use(side)
+		_t_state = 2
+		return false
+	if _t_state == 2:
+		if not _wait_physics(3):
+			return false
+		_check(_sm.get_current_location_id() == "house_exterior", "T11 侧门通向室外")
+		var p: Vector3 = _rig.global_position
+		_check(_dist(p, Vector3(8.6, 0, 2.0)) < 0.35, "T11 侧门落在侧院", str(p))
+
+		var inst2: Node = _sm.get_current_instance()
+		var back := _find(inst2, "SideReturn")
+		_check(back != null, "T11 室外存在侧门回程入口")
+		_use(back)
+		_t_state = 3
+		return false
+	if _t_state == 3:
+		if not _wait_physics(3):
+			return false
+		_check(_sm.get_current_location_id() == "party_house", "T11 侧门可返回室内",
+			str(_sm.get_current_location_id()))
+		var p2: Vector3 = _rig.global_position
+		_check(_dist(p2, Vector3(5.8, 0, 2.25)) < 0.35, "T11 回到侧门内侧", str(p2))
+		_check(not _is_embedded(p2), "T11 侧门内侧落点未嵌入", str(p2))
+		var yaw_deg: float = rad_to_deg(_rig.yaw)
+		_check(absf(fposmod(yaw_deg - 90.0, 360.0)) < 5.0, "T11 侧门回屋后朝向屋内",
+			"yaw=%.1f° 期望≈90°" % yaw_deg)
+
+		var inst3: Node = _sm.get_current_instance()
+		var patio := _find(inst3, "PatioDoor")
+		_check(patio != null, "T11 露台门热点存在")
+		_use(patio)
+		_t_state = 4
+		return false
+	if _t_state == 4:
+		if not _wait_physics(3):
+			return false
+		_check(_sm.get_current_location_id() == "house_exterior", "T11 露台门通向室外")
+		var p3: Vector3 = _rig.global_position
+		_check(_dist(p3, Vector3(-4.0, 0, 11.0)) < 0.35, "T11 露台门落在后院", str(p3))
+
+		var inst4: Node = _sm.get_current_instance()
+		var patio_back := _find(inst4, "PatioReturn")
+		_check(patio_back != null, "T11 室外存在露台门回程入口")
+		_use(patio_back)
+		_t_state = 5
+		return false
+	if _t_state == 5:
+		if not _wait_physics(3):
+			return false
+		_check(_sm.get_current_location_id() == "party_house", "T11 露台门可返回室内",
+			str(_sm.get_current_location_id()))
+		var p4: Vector3 = _rig.global_position
+		_check(_dist(p4, Vector3(-4.0, 0, 8.6)) < 0.35, "T11 回到露台门内侧", str(p4))
+		_check(not _is_embedded(p4), "T11 露台门内侧落点未嵌入", str(p4))
+		var yaw2: float = rad_to_deg(_rig.yaw)
+		_check(absf(fposmod(yaw2, 360.0)) < 5.0 or absf(fposmod(yaw2, 360.0) - 360.0) < 5.0,
+			"T11 露台门回屋后朝向屋内", "yaw=%.1f° 期望≈0°" % yaw2)
+		_t_state = 0
+	return true
 
 
 func step_report() -> bool:

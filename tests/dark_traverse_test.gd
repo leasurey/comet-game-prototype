@@ -42,6 +42,7 @@ func _initialize() -> void:
 		Callable(self, "step_t05_switch_on_exit"),
 		Callable(self, "step_t06_once_only"),
 		Callable(self, "step_t07_shared_geometry"),
+		Callable(self, "step_t08_turn_back"),
 		Callable(self, "step_report"),
 	]
 
@@ -269,6 +270,63 @@ func step_t07_shared_geometry() -> bool:
 			if c is StaticBody3D:
 				geo += 1
 		_check(geo >= 5, "T07 共享碰撞体未被现实切换清空", "static=%d" % geo)
+	return true
+
+
+# ------------------------------------------------------------------ T08 掉头
+
+## 此前黑暗路段只有"走到尽头"一条出路：掉头往回走会进入没有边界的黑暗，
+## 既无反馈也无出口（地面一直铺到 z=+15）。这一条验证"
+## 掉头 = 原路离开，且**不改变现实**"。
+func step_t08_turn_back() -> bool:
+	if _t_state == 0:
+		_svc.new_game()
+		_t_state = 1
+		return false
+	if _t_state == 1:
+		if not _wait_physics(4):
+			return false
+		# new_game 会**替换** WorldManager 实例，之前缓存的 _wm 指向旧对象，
+		# 读到的是上一局留下的 world_beta。这里必须重新取引用。
+		_wm = _svc.world_manager
+		_check(_wm.get_current_world_id() == "world_alpha", "T08 前置: 现实已回到 alpha",
+				_wm.get_current_world_id())
+		_sm.enter_location("dark_road", false)
+		_t_state = 2
+		return false
+	if _t_state == 2:
+		# 等待足够帧数：AutoPortal._ready 会先关 monitoring 再等两个物理帧才开启，
+		# 太早瞬移会在检测尚未启用时把玩家送进区域，body_entered 不再补发。
+		if not _wait_physics(10):
+			return false
+		var inst: Node = _sm.get_current_instance()
+		var back := _find(inst, "DarkBack")
+		_check(back != null, "T08 黑暗入口侧存在回程区域")
+		if back == null:
+			_t_state = 0
+			return true
+		_check(absf((back as Node3D).global_position.z - 4.0) < 4.0,
+				"T08 回程区域位于出生点附近", "z=%.2f" % (back as Node3D).global_position.z)
+		# 与既有用例一致：瞬移到检测区，靠物理 body_entered 真实触发
+		_rig.reset_to_spawn(Vector3((back as Node3D).global_position.x, 0.05,
+				(back as Node3D).global_position.z))
+		# 关键：_wait_physics 的计时起点是跨调用复用的。
+		# 上一段已等满 10 帧，若不重置，下一步的"等 8 帧"会立刻返回 true，
+		# 物理根本没处理这次瞬移，区域自然不会触发。
+		_pf_needed = 0
+		_t_state = 3
+		return false
+	if _t_state == 3:
+		if not _wait_physics(8):
+			return false
+		_check(_sm.get_current_location_id() == "house_exterior",
+				"T08 掉头可离开黑暗区域", str(_sm.get_current_location_id()))
+		_check(_wm.get_current_world_id() == "world_alpha",
+				"T08 掉头不改变现实", _wm.get_current_world_id())
+		var p: Vector3 = _rig.global_position
+		_check(Vector2(p.x, p.z).distance_to(Vector2(0.0, -18.0)) < 0.5,
+				"T08 落回街道黑暗路口内侧", str(p))
+		_t_state = 0
 	return true
 
 
