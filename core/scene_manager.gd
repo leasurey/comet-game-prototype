@@ -138,6 +138,25 @@ func get_location_name(location_id: String) -> String:
 	return str(get_location_info(location_id).get("display_name", location_id))
 
 
+## 地点出生点。未配置时回退到原点 (0,0,0)。
+##
+## 之所以放在数据里而不是在代码中按地点硬编码：
+## 三个地点的地面高度并不相同（室内地板顶面 y=0，室外门廊顶面 y=0.20），
+## 若统一写一个常量，玩家在某处出生时会嵌进地面。
+func get_location_spawn(location_id: String) -> Vector3:
+	var info := get_location_info(location_id)
+	var spawn: Variant = info.get("spawn", null)
+	if typeof(spawn) != TYPE_DICTIONARY:
+		return Vector3.ZERO
+	var pos: Variant = (spawn as Dictionary).get("position", [])
+	if typeof(pos) != TYPE_ARRAY:
+		return Vector3.ZERO
+	var arr: Array = pos
+	if arr.size() < 3:
+		return Vector3.ZERO
+	return Vector3(float(arr[0]), float(arr[1]), float(arr[2]))
+
+
 func get_exit_label(from_location_id: String, target_location_id: String) -> String:
 	var info := get_location_info(from_location_id)
 	for ex in (info.get("exits", []) as Array):

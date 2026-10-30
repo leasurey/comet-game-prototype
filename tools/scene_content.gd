@@ -61,6 +61,46 @@ func _box(parent: Node, node_name: String, size: Vector3, pos: Vector3, mat: Mat
 	return mi
 
 
+## 生成「带碰撞的实体盒」：StaticBody3D 内含 MeshInstance3D 与 BoxShape3D。
+##
+## 与 _box() 的区别：_box 只产生可见几何，玩家可以穿过去；
+## _solid 产生的几何同时具备 layer 1 的静态碰撞，玩家会被阻挡、可以站在上面。
+##
+## 注意：碰撞体与网格使用同一尺寸、同一旋转，因此视觉上与碰撞边界完全一致，
+## 不会出现「看起来还有空隙却撞上」或「穿进模型一半」的情况。
+func _solid(parent: Node, node_name: String, size: Vector3, pos: Vector3, mat: Material,
+		rot_y: float = 0.0, rot_z: float = 0.0) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	body.name = node_name
+	body.collision_layer = 1
+	body.collision_mask = 0
+
+	var basis := Basis.IDENTITY
+	if absf(rot_y) > 0.0001:
+		basis = basis.rotated(Vector3.UP, rot_y)
+	if absf(rot_z) > 0.0001:
+		basis = basis.rotated(Vector3(0, 0, 1), rot_z)
+	body.transform = Transform3D(basis, pos)
+
+	var mi := MeshInstance3D.new()
+	mi.name = "Mesh"
+	var bm := BoxMesh.new()
+	bm.size = size
+	mi.mesh = bm
+	mi.material_override = mat
+	body.add_child(mi)
+
+	var cs := CollisionShape3D.new()
+	cs.name = "Shape"
+	var bs := BoxShape3D.new()
+	bs.size = size
+	cs.shape = bs
+	body.add_child(cs)
+
+	parent.add_child(body)
+	return body
+
+
 func _cyl(parent: Node, node_name: String, radius: float, height: float, pos: Vector3,
 		mat: Material) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
@@ -180,26 +220,26 @@ func assemble_living_room(root: Node3D) -> void:
 	var m_knob := _mat("lr_knob", Color(0.62, 0.55, 0.35), 0.35, 0.8)
 
 	# ---- 房间外壳（不随世界变化）
-	_box(shared, "Floor", Vector3(7.2, 0.12, 6.2), Vector3(0, -0.06, 0), m_floor)
-	_box(shared, "Ceiling", Vector3(7.2, 0.12, 6.2), Vector3(0, 2.76, 0), m_ceil)
-	_box(shared, "WallBack", Vector3(7.2, 2.7, 0.16), Vector3(0, 1.35, -3.10), m_wall)
-	_box(shared, "WallFront", Vector3(7.2, 2.7, 0.16), Vector3(0, 1.35, 3.10), m_wall)
-	_box(shared, "WallLeft", Vector3(0.16, 2.7, 6.2), Vector3(-3.60, 1.35, 0), m_wall)
-	_box(shared, "WallRight", Vector3(0.16, 2.7, 6.2), Vector3(3.60, 1.35, 0), m_wall)
+	_solid(shared, "Floor", Vector3(7.2, 0.12, 6.2), Vector3(0, -0.06, 0), m_floor)
+	_solid(shared, "Ceiling", Vector3(7.2, 0.12, 6.2), Vector3(0, 2.76, 0), m_ceil)
+	_solid(shared, "WallBack", Vector3(7.2, 2.7, 0.16), Vector3(0, 1.35, -3.10), m_wall)
+	_solid(shared, "WallFront", Vector3(7.2, 2.7, 0.16), Vector3(0, 1.35, 3.10), m_wall)
+	_solid(shared, "WallLeft", Vector3(0.16, 2.7, 6.2), Vector3(-3.60, 1.35, 0), m_wall)
+	_solid(shared, "WallRight", Vector3(0.16, 2.7, 6.2), Vector3(3.60, 1.35, 0), m_wall)
 	_box(shared, "Rug", Vector3(3.4, 0.04, 2.6), Vector3(-0.3, 0.02, -1.2), m_carpet)
 
 	# ---- 家具
-	_box(shared, "SofaBase", Vector3(2.3, 0.42, 0.95), Vector3(-1.35, 0.24, -0.55), m_sofa)
-	_box(shared, "SofaBack", Vector3(2.3, 0.62, 0.20), Vector3(-1.35, 0.62, -0.95), m_sofa)
+	_solid(shared, "SofaBase", Vector3(2.3, 0.42, 0.95), Vector3(-1.35, 0.24, -0.55), m_sofa)
+	_solid(shared, "SofaBack", Vector3(2.3, 0.62, 0.20), Vector3(-1.35, 0.62, -0.95), m_sofa)
 	_box(shared, "SofaArmL", Vector3(0.22, 0.62, 0.95), Vector3(-2.38, 0.50, -0.55), m_sofa)
 	_box(shared, "SofaArmR", Vector3(0.22, 0.62, 0.95), Vector3(-0.32, 0.50, -0.55), m_sofa)
-	_box(shared, "TableTop", Vector3(1.3, 0.07, 0.75), Vector3(-0.30, 0.40, -1.25), m_wood)
-	_box(shared, "TableBase", Vector3(1.0, 0.36, 0.50), Vector3(-0.30, 0.22, -1.25), m_wood)
-	_box(shared, "TVCabinet", Vector3(2.4, 0.55, 0.55), Vector3(0, 0.28, -2.55), m_wood)
+	_solid(shared, "TableTop", Vector3(1.3, 0.07, 0.75), Vector3(-0.30, 0.40, -1.25), m_wood)
+	_solid(shared, "TableBase", Vector3(1.0, 0.36, 0.50), Vector3(-0.30, 0.22, -1.25), m_wood)
+	_solid(shared, "TVCabinet", Vector3(2.4, 0.55, 0.55), Vector3(0, 0.28, -2.55), m_wood)
 	_box(shared, "TVBody", Vector3(1.64, 0.98, 0.10), Vector3(0, 1.10, -2.58), m_tv_body)
 	_box(shared, "LampPole", Vector3(0.06, 1.45, 0.06), Vector3(2.25, 0.72, -1.75), m_metal)
 	_cyl(shared, "LampShade", 0.24, 0.32, Vector3(2.25, 1.52, -1.75), m_lamp)
-	_box(shared, "ShelfBody", Vector3(0.44, 1.85, 1.70), Vector3(3.05, 0.92, -0.40), m_wood)
+	_solid(shared, "ShelfBody", Vector3(0.44, 1.85, 1.70), Vector3(3.05, 0.92, -0.40), m_wood)
 	_box(shared, "ShelfBoard", Vector3(0.46, 0.04, 1.72), Vector3(3.05, 1.30, -0.40), m_wood)
 
 	# ---- 灯光（两版一致，保证「客厅变化」只体现在物件与屏幕）
@@ -297,12 +337,12 @@ func assemble_house_exterior(root: Node3D) -> void:
 	var m_porch_bulb_off := _mat("he_bulb_off", Color(0.14, 0.14, 0.15), 0.75)
 
 	# ---- 地形与房屋主体（不随世界变化）
-	_box(shared, "Ground", Vector3(40.0, 0.2, 40.0), Vector3(0, -0.10, -4.0), m_ground)
+	_solid(shared, "Ground", Vector3(40.0, 0.2, 40.0), Vector3(0, -0.10, -4.0), m_ground)
 	_box(shared, "Path", Vector3(2.9, 0.10, 16.0), Vector3(0, 0.02, -7.0), m_path)
-	_box(shared, "PorchFloor", Vector3(5.6, 0.20, 2.6), Vector3(0, 0.10, 0.55), m_porch)
-	_box(shared, "StepA", Vector3(3.8, 0.20, 0.70), Vector3(0, 0.10, -0.95), m_porch)
-	_box(shared, "StepB", Vector3(4.2, 0.10, 0.70), Vector3(0, 0.05, -1.62), m_porch)
-	_box(shared, "HouseBody", Vector3(6.6, 3.2, 5.2), Vector3(0, 1.60, 4.20), m_house)
+	_solid(shared, "PorchFloor", Vector3(5.6, 0.20, 2.6), Vector3(0, 0.10, 0.55), m_porch)
+	_solid(shared, "StepA", Vector3(3.8, 0.20, 0.70), Vector3(0, 0.10, -0.95), m_porch)
+	_solid(shared, "StepB", Vector3(4.2, 0.10, 0.70), Vector3(0, 0.05, -1.62), m_porch)
+	_solid(shared, "HouseBody", Vector3(6.6, 3.2, 5.2), Vector3(0, 1.60, 4.20), m_house)
 	_box(shared, "Roof", Vector3(7.4, 0.35, 6.0), Vector3(0, 3.38, 4.20), m_roof)
 	_box(shared, "WindowFrameL", Vector3(1.44, 1.20, 0.12), Vector3(-2.15, 1.65, 1.55), m_roof)
 	_box(shared, "WindowFrameR", Vector3(1.44, 1.20, 0.12), Vector3(2.15, 1.65, 1.55), m_roof)
@@ -339,12 +379,12 @@ func assemble_house_exterior(root: Node3D) -> void:
 
 	# ---- 差异一（物品位置）：木箱从右侧正立，变成左侧倾倒
 	var crate_a := _n(va, "Crate")
-	_box(crate_a, "CrateBody", Vector3(0.78, 0.58, 0.62), Vector3(1.60, 0.29, -1.60), m_crate, deg_to_rad(-14.0))
-	_box(crate_a, "CrateLid", Vector3(0.82, 0.06, 0.66), Vector3(1.60, 0.58, -1.60), m_crate, deg_to_rad(-14.0))
+	_solid(crate_a, "CrateBody", Vector3(0.78, 0.58, 0.62), Vector3(1.60, 0.29, -1.60), m_crate, deg_to_rad(-14.0))
+	_solid(crate_a, "CrateLid", Vector3(0.82, 0.06, 0.66), Vector3(1.60, 0.58, -1.60), m_crate, deg_to_rad(-14.0))
 
 	var crate_b := _n(vb, "Crate")
-	_box(crate_b, "CrateBody", Vector3(0.78, 0.58, 0.62), Vector3(-1.55, 0.26, -2.30), m_crate, deg_to_rad(22.0), deg_to_rad(38.0))
-	_box(crate_b, "CrateLid", Vector3(0.82, 0.06, 0.66), Vector3(-1.42, 0.55, -2.10), m_crate, deg_to_rad(22.0), deg_to_rad(38.0))
+	_solid(crate_b, "CrateBody", Vector3(0.78, 0.58, 0.62), Vector3(-1.55, 0.26, -2.30), m_crate, deg_to_rad(22.0), deg_to_rad(38.0))
+	_solid(crate_b, "CrateLid", Vector3(0.82, 0.06, 0.66), Vector3(-1.42, 0.55, -2.10), m_crate, deg_to_rad(22.0), deg_to_rad(38.0))
 
 	# ---- 差异三（新增线索）：beta 的台阶旁多出一滩碎玻璃，alpha 完全没有
 	var glass := _n(vb, "GlassShards")
@@ -453,7 +493,7 @@ func assemble_dark_road(root: Node3D) -> void:
 	var m_far := _mat("dr_far", Color(0.16, 0.19, 0.24), 0.5, 0.0, Color(0.28, 0.36, 0.46), 0.5)
 
 	# ---- 地形与道路
-	_box(shared, "Ground", Vector3(60.0, 0.2, 70.0), Vector3(0, -0.10, -20.0), m_ground)
+	_solid(shared, "Ground", Vector3(60.0, 0.2, 70.0), Vector3(0, -0.10, -20.0), m_ground)
 	_box(shared, "Road", Vector3(3.4, 0.08, 46.0), Vector3(0, 0.02, -18.0), m_road)
 	_box(shared, "RoadEdgeL", Vector3(0.30, 0.14, 46.0), Vector3(-1.85, 0.04, -18.0), m_tree)
 	_box(shared, "RoadEdgeR", Vector3(0.30, 0.14, 46.0), Vector3(1.85, 0.04, -18.0), m_tree)

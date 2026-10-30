@@ -31,6 +31,10 @@ const PATH_LOCATIONS := "res://data/locations.json"
 
 # 输入动作名。集中定义在此，避免各脚本各自硬编码字符串。
 const ACTION_INTERACT := "interact"
+const ACTION_MOVE_FORWARD := "move_forward"
+const ACTION_MOVE_BACK := "move_back"
+const ACTION_MOVE_LEFT := "move_left"
+const ACTION_MOVE_RIGHT := "move_right"
 
 var world_manager: WorldManager = null
 var event_manager: EventManager = null
@@ -134,19 +138,26 @@ func _bootstrap() -> void:
 ##
 ## 交互键使用 E：项目目前不存在任何输入映射（已核实），不存在冲突。
 func _ensure_input_actions() -> void:
-	if not InputMap.has_action(ACTION_INTERACT):
-		InputMap.add_action(ACTION_INTERACT, 0.2)
+	_register_key_action(ACTION_INTERACT, KEY_E)
+	_register_key_action(ACTION_MOVE_FORWARD, KEY_W)
+	_register_key_action(ACTION_MOVE_BACK, KEY_S)
+	_register_key_action(ACTION_MOVE_LEFT, KEY_A)
+	_register_key_action(ACTION_MOVE_RIGHT, KEY_D)
 
-	# 仅在尚未绑定任何按键时才补充，避免重复添加
-	var has_key := false
-	for e in InputMap.action_get_events(ACTION_INTERACT):
+
+## 幂等注册「一个动作 + 一个物理按键」。
+## 若动作已存在但尚未绑定按键，则只补按键，不重复创建动作。
+func _register_key_action(action: String, keycode: int) -> void:
+	if not InputMap.has_action(action):
+		InputMap.add_action(action, 0.2)
+
+	for e in InputMap.action_get_events(action):
 		if e is InputEventKey:
-			has_key = true
-			break
-	if not has_key:
-		var key_event := InputEventKey.new()
-		key_event.physical_keycode = KEY_E
-		InputMap.action_add_event(ACTION_INTERACT, key_event)
+			return
+
+	var key_event := InputEventKey.new()
+	key_event.physical_keycode = keycode
+	InputMap.action_add_event(action, key_event)
 
 
 func _fail(reason: String) -> void:

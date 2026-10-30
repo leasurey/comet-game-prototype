@@ -427,9 +427,14 @@ func step_t09_occlusion_check() -> bool:
 			"目标=%s 当前聚焦=%s" % [_focus_before.name,
 			str(focused.name) if focused != null else "null"])
 
-	# 清理遮挡体，确认恢复后能重新识别
-	_blocker.queue_free()
-	_blocker = null
+	# 立即移除并释放遮挡体。
+	# 用 queue_free() 只是标记删除，实际释放发生在帧末，
+	# 物理空间里的碰撞体可能还会多存活一帧，导致下一步骤被误判为「仍然被遮挡」。
+	if _blocker != null:
+		if _blocker.get_parent() != null:
+			_blocker.get_parent().remove_child(_blocker)
+		_blocker.free()
+		_blocker = null
 	return true
 
 

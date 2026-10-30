@@ -211,6 +211,12 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 		_ui.set_back_enabled(GameServices.scene_manager.can_go_back())
 		_ui.set_focus_text("")
 
+	# 把玩家放到该地点自己的出生点。
+	# 否则从 A 点走到边缘再切到 B 点，玩家会带着 A 的坐标落进 B 的墙体里。
+	var pc = GameServices.player_controller
+	if pc != null and pc.has_method("reset_to_spawn"):
+		pc.reset_to_spawn(GameServices.scene_manager.get_location_spawn(location_id))
+
 
 func _on_location_failed(_location_id: String, error: String) -> void:
 	push_error("COMET 地点切换失败: %s" % error)

@@ -107,6 +107,26 @@ enter_location(id)
 **yaw 收敛**：`yaw` 每次应用后 `wrapf` 到 `[-π, π]`，避免长时间游玩后浮点精度下降。
 `-π` 与 `+π` 是同一朝向，视觉连续，不会出现跳变或突然回正。
 
+**移动与碰撞（v0.2.0）**：本节点是 `CharacterBody3D`，原点表示**脚底**，
+碰撞胶囊半径 0.32 / 总高 1.72，`Camera3D` 的 local y = 1.62 因此观察高度不变。
+
+```
+Main
+└── CameraRig (CharacterBody3D, PlayerController)   ← yaw + 移动 + 重力
+    ├── Body (CollisionShape3D, CapsuleShape3D)     ← 中心 y=0.86
+    └── Camera3D                                    ← pitch + 渲染，local y=1.62
+```
+
+移动方向由 `Basis(Vector3.UP, yaw)` 计算，**显式只用 yaw**。
+这样即使将来有人给节点加了倾斜，移动方向也不会被污染；
+同时因为 pitch 只存在于子相机，抬头低头在结构上就不可能影响移动平面。
+
+`Input.get_vector()` 自带归一化，斜向与单向速度相同（实测比值 1.000）。
+
+**出生点**：由 `locations.json` 的 `spawn.position` 提供，切换地点时
+`main.gd` 调用 `reset_to_spawn()`。三个地点地面高度不同
+（室内顶面 y=0，门廊顶面 y=0.20），写死单一坐标会让玩家嵌进地面。
+
 ### 6. UIManager — 界面与提示
 
 **负责**：把状态显示出来，把界面操作转成信号。

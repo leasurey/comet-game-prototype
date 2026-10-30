@@ -1,53 +1,66 @@
-## PlayerController — 第一人称视角控制（鼠标捕获式）
+## PlayerController — 第一人称视角 + 地面移动
 ##
 ## 职责边界：
-##   只把鼠标移动翻译成 yaw/pitch，不做任何交互判定，不读世界状态。
-##
-## 输入机制：
-##   使用 Godot 原生的鼠标捕获（Input.MOUSE_MODE_CAPTURED）。
-##   捕获后系统光标隐藏、指针被锁定，引擎在 InputEventMouseMotion.relative
-##   中直接给出「本次移动了多少」，无需自行做屏幕坐标补偿，
-##   鼠标移到窗口边缘也不会中断。
+##   把鼠标移动翻译成 yaw/pitch，把 WASD 翻译成地面位移。
+##   不做任何交互判定，不读世界状态，不操作 UI。
 ##
 ## 节点分工（沿用既有结构，未重建）：
-##   本节点（CameraRig）负责 yaw —— rotation.y
-##   子 Camera3D         负责 pitch —— rotation.x
-##   Camera3D 同时负责画面渲染
-##   两层分离可以避免欧拉角耦合造成的翻转/倾斜。
+##   本节点（CameraRig，CharacterBody3D）
+##     ├─ yaw    ：rotation.y
+##     ├─ 移动   ：velocity.x/z，move_and_slide()
+##     └─ 子 Camera3D：pitch（rotation.x）+ 渲染，local y 固定为观察高度
+##
+##   两层分离除了避免欧拉角耦合造成的翻转，还让「移动只跟随水平朝向」
+##   成为结构上的必然：本节点的 rotation 只含 yaw，pitch 只存在于子相机，
+##   因此移动方向不可能被抬头/低头影响。
+##
+## 输入机制：
+##   鼠标：Godot 原生捕获（Input.MOUSE_MODE_CAPTURED），
+##        增量由 InputEventMouseMotion.relative 直接给出，不做屏幕坐标补偿。
+##   键盘：WASD 经 InputMap 动作读取，Input.get_vector() 自带归一化，
+##        因此斜向移动速度不会快于单方向。
 ##
 ## 单位约定：yaw 与 pitch 一律使用**弧度**。
-##   历史上曾出现「按弧度累加、按度数使用」的单位混乱，
-##   导致垂直方向灵敏度比水平低约 57 倍。本文件内所有角度计算统一为弧度，
-##   只有在需要展示时才转换。
+##   历史上曾出现「按弧度累加、按度数使用」的混乱，
+##   使垂直灵敏度比水平低约 57 倍。本文件内所有角度统一为弧度。
 
 class_name PlayerController
-extends Node3D
+extends CharacterBody3D
 
 const MAX_PITCH_DEGREES := 75.0
-## 75° 换算后的弧度值。这里写成字面量而不用 deg_to_rad()，
-## 因为 GDScript 的 const 初始化不允许调用全局函数。
+## 75° 换算后的弧度值。写成字面量是因为 GDScript 的 const 初始化不允许调用全局函数。
 const MAX_PITCH_RADIANS := 1.30900
 
-## 灵敏度默认值。这是全项目唯一的灵敏度来源，其他脚本不得重复定义。
-## 单位：弧度 / 像素。0.0035 表示鼠标移动 1000 像素约转 3.5 弧度（约 200°）。
+## 灵敏度默认值。全项目唯一定义点，其他脚本不得重复定义。
+## 单位：弧度 / 像素。
 const DEFAULT_SENSITIVITY_X := 0.0035
 const DEFAULT_SENSITIVITY_Y := 0.0035
+
+## 移动参数默认值。
+const DEFAULT_MOVE_SPEED := 2.6
+const DEFAULT_GRAVITY := 18.0
+const MAX_FALL_SPEED := 20.0
 
 @export_group("鼠标灵敏度")
 @export_range(0.0002, 0.02, 0.0001) var sensitivity_x: float = DEFAULT_SENSITIVITY_X
 @export_range(0.0002, 0.02, 0.0001) var sensitivity_y: float = DEFAULT_SENSITIVITY_Y
 @export var invert_y: bool = false
 
+@export_group("移动")
+## 水平移动速度，单位：米 / 秒。
+@export_range(0.2, 12.0, 0.1) var move_speed: float = DEFAULT_MOVE_SPEED
+@export_range(0.0, 60.0, 0.5) var gravity: float = DEFAULT_GRAVITY
+
 @export_group("视角")
+## Camera3D 相对玩家脚底的高度。
 @export var eye_height: float = 1.62
 
 var input_enabled: bool = true
 var yaw: float = 0.0
 var pitch: float = 0.0
 
-## 逻辑上的捕获状态。
-## 单独维护而不只读 Input.mouse_mode，是为了在 headless（无真实窗口）下
-## 也能被测试可靠地断言；运行时两者保持同步。
+## 逻辑捕获状态。单独维护而不只读 Input.mouse_mode，
+## 是为了在 headless（无真实窗口）下也能被测试可靠断言；运行时两者同步。
 var _mouse_captured: bool = false
 
 var _camera: Camera3D = null
@@ -55,12 +68,14 @@ var _camera: Camera3D = null
 
 func _ready() -> void:
 	_discover_camera()
-	position.y = eye_height
+	# 观察高度由「子相机相对脚底的高度」表达，不再改动自身 position.y：
+	# 本节点原点现在是脚底，position.y 由物理（重力 / 地面）决定。
+	if _camera != null:
+		_camera.position.y = eye_height
 	_apply_rotation()
 
 
 func _exit_tree() -> void:
-	# 退出时必须把鼠标交还系统，避免残留捕获状态
 	release_mouse()
 
 
@@ -96,7 +111,7 @@ func is_mouse_captured() -> bool:
 	return _mouse_captured
 
 
-# ------------------------------------------------------------------ 输入处理
+# ------------------------------------------------------------------ 视角输入
 
 func _input(event: InputEvent) -> void:
 	if not input_enabled:
@@ -122,7 +137,7 @@ func _apply_look(relative: Vector2) -> void:
 func _apply_rotation() -> void:
 	pitch = clampf(pitch, -MAX_PITCH_RADIANS, MAX_PITCH_RADIANS)
 	# 把 yaw 收敛回 [-PI, PI]，避免长时间游玩后浮点精度下降。
-	# -PI 与 +PI 是同一朝向，因此视觉上连续，不会出现跳变或突然回正。
+	# -PI 与 +PI 是同一朝向，视觉连续，不会出现跳变或突然回正。
 	yaw = wrapf(yaw, -PI, PI)
 	rotation.y = yaw
 	if _camera != null and is_instance_valid(_camera):
@@ -133,6 +148,58 @@ func get_camera() -> Camera3D:
 	if _camera == null:
 		_discover_camera()
 	return _camera
+
+
+# ------------------------------------------------------------------ 移动
+
+func _physics_process(delta: float) -> void:
+	if not input_enabled:
+		return
+	_apply_gravity(delta)
+	_apply_horizontal_velocity()
+	move_and_slide()
+
+
+func _apply_gravity(delta: float) -> void:
+	if is_on_floor():
+		# 站住时把残余下落速度清零，避免贴地抖动
+		if velocity.y < 0.0:
+			velocity.y = 0.0
+	else:
+		velocity.y -= gravity * delta
+		velocity.y = maxf(velocity.y, -MAX_FALL_SPEED)
+
+
+## 只使用本节点的 yaw 计算移动方向。
+## 不使用 transform.basis —— 那样会把其它旋转分量一并带入。
+## 当前结构下本节点只有 yaw，但显式写 Basis(UP, yaw) 能把这个约束固定下来，
+## 将来即使有人给节点加了倾斜，也不会污染移动方向。
+func _apply_horizontal_velocity() -> void:
+	var input_dir := Input.get_vector(
+		"move_left", "move_right", "move_forward", "move_back"
+	)
+	_apply_direction(input_dir)
+
+
+## 把二维输入方向转成世界位移并写入 velocity。
+## Input.get_vector() 已保证长度不超过 1，所以斜向不会快于单向。
+func _apply_direction(input_dir: Vector2) -> void:
+	var direction := Basis(Vector3.UP, yaw) * Vector3(input_dir.x, 0.0, input_dir.y)
+	if direction.length_squared() > 0.000001:
+		direction = direction.normalized()
+	velocity.x = direction.x * move_speed
+	velocity.z = direction.z * move_speed
+
+
+## 供测试直接注入移动输入，绕开真实键盘，但不改变物理流程。
+func apply_move_input(input_dir: Vector2) -> void:
+	_apply_direction(input_dir)
+
+
+## 切换地点后把玩家放回该地点出生点，避免沿用上一个地点的坐标导致嵌墙。
+func reset_to_spawn(spawn: Vector3) -> void:
+	velocity = Vector3.ZERO
+	global_position = spawn
 
 
 # ------------------------------------------------------------------ 存档
@@ -153,7 +220,6 @@ func reset_view() -> void:
 	_apply_rotation()
 
 
-## 以度数返回当前俯仰，仅用于日志与测试断言。
 func get_pitch_degrees() -> float:
 	return rad_to_deg(pitch)
 

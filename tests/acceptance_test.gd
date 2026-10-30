@@ -129,12 +129,26 @@ func step_setup() -> bool:
 	var script_player := load("res://core/player_controller.gd") as Script
 	_rig = script_player.new() as PlayerController
 	_rig.name = "CameraRig"
-	root.add_child(_rig)
 
+	# 必须先挂 Camera3D 再把 rig 入树。
+	# PlayerController._ready() 会调用 _discover_camera() 并据此设置相机高度；
+	# 若先入树后加相机，_ready 时找不到相机，观察高度不会被设置，
+	# 相机将停在脚底高度 (y=0)，俯视低处热点时会被地板/台阶遮挡。
 	_camera = Camera3D.new()
 	_camera.name = "Camera3D"
 	_rig.add_child(_camera)
-	_rig.position = Vector3(0, 1.62, 0)
+
+	root.add_child(_rig)
+
+	# CameraRig 已改为 CharacterBody3D，原点是「脚底」而非「眼睛」，
+	# 观察高度由子 Camera3D 的 local y（eye_height）承担，因此脚底放在原点。
+	_rig.position = Vector3(0, 0, 0)
+
+	# 本测试手工装配的 rig 没有碰撞体，is_on_floor() 恒为 false，
+	# 若保留物理处理会每帧重力下落，相机在等待帧中下沉，导致射线方向失真
+	# （实测表现为「热点突然全部无法聚焦」）。
+	# 这里只验证视角与射线，不需要移动与重力，因此关闭其物理处理。
+	_rig.set_physics_process(false)
 
 	var script_interaction := load("res://core/interaction_manager.gd") as Script
 	_interaction = script_interaction.new() as InteractionManager
@@ -457,6 +471,10 @@ func step_07_round_trip() -> bool:
 func step_08_hotspot_raycast() -> bool:
 	if not _hotspot_scan_done:
 		_scene_mgr.enter_location("house_exterior", false)
+		# 与 main.gd 的运行时行为保持一致：进入地点后把玩家放到该地点的出生点。
+		# house_exterior 的门廊顶面在 y=0.20，若把脚底放在 y=0，相机整体偏低，
+		# 俯视低处热点时会被台阶遮挡。
+		_rig.position = _scene_mgr.get_location_spawn("house_exterior")
 		var inst: Node = _scene_mgr.get_current_instance()
 		var pending: Array = []
 		for s in (inst as GameLocation).collect_hotspots():
