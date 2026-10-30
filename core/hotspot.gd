@@ -100,25 +100,34 @@ func set_focused(value: bool) -> void:
 func _update_visual_feedback() -> void:
 	# 悬停反馈刻意做得很轻：只轻微提亮自发光，不使用描边或跳动图标，
 	# 以免破坏「热点不过度突出」的影片基调。
-	var factor := 1.0
-	if _focused:
-		factor = 1.0
-	_apply_emission(factor)
+	_apply_emission(1.0)
 
 
+## 给本热点的可见子网格设置/取消自发光。
+##
+## 关键点：**必须逐实例复制材质**。
+## 场景构建器 tools/lib/geom.gd 与 tools/scene_content.gd 的 _mat() 按 key 缓存材质，
+## 全场景大量网格共用同一个 StandardMaterial3D 实例。若直接改这个实例，
+## 凝视一个门把手会让所有共用该材质的物体一起发光。
+## 复制后用 meta 标记，保证只复制一次——否则每次聚焦都新建材质，数量会无限增长。
 func _apply_emission(scale_factor: float) -> void:
 	for child in get_children():
-		if child is GeometryInstance3D:
-			var gi := child as GeometryInstance3D
-			if gi.material_override is StandardMaterial3D:
-				var mat := gi.material_override as StandardMaterial3D
-				mat.emission_enabled = _focused
-				mat.emission = Color(1.0, 0.88, 0.62) * (0.22 * scale_factor)
-			else:
-				var new_mat := StandardMaterial3D.new()
-				new_mat.emission_enabled = _focused
-				new_mat.emission = Color(1.0, 0.88, 0.62) * (0.22 * scale_factor)
-				gi.material_override = new_mat
+		if not (child is GeometryInstance3D):
+			continue
+		var gi := child as GeometryInstance3D
+		var mat: StandardMaterial3D = null
+		if gi.material_override is StandardMaterial3D:
+			mat = gi.material_override as StandardMaterial3D
+		else:
+			mat = StandardMaterial3D.new()
+
+		if not mat.has_meta("comet_own"):
+			mat = mat.duplicate() as StandardMaterial3D
+			mat.set_meta("comet_own", true)
+			gi.material_override = mat
+
+		mat.emission_enabled = _focused
+		mat.emission = Color(1.0, 0.88, 0.62) * (0.22 * scale_factor)
 
 
 ## 热点的显示与否由世界状态驱动，而不是随机决定。

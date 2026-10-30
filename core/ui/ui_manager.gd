@@ -22,6 +22,9 @@ signal back_requested
 signal save_requested
 signal quit_requested
 signal new_game_requested
+## 「重新开始」的二次确认结果。请求与确认分开两个信号，
+## 是为了让 UIManager 不承担"删档"这种破坏性决定，只负责问一句。
+signal new_game_confirmed
 
 const COLOR_TEXT := Color(0.86, 0.87, 0.88, 1.0)
 const COLOR_MUTED := Color(0.55, 0.57, 0.59, 1.0)
@@ -36,6 +39,7 @@ var _message_bg: ColorRect = null
 var _reticle: Control = null
 var _back_button: Button = null
 var _overlay_root: Control = null
+var _confirm_root: Control = null
 var _root: Control = null
 
 
@@ -60,6 +64,7 @@ func _build_ui() -> void:
 	_build_focus()
 	_build_message()
 	_build_button_bar()
+	_build_confirm()
 
 	_overlay_root = Control.new()
 	_overlay_root.name = "OverlayLayer"
@@ -208,6 +213,87 @@ func _build_button_bar() -> void:
 	quit_button.add_theme_font_size_override("font_size", 14)
 	quit_button.pressed.connect(func() -> void: quit_requested.emit())
 	bar.add_child(quit_button)
+
+
+## 二次确认面板。
+##
+## 为什么必须有：原来的「重新开始」按钮一点就直接 delete_save + new_game，
+## 误触一次，几十小时的进度就没了，而且没有任何提示。
+## 这里只负责"问一句"，真正的删档仍由 main 执行。
+func _build_confirm() -> void:
+	var root := Control.new()
+	root.name = "ConfirmRoot"
+	# STOP：面板显示期间吞掉点击，避免同一次点击既确认又落到场景交互上
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.visible = false
+	_root.add_child(root)
+
+	var dim := ColorRect.new()
+	dim.name = "Dim"
+	dim.color = Color(0.0, 0.0, 0.0, 0.55)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.add_child(dim)
+
+	var panel := PanelContainer.new()
+	panel.name = "Panel"
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.offset_left = -220.0
+	panel.offset_top = -80.0
+	panel.offset_right = 220.0
+	panel.offset_bottom = 80.0
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	panel.add_child(box)
+
+	var label := Label.new()
+	label.name = "ConfirmLabel"
+	label.text = "重新开始会清除当前存档，确定吗？"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 17)
+	label.add_theme_color_override("font_color", COLOR_TEXT)
+	box.add_child(label)
+
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override("separation", 18)
+	box.add_child(row)
+
+	var yes := Button.new()
+	yes.name = "ConfirmYes"
+	yes.text = "确定重来"
+	yes.custom_minimum_size = Vector2(140, 34)
+	yes.pressed.connect(func() -> void:
+		hide_confirm()
+		new_game_confirmed.emit())
+	row.add_child(yes)
+
+	var no := Button.new()
+	no.name = "ConfirmNo"
+	no.text = "取消"
+	no.custom_minimum_size = Vector2(100, 34)
+	no.pressed.connect(func() -> void: hide_confirm())
+	row.add_child(no)
+
+	_confirm_root = root
+
+
+func ask_new_game() -> void:
+	if _confirm_root != null:
+		_confirm_root.visible = true
+
+
+func hide_confirm() -> void:
+	if _confirm_root != null:
+		_confirm_root.visible = false
+
+
+func is_confirm_visible() -> bool:
+	return _confirm_root != null and _confirm_root.visible
 
 
 # ---------------------------------------------------------------- 对外 API

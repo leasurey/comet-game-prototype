@@ -112,11 +112,13 @@ func _find(n: Node, target: String) -> Node:
 	return null
 
 
-## 通过真实交互路径激活热点：InteractionManager.activate() → 信号 → main 分发
+## 通过交互信号路径激活热点：debug_activate() → 信号 → main 分发
+## 注意：此处绕过了距离校验（测试需要从任意位置触发门），
+## 玩家路径走的是 activate_focused()，那条路含距离与遮挡判据。
 func _use(spot: Node) -> bool:
 	if spot == null:
 		return false
-	return _im.activate(spot)
+	return _im.debug_activate(spot)
 
 
 func _dist(a: Vector3, b: Vector3) -> float:

@@ -176,7 +176,9 @@ func step_save_at() -> bool:
 			return false
 		var ok: bool = _svc.save_game()
 		_check(ok, "B2 保存成功")
-		var payload := JSON.parse_string(
+		# 显式标 Variant：JSON.parse_string 的返回类型是 Variant，
+		# 用 := 会触发 "inferred from Variant" 警告（本项目把该警告当错误处理）。
+		var payload: Variant = JSON.parse_string(
 			FileAccess.get_file_as_string(_svc.save_manager.get_path()))
 		_check(typeof(payload) == TYPE_DICTIONARY, "B3 存档可解析")
 		if typeof(payload) == TYPE_DICTIONARY:

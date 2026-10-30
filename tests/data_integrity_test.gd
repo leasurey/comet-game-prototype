@@ -23,6 +23,7 @@ func _initialize() -> void:
 	_check_negative_cases()
 	_check_scene_variants()
 	_check_apply_world()
+	_check_hotspot_material_isolation()
 	_report()
 
 
@@ -198,6 +199,38 @@ func _check_apply_world() -> void:
 			"%d/%d" % [shared_visible, shared_total])
 
 	inst.free()
+
+
+## 聚焦反馈不得改写共享材质（BUG-011）
+##
+## 构建器按 key 缓存材质，全场景大量网格共用同一个 StandardMaterial3D。
+## 早期实现直接改这个实例，于是一个门把手发光会让所有同材质物体一起亮。
+func _check_hotspot_material_isolation() -> void:
+	var hs := Area3D.new()
+	hs.set_script(load("res://core/hotspot.gd"))
+	var shared := StandardMaterial3D.new()
+	shared.albedo_color = Color(0.5, 0.5, 0.5)
+	var a := MeshInstance3D.new()
+	a.mesh = BoxMesh.new()
+	a.material_override = shared
+	hs.add_child(a)
+	var b := MeshInstance3D.new()
+	b.mesh = BoxMesh.new()
+	b.material_override = shared
+	hs.add_child(b)
+
+	hs.set_focused(true)
+	var ma: Material = a.material_override
+	var mb: Material = b.material_override
+	_check(ma != shared and mb != shared, "聚焦时为每个子网格复制了材质",
+		"same_a=%s same_b=%s" % [str(ma == shared), str(mb == shared)])
+	_check(not shared.emission_enabled, "共享材质本身未被点亮（核心断言）")
+	_check((ma as StandardMaterial3D).emission_enabled, "被聚焦物体自身仍会发光")
+
+	hs.set_focused(false)
+	_check(not (ma as StandardMaterial3D).emission_enabled, "取消聚焦后发光关闭")
+	_check(a.material_override == ma, "反复聚焦不会无限新建材质（meta 缓存生效）")
+	hs.free()
 
 
 func _report() -> void:

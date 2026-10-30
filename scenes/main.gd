@@ -62,8 +62,19 @@ func _bind_services() -> void:
 		GameServices.interaction_manager.hotspot_unfocused.connect(_on_hotspot_unfocused)
 		GameServices.interaction_manager.hotspot_activated.connect(_on_hotspot_activated)
 
-	if GameServices.event_manager != null:
-		GameServices.event_manager.event_triggered.connect(_on_event_triggered)
+	# 事件提示改走**总线**订阅。
+	# 原因：new_game() 会重建 EventManager 实例，而 _bind_services 只在启动时跑一次，
+	# 直接连 event_manager 的信号在"重新开始"之后就成了空连接——
+	# 事件照样触发，但玩家再也看不到任何文字提示。
+	# event_bus 由 GameServices 持有、生命周期与游戏同长，不存在被替换的问题。
+	# 注意：只连总线，不再直连 event_manager，否则 GameServices 的转发会造成重复提示。
+	if GameServices.event_bus != null:
+		if not GameServices.event_bus.event_triggered.is_connected(_on_event_triggered):
+			GameServices.event_bus.event_triggered.connect(_on_event_triggered)
+
+	# 保存结果必须有反馈：此前调用后什么都不显示，玩家无法判断到底存没存上。
+	if not GameServices.save_completed.is_connected(_on_save_completed):
+		GameServices.save_completed.connect(_on_save_completed)
 
 	if _ui != null:
 		_ui.back_requested.connect(_on_back_requested)
@@ -71,6 +82,8 @@ func _bind_services() -> void:
 		_ui.quit_requested.connect(_on_quit_requested)
 		if _ui.has_signal("new_game_requested"):
 			_ui.new_game_requested.connect(_on_new_game_requested)
+		if _ui.has_signal("new_game_confirmed"):
+			_ui.new_game_confirmed.connect(_on_new_game_confirmed)
 
 
 func _start_flow() -> void:
@@ -282,8 +295,15 @@ func _on_portal_entered(portal: AutoPortal) -> void:
 		GameServices.event_manager.evaluate(
 			portal.event_kind, portal.event_keys,
 			GameServices.world_manager, errs)
-		for e in errs:
-			push_warning("区域事件求值: %s" % str(e))
+		# 事件求值失败时**不切场景**。
+		# 此前的实现只 push_warning 然后照切：玩家穿过黑暗到了对面，
+		# 现实却没变——环境毫无差异，而叙事已经暗示"你走错了"，
+		# 这是最难排查的静默不一致。宁可停在原地并给出提示。
+		if not errs.is_empty():
+			for e in errs:
+				push_error("区域事件求值失败: %s" % str(e))
+			_notify("有什么东西不对劲，你退了回来。", 5.0)
+			return
 
 	if portal.target_location.is_empty():
 		return
@@ -318,11 +338,41 @@ func _on_save_requested() -> void:
 	GameServices.save_game()
 
 
+## 保存结果反馈。此前调用 save_game() 后什么都不显示，
+## 玩家点完"保存"不知道到底存上了没有。
+func _on_save_completed(ok: bool, message: String) -> void:
+	if ok:
+		_notify("进度已保存。", 3.0)
+	else:
+		_notify("保存失败：%s" % message, 8.0)
+
+
+## 「重新开始」第一步：只问，不动数据。
+## 鼠标必须可见，否则玩家没法点确认按钮。
 func _on_new_game_requested() -> void:
-	if GameServices.delete_save():
-		GameServices.new_game()
-		_refresh_ui_state()
-		_notify("重新开始了。")
+	if _ui != null and _ui.has_method("ask_new_game"):
+		_release_mouse()
+		_ui.ask_new_game()
+	else:
+		_on_new_game_confirmed()
+
+
+## 「重新开始」第二步：确认后才真正删档开新局。
+func _on_new_game_confirmed() -> void:
+	# 兜底关闭确认框：正常路径由"确定"按钮自己关闭，但任何直接调用
+	# （测试、快捷键、未来的键盘确认）都必须让面板收起，否则会挡住画面。
+	if _ui != null and _ui.has_method("hide_confirm"):
+		_ui.hide_confirm()
+	if not GameServices.delete_save():
+		_notify("无法清除旧存档，已取消。", 5.0)
+		return
+	var ok: bool = GameServices.new_game()
+	_refresh_ui_state()
+	if ok:
+		_notify("重新开始了。", 3.0)
+	else:
+		_notify("重新开始失败，请检查数据完整性。", 8.0)
+	_capture_mouse()
 
 
 func _on_quit_requested() -> void:
@@ -336,6 +386,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		_release_mouse()
 		get_tree().quit()
+	# 窗口失焦时必须交出鼠标：否则 Alt+Tab 切走后回来，
+	# 鼠标可能仍处于捕获态，玩家既看不见光标也点不到界面。
+	# 聚焦不自动重新捕获——等玩家自己点击画面，避免视角在手一抖时突然跳转。
+	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_release_mouse()
 
 
 func _notify(text: String, duration: float = 4.0) -> void:
