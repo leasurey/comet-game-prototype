@@ -19,6 +19,18 @@ signal focus_changed(hotspot: Hotspot, focused: bool)
 @export var examine_text: String = ""
 @export var visible_only_in_worlds: Array = []
 
+## exit 热点的门级落点。
+##
+## 地点级 spawn 只能回答「这个场景从哪儿开始」，回答不了「玩家是从哪扇门进来的」。
+## 前门、侧门、露台门若共用地点 spawn，出去一律落在同一点、同一朝向，
+## 穿门前后就没有空间连续性可言。
+##
+## use_target_spawn 为 true 时，进入 target_location 后由热点携带的
+## target_spawn / target_yaw_deg 决定位置与朝向；为 false 时沿用地点 spawn。
+@export var use_target_spawn: bool = false
+@export var target_spawn: Vector3 = Vector3.ZERO
+@export var target_yaw_deg: float = 0.0
+
 var _focused: bool = false
 var _shape_ready: bool = false
 

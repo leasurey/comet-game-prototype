@@ -19,6 +19,13 @@ const HOTSPOT_LAYER_MASK := 2
 const ENVIRONMENT_LAYER_MASK := 1
 const RAY_LENGTH := 60.0
 
+## 最大交互距离（米）。射线长度与交互距离是两件事：
+##   射线长度 60 m 同时承担「遮挡判定」——必须够长才能比较墙距与热点距；
+##   交互距离 2.5 m 才是「玩家够不够得着」的判据。
+## 两者混用会导致缩短射线后远处墙体不再参与遮挡比对。
+## 这是设计初值，需按实际手感调整。
+const MAX_INTERACT_DISTANCE := 2.5
+
 var enabled: bool = true
 
 var _camera: Camera3D = null
@@ -92,7 +99,14 @@ func _update_focus() -> void:
 			dist = origin.distance_to(pos2 as Vector3)
 		if collider is Hotspot and _hotspots.has(collider):
 			var candidate := collider as Hotspot
-			if candidate.is_interactable() and dist <= env_distance:
+			# 三重判据缺一不可：
+			#   1 可交互（世界可见性 / 启用状态）
+			#   2 未被墙体遮挡（dist <= env_distance）
+			#   3 在交互距离内（dist <= MAX_INTERACT_DISTANCE）
+			# 第 3 条是新加的：此前只看遮挡，站在客厅能聚焦 60 m 外门廊的热点。
+			if candidate.is_interactable() \
+					and dist <= env_distance \
+					and dist <= MAX_INTERACT_DISTANCE:
 				found = candidate
 
 	set_focused_internal(found)
@@ -113,16 +127,26 @@ func set_focused_internal(spot: Hotspot) -> void:
 
 
 ## 激活当前聚焦的热点。返回是否成功，便于调用方决定是否给反馈。
+## 玩家路径的唯一激活入口（E 键与鼠标左键都经 _try_interact 到达这里）。
+##
+## 必须做距离二次校验：_update_focus() 只保证「本帧聚焦时够得着」，
+## 但聚焦状态可以保持多帧，玩家在按下 E 之前完全可能已经走开。
+## 缺了这一条，就会出现「提示已消失但仍能隔空交互」。
 func activate_focused() -> bool:
 	if _focused == null or not is_instance_valid(_focused):
 		return false
 	if not _focused.is_interactable():
+		return false
+	if not _within_reach(_focused):
+		set_focused_internal(null)
 		return false
 	var target := _focused
 	hotspot_activated.emit(target)
 	return true
 
 
+## 程序化激活入口，供测试与脚本使用，不做距离校验（没有玩家位置的语义）。
+## 玩家永远走不到这里——这条边界必须守住，否则距离限制形同虚设。
 func activate(spot: Hotspot) -> bool:
 	if spot == null or not is_instance_valid(spot):
 		return false
@@ -130,3 +154,9 @@ func activate(spot: Hotspot) -> bool:
 		return false
 	hotspot_activated.emit(spot)
 	return true
+
+
+func _within_reach(spot: Hotspot) -> bool:
+	if _camera == null or not is_instance_valid(_camera):
+		return false
+	return _camera.global_position.distance_to(spot.global_position) <= MAX_INTERACT_DISTANCE

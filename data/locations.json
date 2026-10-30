@@ -57,14 +57,14 @@
       "spawn": {
         "position": [
           0.0,
-          0.3,
-          0.0
+          0.05,
+          -2.6
         ],
         "yaw": 0.0
       },
       "exits": [
         {
-          "target": "living_room",
+          "target": "party_house",
           "label": "回到屋内"
         },
         {

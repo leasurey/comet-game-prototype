@@ -117,6 +117,30 @@ func _check(condition: bool, label: String, detail: String = "") -> void:
 
 # ------------------------------------------------------------------ 场景装配
 
+## 把玩家放到热点附近的可站位置（四方向探测，避开热点自身的碰撞盒）。
+## 交互距离上限 2.5 m 后，远距离聚焦不再成立；而「前方 1.2 m」也不可靠
+## ——车与邮箱的碰撞盒比 1.2 m 大，硬放会让射线起点落进盒内。
+func _place_near(spot: Hotspot, dist: float) -> void:
+	if spot == null or _rig == null or _camera == null:
+		return
+	var base: Vector3 = spot.global_position
+	var space: PhysicsDirectSpaceState3D = _camera.get_world_3d().direct_space_state
+	var shape := CapsuleShape3D.new()
+	shape.radius = 0.30
+	shape.height = 1.66
+	for d in [Vector3(0, 0, -1), Vector3(0, 0, 1), Vector3(1, 0, 0), Vector3(-1, 0, 0)]:
+		var p: Vector3 = base + d * dist
+		p.y = _rig.global_position.y
+		var q := PhysicsShapeQueryParameters3D.new()
+		q.shape = shape
+		q.transform = Transform3D(Basis.IDENTITY, p + Vector3(0, 0.90, 0))
+		q.collision_mask = 1
+		if space.intersect_shape(q, 2).is_empty():
+			_rig.global_position = p
+			return
+	_rig.global_position = Vector3(base.x, _rig.global_position.y, base.z - dist)
+
+
 func step_setup() -> bool:
 	_container = Node3D.new()
 	_container.name = "TestLocationContainer"
@@ -503,6 +527,10 @@ func step_08_hotspot_raycast() -> bool:
 		_aim_target = _snapshot_visible.pop_back() as Hotspot
 		# 每次换目标都要重新计时，否则会读到上一个目标遗留的聚焦结果
 		_aim_ticks = 0
+		# 交互距离上限 2.5 m：必须站到热点附近才能聚焦。
+		# 站点不能简单取「前方 1.2 m」——车、邮箱这类热点碰撞盒比 1.2 m 大，
+		# 硬放会让射线起点跑进盒内。这里四方向探测，取第一个不重叠的位置。
+		_place_near(_aim_target, 1.8)
 
 	_camera.look_at(_aim_target.global_position, Vector3.UP)
 

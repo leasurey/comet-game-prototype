@@ -403,22 +403,29 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_box(vb, "LampHeadA", Vector3(0.34, 0.16, 0.34), Vector3(-6.80, 4.62, -18.55), m_lamp_off)
 	_box(vb, "LampHeadB", Vector3(0.34, 0.16, 0.34), Vector3(6.80, 4.62, -18.55), m_lamp_off)
 
-	_solid(shared, "PorchFloor", Vector3(5.6, 0.20, 2.6), Vector3(0, 0.10, 0.55), m_porch)
-	_solid(shared, "StepA", Vector3(3.8, 0.20, 0.70), Vector3(0, 0.10, -0.95), m_porch)
-	_solid(shared, "StepB", Vector3(4.2, 0.10, 0.70), Vector3(0, 0.05, -1.62), m_porch)
-	_solid(shared, "HouseBody", Vector3(6.6, 3.2, 5.2), Vector3(0, 1.60, 4.20), m_house)
-	_box(shared, "Roof", Vector3(7.4, 0.35, 6.0), Vector3(0, 3.38, 4.20), m_roof)
-	_box(shared, "WindowFrameL", Vector3(1.44, 1.20, 0.12), Vector3(-2.15, 1.65, 1.55), m_roof)
-	_box(shared, "WindowFrameR", Vector3(1.44, 1.20, 0.12), Vector3(2.15, 1.65, 1.55), m_roof)
+	# ---- 建筑立面：与 party_house 的 13.4 × 9.4 外轮廓严格对齐
+	# 旧立面是 6.6 × 5.2，玩家从室内走出去会看到一栋只有实际尺寸一半的房子。
+	# 现在 HouseBody 直接占 x -6.70~6.70 / z 0.00~9.40，前墙落在 z=0，
+	# 与 party_house 的前门平面重合，穿门前后看到的是同一栋建筑。
+	_solid(shared, "HouseBody", Vector3(13.4, 3.2, 9.4), Vector3(0, 1.60, 4.70), m_house)
+	_box(shared, "Roof", Vector3(14.2, 0.35, 10.2), Vector3(0, 3.38, 4.70), m_roof)
 
-	# 门廊灯罩（灯具本体不随世界变化，只有灯泡亮灭变化）
-	_box(shared, "PorchFixture", Vector3(0.26, 0.26, 0.26), Vector3(0, 2.52, 1.30), m_metal_dark)
+	# 门廊：z -2.20 ~ 0，顶面 0.10（比室内地面 0.20 低一级）
+	_solid(shared, "PorchFloor", Vector3(5.6, 0.30, 2.2), Vector3(0, -0.05, -1.10), m_porch)
+
+	# 前墙上两扇窗，嵌在墙体内（墙面 z=0，墙厚 0.20）
+	_box(shared, "WindowFrameL", Vector3(1.44, 1.20, 0.12), Vector3(-3.50, 1.85, -0.02), m_roof)
+	_box(shared, "WindowFrameR", Vector3(1.44, 1.20, 0.12), Vector3(3.50, 1.85, -0.02), m_roof)
+
+	# 门廊灯罩：挂在前门上方、门外一侧
+	_box(shared, "PorchFixture", Vector3(0.26, 0.26, 0.26), Vector3(0, 2.52, -0.22), m_metal_dark)
 
 	# 树：固定在几个坐标上，不使用随机，保证每次构建结果完全一致
 	var tree_positions: Array = [
 		Vector3(-6.5, 0.0, -2.0), Vector3(-8.2, 0.0, -7.5), Vector3(-7.0, 0.0, -13.0),
 		Vector3(6.8, 0.0, -3.5), Vector3(8.6, 0.0, -9.0), Vector3(7.2, 0.0, -15.0),
-		Vector3(-5.5, 0.0, 3.5), Vector3(5.8, 0.0, 4.2),
+		# 最后两棵原在 (-5.5,3.5) / (5.8,4.2)，房屋扩到 13.4×9.4 后会落在室内，移到两侧
+		Vector3(-9.5, 0.0, 3.5), Vector3(9.8, 0.0, 4.2),
 	]
 	for i in tree_positions.size():
 		var p: Vector3 = tree_positions[i]
@@ -431,15 +438,15 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_sun(vb, "MoonlightBeta", -35.0, -42.0, Color(0.52, 0.64, 0.98), 0.85)
 
 	# ---- 差异二（灯光）：alpha 门廊灯亮着、窗户透出暖光；beta 门廊灯熄灭、窗户全黑
-	_box(va, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, 1.30), m_porch_bulb)
-	_omni(va, "PorchLight", Vector3(0.0, 2.45, 1.15), Color(1.0, 0.78, 0.46), 5.5, 16.0)
-	_box(va, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-2.15, 1.65, 1.49), m_win_glow)
-	_box(va, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(2.15, 1.65, 1.49), m_win_glow)
-	_omni(va, "WindowSpill", Vector3(-2.15, 1.60, 1.00), Color(1.0, 0.72, 0.40), 1.2, 7.0)
+	_box(va, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, -0.22), m_porch_bulb)
+	_omni(va, "PorchLight", Vector3(0.0, 2.45, -0.55), Color(1.0, 0.78, 0.46), 5.5, 16.0)
+	_box(va, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-3.50, 1.85, -0.04), m_win_glow)
+	_box(va, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(3.50, 1.85, -0.04), m_win_glow)
+	_omni(va, "WindowSpill", Vector3(-3.50, 1.80, -0.40), Color(1.0, 0.72, 0.40), 1.2, 7.0)
 
-	_box(vb, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, 1.30), m_porch_bulb_off)
-	_box(vb, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-2.15, 1.65, 1.49), m_win_dark)
-	_box(vb, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(2.15, 1.65, 1.49), m_win_dark)
+	_box(vb, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, -0.22), m_porch_bulb_off)
+	_box(vb, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-3.50, 1.85, -0.04), m_win_dark)
+	_box(vb, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(3.50, 1.85, -0.04), m_win_dark)
 
 	# ---- 差异一（物品位置）：木箱从右侧正立，变成左侧倾倒
 	var crate_a := _n(va, "Crate")
@@ -458,8 +465,8 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_box(glass, "Shard4", Vector3(0.09, 0.02, 0.11), Vector3(-0.30, 0.21, -0.92), m_glass, deg_to_rad(-8.0))
 
 	# ---- 差异四（门牌歪斜）：同一个门牌，beta 里歪了
-	_box(va, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, 1.50), m_signboard)
-	_box(vb, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, 1.50), m_signboard, 0.0, deg_to_rad(24.0))
+	_box(va, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, -0.13), m_signboard)
+	_box(vb, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, -0.13), m_signboard, 0.0, deg_to_rad(24.0))
 
 	_world_env(root, Color(0.016, 0.018, 0.028), Color(0.13, 0.14, 0.19))
 
@@ -468,12 +475,19 @@ func assemble_house_exterior(root: Node3D) -> void:
 	var door := Area3D.new()
 	door.name = "DoorToInterior"
 	door.set_script(load(S_HOTSPOT))
-	door.position = Vector3(0, 1.15, 1.40)
-	door.display_name = "回屋的门"
+	# 门位于前墙 z=0 外表面一侧，与 party_house 的前门洞（x=0，宽 1.60）对齐
+	door.position = Vector3(0, 1.15, -0.05)
+	door.display_name = "前门"
 	door.action_kind = "exit"
-	door.target_location = "living_room"
+	# 修正：原先指向 living_room（第一阶段遗留的独立客厅）。
+	# 玩家从新住宅前门出去，回来却进了另一个客厅，动线彻底断掉。
+	# 现在直接回到 party_house 的前门内侧，朝向 +Z（面朝屋内）。
+	door.target_location = "party_house"
+	door.use_target_spawn = true
+	door.target_spawn = Vector3(0.0, 0.25, 1.60)
+	door.target_yaw_deg = 180.0
 	_box(door, "DoorPanel", Vector3(1.10, 2.15, 0.12), Vector3.ZERO, m_metal_dark)
-	_col(door, Vector3(1.4, 2.4, 0.5))
+	_col(door, Vector3(1.6, 2.4, 0.5))
 	hotspots.add_child(door)
 
 	# 通往黑暗区域：移到街道对面、路缘断口之后，
@@ -564,17 +578,11 @@ func assemble_house_exterior(root: Node3D) -> void:
 	# 通往「另一栋房子」的入口。
 	# 叙事上这是一栋与本宅几乎一样的房子——影片的核心设定正是「同一栋房子的不同版本」。
 	# 灰盒阶段它的内部由 tools/house/ 单独构建，不在本文件里。
-	# 位置必须落在房子主体之外（HouseBody 占 x -3.3~3.3, z 1.6~6.8），
-	# 否则热点会被墙体包住，射线永远打在墙上而无法聚焦。
-	var other_house := Area3D.new()
-	other_house.name = "ExitToPartyHouse"
-	other_house.set_script(load(S_HOTSPOT))
-	other_house.position = Vector3(3.9, 1.10, 1.20)
-	other_house.display_name = "另一栋房子的前门"
-	other_house.action_kind = "exit"
-	other_house.target_location = "party_house"
-	_col(other_house, Vector3(1.2, 2.4, 1.2))
-	hotspots.add_child(other_house)
+	# 注：这里原有一个 ExitToPartyHouse 热点（display_name「另一栋房子的前门」），
+	# 它是在 party_house 尚无正式回屋入口时加的桥接：从室外走向"另一栋房子"其实会
+	# 回到 party_house 本身，语义是错的。
+	# 现在 DoorToInterior 已直接通向 party_house 并携带门级落点，桥接不再需要，
+	# 故移除。未来若加入真正的邻宅 neighbor_house，应新建热点指向它，而不是复用它。
 
 
 # ============================================================== 3. 黑暗区域

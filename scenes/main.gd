@@ -23,6 +23,13 @@ extends Node3D
 
 var _started := false
 
+## 待消费的门级落点。热点带 use_target_spawn 时，在 go_to() 之前写入这里，
+## 由 _on_location_entered 取用后立即清空。
+## 用「挂起—消费」而不是给 SceneManager 加参数，是为了让 enter_location 的
+## 旧签名与所有既有调用（含测试、go_back、读档）保持完全不变。
+var _pending_spawn: Variant = null
+var _pending_yaw_deg: float = 0.0
+
 
 func _ready() -> void:
 	randomize()
@@ -188,11 +195,19 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 			if spot.target_location.is_empty():
 				_notify("这里走不通。")
 				return
+			# 门级落点：热点自带出现位置与朝向。没有则清空挂起值，
+			# 保证「从非门热点 / 程序化切换」仍走地点 spawn。
+			if spot.use_target_spawn:
+				_pending_spawn = spot.target_spawn
+				_pending_yaw_deg = spot.target_yaw_deg
+			else:
+				_pending_spawn = null
 			var label := GameServices.scene_manager.get_exit_label(
 				GameServices.get_current_location_id(), spot.target_location
 			)
 			_notify(label)
 			if not GameServices.go_to(spot.target_location):
+				_pending_spawn = null
 				_notify("无法前往那里。")
 		"examine":
 			var text := spot.examine_text
@@ -211,11 +226,23 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 		_ui.set_back_enabled(GameServices.scene_manager.can_go_back())
 		_ui.set_focus_text("")
 
-	# 把玩家放到该地点自己的出生点。
-	# 否则从 A 点走到边缘再切到 B 点，玩家会带着 A 的坐标落进 B 的墙体里。
+	# 把玩家放到落点。
+	# 优先消费门级落点：从哪扇门出来就落在对应位置、面朝对应方向。
+	# 没有门级落点时才回退到地点 spawn——这是读档、go_back、首次开局等
+	# 非穿门路径的唯一正确行为。
 	var pc = GameServices.player_controller
 	if pc != null and pc.has_method("reset_to_spawn"):
-		pc.reset_to_spawn(GameServices.scene_manager.get_location_spawn(location_id))
+		if _pending_spawn != null:
+			var pos: Vector3 = _pending_spawn
+			var yaw_deg: float = _pending_yaw_deg
+			_pending_spawn = null
+			_pending_yaw_deg = 0.0
+			pc.reset_to_spawn(pos)
+			pc.yaw = deg_to_rad(yaw_deg)
+			pc.pitch = 0.0
+			pc._apply_rotation()
+		else:
+			pc.reset_to_spawn(GameServices.scene_manager.get_location_spawn(location_id))
 
 
 func _on_location_failed(_location_id: String, error: String) -> void:
