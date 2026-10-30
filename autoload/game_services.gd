@@ -166,6 +166,9 @@ func _ensure_input_actions() -> void:
 	_register_key_action(ACTION_MOVE_BACK, KEY_S)
 	_register_key_action(ACTION_MOVE_LEFT, KEY_A)
 	_register_key_action(ACTION_MOVE_RIGHT, KEY_D)
+	_register_key_action("jump", KEY_SPACE)
+	_register_key_action("run", KEY_SHIFT)
+	_register_key_action("phone", KEY_TAB)
 
 
 ## 幂等注册「一个动作 + 一个物理按键」。
