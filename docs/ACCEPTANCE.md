@@ -2,6 +2,30 @@
 
 > 以下为真实执行输出，非预期描述。
 
+## 当前状态（v0.6.0 / commit 见本节末尾）
+
+| 测试 | 断言数 | 结果 | 覆盖 |
+| --- | ---: | --- | --- |
+| `acceptance_test.gd` | 59 | PASS | 地点/世界/存档/交互核心链路 |
+| `v2_p0_test.gd` | 13 | PASS | 时间 tick、具名随机流、信号总线、条件求值 |
+| `fps_input_test.gd` | 29 | PASS | 鼠标捕获视角 T01–T13 |
+| `player_movement_test.gd` | 34 | PASS | WASD、斜向归一化、碰撞 T01–T16 |
+| `party_house_test.gd` | 54 | PASS | 住宅几何、七条路线连通性、两套灯光 |
+| `wall_geometry_test.gd` | 24 | PASS | 带洞口墙体原语（射线逐点验证） |
+| `door_connection_test.gd` | 53 | PASS | 门级落点、三扇门往返、交互距离与遮挡 |
+| `dark_traverse_test.gd` | 31 | PASS | 进入不变/尽头才变、once 语义、掉头不改现实 |
+| `save_isolation_test.gd` | 10 | PASS | 测试不触碰玩家正式存档（SHA-256 比对） |
+| `save_migration_test.gd` | 27 | PASS | 原子写入、备份、v1→v2 迁移、损坏隔离、位置与栈恢复 |
+| `session_reset_test.gd` | 17 | PASS | 重新开始后七项状态归零、返回栈去重限深 |
+| `data_integrity_test.gd` | 22 | PASS | 四份 JSON 交叉校验、变体完整性、材质隔离 |
+| `ui_flow_test.gd` | 12 | PASS | 二次确认（未确认不删档）、保存反馈、总线连接 |
+| **合计** | **385** | **全通过** | |
+
+主场景 `--headless --quit-after 200`：0 error / 0 warning。
+
+> 说明：本文件下方保留的是 v0.1.x 时期的历史输出，仅作存档参考，
+> **不得用于证明当前版本通过**。当前版本的结论以上表为准。
+
 ## 执行命令
 
 ```bash

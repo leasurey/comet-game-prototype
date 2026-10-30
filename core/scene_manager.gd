@@ -275,7 +275,6 @@ func enter_location(location_id: String, remember: bool = true) -> bool:
 	location_entered.emit(location_id, get_location_name(location_id))
 
 	# 进入地点后求值事件。若世界因此改变，同一地点需要按新世界重刷表现。
-	var world_changed_after_enter := false
 	if event_manager != null and event_manager.is_ready() and world_manager != null:
 		var eval_error: Array = []
 		var fired: Array = event_manager.evaluate(
@@ -284,13 +283,9 @@ func enter_location(location_id: String, remember: bool = true) -> bool:
 		if fired.size() > 0:
 			var after_id := str(world_manager.get_current_world_id())
 			if after_id != world_id:
-				world_changed_after_enter = true
 				_refresh_world_presentation()
 				if interaction_manager != null and instance.has_method("collect_hotspots"):
 					interaction_manager.set_hotspots(instance.collect_hotspots())
-
-	if world_changed_after_enter:
-		pass
 
 	return ok
 

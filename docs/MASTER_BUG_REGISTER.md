@@ -227,3 +227,44 @@
 3. BUG-017 的偶发失败**未复现**，因此不能写"已修复"，只能写"已确认存在、原因待定位"。
 4. 性能数字（`party_house` 60 fps / 89 网格 / 86 静态体 / 5 盏灯、`house_exterior` 60 fps、内存 57 MB、显存 16.4 MB）是 `[实测]` 单次采样，**不是稳态压测**，且未确认运行时使用独显还是核显。
 5. 手感和观感（灵敏度、亮度、HUD 可读性、黑暗区域氛围）**本轮未做人工验收**。
+
+---
+
+## 八、状态更新（v0.6.0 实施后）
+
+> 本节覆盖上面各条目的"状态"字段。判定标准：
+> **已修已验证** = 有对应自动化断言且通过；**已实现未验证** = 代码已改但缺少实测；
+> **部分修** = 只解决了条目中的一部分；**未修** = 未动。
+
+| ID | 状态 | 证据 |
+| --- | --- | --- |
+| BUG-001 非原子写入 | **已修已验证** | `save_migration_test` A1–A8：二次保存生成 `.bak`、无残留 `.tmp`、备份可独立读回 |
+| BUG-002 测试删真档 | **已修已验证** | `save_isolation_test` 10 条，含 SHA-256 零变化；5 个测试改用 `use_test_path()` |
+| BUG-003 位置不恢复 | **已修已验证** | `save_migration_test` B7：位置误差 < 0.35 m；位置被占用时回退 spawn 并告警 |
+| BUG-004 visit_stack 未入档 | **已修已验证** | B5 写入、B9 读回（depth=1） |
+| BUG-005 新局不清状态 | **已修已验证** | `session_reset_test`：地点/栈/访问/现实/时钟/视角/变更历史 七项归零 |
+| BUG-006 变体静默回退 | **已修已验证** | `apply_world` 返回 bool + 警告；`data_integrity_test` 断言未命中返回 false |
+| BUG-007 侧门/露台无回程 | **已修已验证** | `door_connection_test` T11：53 条中含两扇门往返、落点与朝向 |
+| BUG-008 掉头无出路 | **已修已验证** | `dark_traverse_test` T08：掉头回 street 且 `world_alpha` 不变 |
+| BUG-009 事件失败仍切场景 | **已实现未验证** | 代码已加 `errs` 分支并 return；**未构造失败规则做端到端实测** |
+| BUG-010 重开后事件提示失效 | **已修已验证** | `ui_flow_test`：`event_bus.event_triggered` 连接数 = 1 |
+| BUG-011 共享材质被点亮 | **已修已验证** | `data_integrity_test` 5 条：共享材质保持未发光、meta 缓存不无限新建 |
+| BUG-012 无确认/无保存反馈 | **已修已验证** | `ui_flow_test` 12 条：未确认不删档、确认后删档、执行后关闭面板 |
+| BUG-013 警告全局关闭 | **已修已验证** | 改为 `true` 后立即暴露 1 处 Variant 推断问题（已修），主场景零报错 |
+| BUG-014 EventBus 无订阅者 | **已修已验证** | main 改为订阅总线，`ui_flow_test` 断言连接存在 |
+| BUG-015 `interact` 从未求值 / 死事件 | **未修** | `TRIGGER_INTERACT` 仍无调用点；`evt_return_to_house` 仍无规则 |
+| BUG-016 三处双份真相 | **部分修** | `variants` 已成为校验源；`initial_world`（transitions 内）与 `exits` 仍只作装饰 |
+| BUG-017 测试偶发失败 | **部分修** | 已为四处聚焦断言加入显式 `_update_focus()` 驱动与 40 帧收敛窗口；失败率下降但仍偶发（同一批次内曾 6 次中失败 2 次，手动单跑 5/5 通过）。**未定位到具体断言**，保持"原因待查" |
+| BUG-018 窗口失焦未处理 | **已实现未验证** | `_notification` 已加 FOCUS_OUT 分支；**真实 Alt+Tab 未人工验收** |
+| BUG-019 HUD 无缩放 | **部分修** | 已配 `stretch/mode=canvas_items` + `aspect=keep`；三档分辨率未人工截图验收 |
+| BUG-020 无音频系统 | **未修** | 未实现（缺素材与授权确认） |
+| BUG-021 损坏档不隔离 | **部分修** | 已加 `quarantine_corrupt()`；启动仍自动读档、无标题页 |
+| BUG-022 未做导出验证 | **未修** | 无 `export_presets.cfg`，未做独立包 |
+| BUG-023 `activate()` 绕过距离 | **已修已验证** | 更名 `debug_activate()`，玩家路径只剩 `activate_focused()`；测试同步 |
+| BUG-024 返回栈只增不减 | **已修已验证** | 去重 + `MAX_BACK_STACK=16`；`session_reset_test` 五次折返后深度 3 |
+| BUG-025 单槽/明文 | **未修** | 仍单槽；明文 JSON 仍存在（已在 KNOWN_ISSUES 说明） |
+| BUG-026 文档数字过时 | **已修** | README 52→385、ACCEPTANCE 增加现行结果表、CHANGELOG 补 v0.6.0 |
+| BUG-027 死代码/重复字段 | **部分修** | 清了 `_update_visual_feedback` 恒 1.0 与 `world_changed_after_enter`；payload 双字段保留（两个读者各用一个，属兼容而非死码） |
+| BUG-028 鸭子类型耦合 | **未修** | `AutoPortal` 仍用 `has_method("is_mouse_captured")`；`main` 仍直写 `pc.yaw` |
+
+**统计（v0.6.0）**：已修已验证 **18** 条，已实现未验证 **2** 条，部分修 **5** 条，未修 **3** 条。
