@@ -240,6 +240,13 @@ func new_game(seed_value: int = -1) -> bool:
 	_inject_services()
 	_wire_signals()
 
+	# 会话状态必须归零，否则「重新开始」会继承上一局：
+	# 返回栈留着→一按返回就退回上局地点；访问记录留着→依赖 visited 的事件条件被污染；
+	# 朝向留着→新局面朝上局最后看的方向。
+	scene_manager.reset_session()
+	if player_controller != null and player_controller.has_method("reset_view"):
+		player_controller.reset_view()
+
 	return scene_manager.enter_location(scene_manager.get_start_location_id(), false)
 
 

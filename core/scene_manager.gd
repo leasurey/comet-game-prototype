@@ -17,6 +17,11 @@ signal location_failed(location_id: String, error: String)
 
 const ENVIRONMENT_ROOT := "Environment"
 
+## 返回栈上限。栈只应记录「来路」，不该无限增长：
+## A→B→C→B→C… 的老实现在栈里堆满重复项，一条 200 步的游玩能堆到上百层。
+## 这里同时做「去重」与「限深」：去重解决重复项，限深保底防止极端情况。
+const MAX_BACK_STACK := 16
+
 var world_manager = null
 var event_manager = null
 var interaction_manager = null
@@ -178,10 +183,27 @@ func can_go_back() -> bool:
 	return _visit_stack.size() > 0
 
 
+## 返回栈深度。仅用于观测与测试，不参与逻辑判断。
+func get_visit_stack_size() -> int:
+	return _visit_stack.size()
+
+
 func get_previous_location_id() -> String:
 	if _visit_stack.is_empty():
 		return ""
 	return str(_visit_stack[-1])
+
+
+## 会话级重置：只清「这一局走过什么」，不动地点表本身。
+##
+## 与 load_from_data 的区别：后者是「重新载入地点表」，顺带清状态；
+## 而 new_game 并不重载地点表，此前因此漏清——
+## 导致「重新开始」后返回栈与访问记录继承上一局，
+## 玩家一按返回就退回上局去过的地点，依赖 visited 的事件条件也被污染。
+func reset_session() -> void:
+	_visit_stack.clear()
+	_visited_locations.clear()
+	_current_location_id = ""
 
 
 ## 进入指定地点。remember=true 时会把上一个地点压入返回栈。
@@ -206,7 +228,15 @@ func enter_location(location_id: String, remember: bool = true) -> bool:
 	var ok := false
 
 	if remember and not previous_id.is_empty() and previous_id != location_id:
-		_visit_stack.append(previous_id)
+		# 去重：若来路已在栈中，截断到它为止，而不是再压一份。
+		# 否则 A→B→C→B→C 会把同一个地点压很多层，"返回"要点很多次才动。
+		var existing := _visit_stack.rfind(previous_id)
+		if existing >= 0:
+			_visit_stack.resize(existing + 1)
+		else:
+			_visit_stack.append(previous_id)
+			while _visit_stack.size() > MAX_BACK_STACK:
+				_visit_stack.pop_front()
 
 	_release_current()
 
