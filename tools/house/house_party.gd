@@ -1,54 +1,45 @@
-## HouseParty — 聚会房屋的墙体与房间布局
+## HouseParty — 聚会住宅灰盒
 ##
-## 尺寸：13.0 m × 9.0 m（按用户确认的灰盒尺寸），墙厚 0.2，层高 2.7。
+## 依据：docs/MAP_REVIEW_ROUND3.md（第三轮核验，commit 781c0c6）
 ##
-## 【重要】以下所有尺寸与房间划分均为**游戏原创**（证据等级 D）。
-## 电影从未提供户型图；本布局只依据「这些空间在片中确实存在」这一 A 级事实，
-## 加上 8 人聚会与第一人称通行所需的功能尺寸推导得出。
-## 详见 docs/SCENE_ARCHAEOLOGY_PARTY_HOUSE.md。
+## 坐标约定（世界坐标，前门朝 -Z）：
+##   外轮廓  x -6.70 ~ 6.70   z 0.00 ~ 9.40   13.4 × 9.4 = 125.96 m²
+##   室内地面 y = 0.20，层高 2.7（天花底面 2.90）
+##   外墙 0.20 / 内墙 0.12
 ##
-## 房间（内表面坐标）：
-##   客厅   x -6.4 ~ -1.2   z -4.4 ~ 0.8
-##   餐厅   x -1.2 ~  2.7   z -4.4 ~ 0.8
-##   厨房   x  2.7 ~  6.4   z -4.4 ~ 0.8
-##   走廊   x -6.4 ~  6.4   z  0.8 ~ 4.4
-##   卫生间 x  3.8 ~  6.4   z  0.8 ~ 3.0
-##   露台   x -6.5 ~ -1.5   z -7.4 ~ -4.5
+## 房间（净尺寸，按墙心线推导）：
+##   书房      x -6.50~-3.02  z 0.20~3.74
+##   卫生间    x -2.90~-1.26  z 0.20~3.74
+##   玄关+侧门 x -1.14~ 3.38  z 0.20~3.74
+##   厨房南段  x  3.50~ 6.50  z 0.20~3.74
+##   主空间    x -6.50~ 6.50  z 3.86~9.20  （客厅/餐厅/厨房北段，无内墙）
+##
+## 本文件只建外壳（地板/天花/墙/门洞）。家具与灯光在后续阶段接入。
 
-class_name HouseParty
 extends RefCounted
 
 const WALL_H := 2.7
-const WALL_T := 0.2
+const WALL_T_OUT := 0.2
+const WALL_T_IN := 0.12
+const FLOOR_Y := 0.20
 
-# 外墙中心线
-const OUT_X := 6.5
-const OUT_Z := 4.5
+const OUT_X := 6.7
+const OUT_Z0 := 0.0
+const OUT_Z1 := 9.4
+const OUT_Z_MID := 4.7
+const OUT_D := 9.4
 
-# 内表面
-const IN_X := 6.4
-const IN_Z := 4.4
+const IN_Z0 := 0.2
+const IN_Z1 := 9.2
 
-# 房间分界（内表面）
-const LIVING_X0 := -6.4
-const LIVING_X1 := -1.2
-const DINING_X1 := 2.7
-const KITCHEN_X1 := 6.4
-const ROOM_Z0 := -4.4
-const ROOM_Z1 := 0.8
-const HALL_Z1 := 4.4
+const W0_Z := 3.80
+const W1_X := -2.96
+const W2_X := -1.20
+const W3_X := 3.44
+const SOUTH_N := 3.74
+const SOUTH_Z_MID := 1.97
 
-const BATH_X0 := 3.8
-const BATH_Z1 := 3.0
-
-const PATIO_X0 := -6.5
-const PATIO_X1 := -1.5
-const PATIO_Z0 := -7.4
-
-# 关键位置
-const FRONT_DOOR := Vector3(0.0, 0.0, 4.5)
-const PATIO_DOOR := Vector3(-4.0, 0.0, -4.5)
-const SPAWN := Vector3(0.0, 0.05, 3.4)
+const SPAWN := Vector3(0.0, FLOOR_Y + 0.05, 1.60)
 
 var geom: HouseGeom = null
 var props: HouseProps = null
@@ -72,21 +63,30 @@ func build(root: Node3D) -> Dictionary:
 	var wall_mat := geom.mat("wall", Color(0.72, 0.70, 0.66), 0.95)
 	var floor_mat := geom.mat("floor", Color(0.36, 0.27, 0.19), 0.88)
 	var ceil_mat := geom.mat("ceiling", Color(0.66, 0.65, 0.63), 0.95)
-	var patio_mat := geom.mat("patio", Color(0.40, 0.39, 0.36), 0.95)
+	var door_mat := geom.mat("door", Color(0.42, 0.32, 0.24), 0.85)
 
 	_build_floor_and_ceiling(shared, floor_mat, ceil_mat)
 	_build_outer_walls(shared, wall_mat)
 	_build_inner_walls(shared, wall_mat)
-	_build_patio(shared, patio_mat)
-	_build_outdoor_ground(shared, floor_mat)
+	_build_door_panels(shared, door_mat)
+	_build_outdoor(shared, floor_mat)
 
-	# 家具
+	# 家具占位（阶段 2）
 	var furniture := HouseFurniture.new(geom, props)
 	furniture.populate(shared)
 
-	# 灯光：两套（有电 / 停电）
-	var lighting := HouseLighting.new(light)
-	lighting.build(va, vb, shared)
+	# 阶段 1 只给一个基础环境，保证能看清结构。
+	# 两套灯光按世界变体分开：alpha 有电（四盏吸顶），beta 停电（只剩餐桌上一支蜡烛）。
+	# 这是既有世界系统的最小配合，不涉及现实切换系统的开发。
+	light.world_env(shared, Color(0.03, 0.03, 0.04), Color(0.30, 0.30, 0.33))
+
+	light.omni(va, "LivingLamp", Vector3(-4.50, 2.55, 6.60), Color(1.0, 0.90, 0.74), 2.0, 9.0)
+	light.omni(va, "DiningLamp", Vector3(1.30, 2.55, 6.60), Color(1.0, 0.90, 0.74), 2.0, 9.0)
+	light.omni(va, "KitchenLamp", Vector3(5.00, 2.55, 6.60), Color(1.0, 0.94, 0.82), 1.8, 9.0)
+	light.omni(va, "FoyerLamp", Vector3(0.00, 2.50, 1.50), Color(1.0, 0.88, 0.70), 1.2, 7.0)
+
+	# beta：全屋停电。只留餐桌上一支蜡烛，用来让玩家察觉「这里已经不是原来那栋房子」。
+	light.omni(vb, "Candle", Vector3(1.325, 1.00, 6.48), Color(1.0, 0.72, 0.40), 0.9, 5.0)
 
 	_build_hotspots(hotspots)
 
@@ -99,171 +99,217 @@ func build(root: Node3D) -> Dictionary:
 	}
 
 
-# ------------------------------------------------------------------ 地板
+# ------------------------------------------------------------------ 地板与天花
 
 func _build_floor_and_ceiling(parent: Node, floor_mat: Material, ceil_mat: Material) -> void:
-	var w := (IN_X + WALL_T) * 2.0
-	var d := (IN_Z + WALL_T) * 2.0
-	# 地板：顶面 y=0
-	geom.solid(parent, "Floor", Vector3(w, 0.2, d), Vector3(0, -0.1, 0), floor_mat)
-	# 天花板：底面 y=2.7
-	geom.solid(parent, "Ceiling", Vector3(w, 0.2, d), Vector3(0, WALL_H + 0.1, 0), ceil_mat)
+	var w := OUT_X * 2.0
+	# 地板：顶面 y = 0.20
+	geom.solid(parent, "Floor", Vector3(w, 0.2, OUT_D),
+			Vector3(0, FLOOR_Y - 0.1, OUT_Z_MID), floor_mat)
+	# 天花板：底面 y = 0.20 + 2.7 = 2.90
+	geom.solid(parent, "Ceiling", Vector3(w, 0.2, OUT_D),
+			Vector3(0, FLOOR_Y + WALL_H + 0.1, OUT_Z_MID), ceil_mat)
 
 
 # ------------------------------------------------------------------ 外墙
 
 func _build_outer_walls(parent: Node, mat: Material) -> void:
-	var span_x := (OUT_X + WALL_T * 0.5) * 2.0
-
-	# 南墙（+Z）：前门 1.0 m
-	geom.wall_with_opening(parent, "WallSouth", {
+	# 前墙（-Z，前门所在）：门洞 1.60，中心 x=0
+	geom.wall_with_opening(parent, "WallFront", {
 		"axis": "x",
-		"center": Vector3(0, 0, OUT_Z),
-		"length": span_x,
-		"thickness": WALL_T,
+		"center": Vector3(0, 0, OUT_Z0),
+		"length": OUT_X * 2.0,
+		"thickness": WALL_T_OUT,
 		"height": WALL_H,
-		"opening": {"offset": 0.0, "width": 1.0, "height": 2.15, "bottom": 0.0},
+		"base_y": FLOOR_Y,
+		"opening": {"offset": 0.0, "width": 1.6, "height": 2.1, "bottom": 0.0},
 	}, mat)
 
-	# 北墙（-Z）：露台门 1.4 m，位于 x=-4.0
-	geom.wall_with_opening(parent, "WallNorth", {
+	# 后墙（+Z）：露台推拉门 1.80，中心 x=-4.0
+	geom.wall_with_opening(parent, "WallBack", {
 		"axis": "x",
-		"center": Vector3(0, 0, -OUT_Z),
-		"length": span_x,
-		"thickness": WALL_T,
+		"center": Vector3(0, 0, OUT_Z1),
+		"length": OUT_X * 2.0,
+		"thickness": WALL_T_OUT,
 		"height": WALL_H,
-		"opening": {"offset": PATIO_DOOR.x, "width": 1.4, "height": 2.15, "bottom": 0.0},
+		"base_y": FLOOR_Y,
+		"opening": {"offset": -4.0, "width": 1.8, "height": 2.1, "bottom": 0.0},
 	}, mat)
 
-	# 西墙（-X）
+	# 西墙（-X）：无洞口
 	geom.wall_with_opening(parent, "WallWest", {
 		"axis": "z",
-		"center": Vector3(-OUT_X, 0, 0),
-		"length": (OUT_Z + WALL_T * 0.5) * 2.0,
-		"thickness": WALL_T,
+		"center": Vector3(-OUT_X, 0, OUT_Z_MID),
+		"length": OUT_D,
+		"thickness": WALL_T_OUT,
 		"height": WALL_H,
+		"base_y": FLOOR_Y,
 	}, mat)
 
-	# 东墙（+X）
+	# 东墙（+X）：侧门 1.20，中心 z=2.00
+	# 该墙中心 z=4.70，故洞口相对偏移 = 2.00 - 4.70 = -2.70
 	geom.wall_with_opening(parent, "WallEast", {
 		"axis": "z",
-		"center": Vector3(OUT_X, 0, 0),
-		"length": (OUT_Z + WALL_T * 0.5) * 2.0,
-		"thickness": WALL_T,
+		"center": Vector3(OUT_X, 0, OUT_Z_MID),
+		"length": OUT_D,
+		"thickness": WALL_T_OUT,
 		"height": WALL_H,
+		"base_y": FLOOR_Y,
+		"opening": {"offset": -2.70, "width": 1.2, "height": 2.1, "bottom": 0.0},
 	}, mat)
 
 
 # ------------------------------------------------------------------ 内墙
 
+## W0 横墙（z = 3.80）在核验报告里是一条，但它需要两个洞口：
+## 玄关→主空间 1.60、厨房南北连通 3.00。
+## wall_with_opening 每次只处理一个洞口，因此按房间边界拆成三段生成。
+## 拆段的位置刻意选在墙体本身（x = -1.14 / 3.38 / 3.50），
+## 不新增任何墙体，也不改变任何房间净尺寸。
 func _build_inner_walls(parent: Node, mat: Material) -> void:
-	# 客厅 | 餐厅（x=-1.2），开放通道 2.8 m
-	var mid_z := (ROOM_Z0 + ROOM_Z1) * 0.5
-	var room_d := ROOM_Z1 - ROOM_Z0
-	geom.wall_with_opening(parent, "WallLivingDining", {
-		"axis": "z",
-		"center": Vector3(LIVING_X1, 0, mid_z),
-		"length": room_d,
-		"thickness": WALL_T,
-		"height": WALL_H,
-		"opening": {"offset": 0.0, "width": 2.8, "height": 2.35, "bottom": 0.0},
-	}, mat)
-
-	# 餐厅 | 厨房（x=2.7），开放通道 2.6 m
-	geom.wall_with_opening(parent, "WallDiningKitchen", {
-		"axis": "z",
-		"center": Vector3(DINING_X1, 0, mid_z),
-		"length": room_d,
-		"thickness": WALL_T,
-		"height": WALL_H,
-		"opening": {"offset": 0.0, "width": 2.6, "height": 2.35, "bottom": 0.0},
-	}, mat)
-
-	# 卫生间西墙（x=3.8），门 0.85 m
-	var bath_d := BATH_Z1 - ROOM_Z1
-	geom.wall_with_opening(parent, "WallBathWest", {
-		"axis": "z",
-		"center": Vector3(BATH_X0, 0, (ROOM_Z1 + BATH_Z1) * 0.5),
-		"length": bath_d,
-		"thickness": WALL_T,
-		"height": WALL_H,
-		"opening": {"offset": 0.0, "width": 0.85, "height": 2.1, "bottom": 0.0},
-	}, mat)
-
-	# 卫生间南墙（z=3.0）
-	geom.wall_with_opening(parent, "WallBathSouth", {
+	# W0a：书房 + 卫生间北墙，x -6.50 ~ -1.14（长 5.36，中心 -3.82）
+	#      书房门 1.20，中心 x = -4.20 → offset = -0.38
+	geom.wall_with_opening(parent, "WallW0a", {
 		"axis": "x",
-		"center": Vector3((BATH_X0 + IN_X) * 0.5, 0, BATH_Z1),
-		"length": IN_X - BATH_X0,
-		"thickness": WALL_T,
+		"center": Vector3(-3.82, 0, W0_Z),
+		"length": 5.36,
+		"thickness": WALL_T_IN,
 		"height": WALL_H,
+		"base_y": FLOOR_Y,
+		"opening": {"offset": -0.38, "width": 1.2, "height": 2.1, "bottom": 0.0},
+	}, mat)
+
+	# W0b：玄关北墙，x -1.14 ~ 3.38（长 4.52，中心 1.12）
+	#      玄关→主空间洞口 1.60，中心 x = 0 → offset = -1.12
+	geom.wall_with_opening(parent, "WallW0b", {
+		"axis": "x",
+		"center": Vector3(1.12, 0, W0_Z),
+		"length": 4.52,
+		"thickness": WALL_T_IN,
+		"height": WALL_H,
+		"base_y": FLOOR_Y,
+		"opening": {"offset": -1.12, "width": 1.6, "height": 2.1, "bottom": 0.0},
+	}, mat)
+
+	# W0c：厨房南段与主空间之间，x 3.50 ~ 6.50（长 3.00，中心 5.00）
+	#      洞口 3.00 与段等宽 → 只剩门楣，等于全开
+	geom.wall_with_opening(parent, "WallW0c", {
+		"axis": "x",
+		"center": Vector3(5.00, 0, W0_Z),
+		"length": 3.00,
+		"thickness": WALL_T_IN,
+		"height": WALL_H,
+		"base_y": FLOOR_Y,
+		"opening": {"offset": 0.0, "width": 3.0, "height": 2.2, "bottom": 0.0},
+	}, mat)
+
+	# W1：书房 | 卫生间，x = -2.96，z 0.20 ~ 3.74（长 3.54，中心 z 1.97）
+	geom.wall_with_opening(parent, "WallW1", {
+		"axis": "z",
+		"center": Vector3(W1_X, 0, SOUTH_Z_MID),
+		"length": 3.54,
+		"thickness": WALL_T_IN,
+		"height": WALL_H,
+		"base_y": FLOOR_Y,
+	}, mat)
+
+	# W2：卫生间 | 玄关，x = -1.20
+	#     卫生间门 1.20，中心 z = 3.00 → offset = 3.00 - 1.97 = 1.03
+	geom.wall_with_opening(parent, "WallW2", {
+		"axis": "z",
+		"center": Vector3(W2_X, 0, SOUTH_Z_MID),
+		"length": 3.54,
+		"thickness": WALL_T_IN,
+		"height": WALL_H,
+		"base_y": FLOOR_Y,
+		"opening": {"offset": 1.03, "width": 1.2, "height": 2.1, "bottom": 0.0},
+	}, mat)
+
+	# W3：侧门通道 | 厨房南段，x = 3.44
+	# 必须在 z=2.00 处开门洞，否则「侧门通道」到不了侧门——侧门开在东外墙 x=6.70，
+	# 而那道外墙属于厨房南段一侧。若 W3 实心，去侧门就得绕主空间→W0c→厨房南段，
+	# 与「侧门是从玄关侧直接出去的一条通路」这一设计意图不符。
+	# 洞口 1.20，中心 z=2.00 → offset = 2.00 - 1.97 = 0.03
+	geom.wall_with_opening(parent, "WallW3", {
+		"axis": "z",
+		"center": Vector3(W3_X, 0, SOUTH_Z_MID),
+		"length": 3.54,
+		"thickness": WALL_T_IN,
+		"height": WALL_H,
+		"base_y": FLOOR_Y,
+		"opening": {"offset": 0.03, "width": 1.2, "height": 2.1, "bottom": 0.0},
 	}, mat)
 
 
-# ------------------------------------------------------------------ 室外
+# ------------------------------------------------------------------ 门板
 
-func _build_patio(parent: Node, mat: Material) -> void:
-	var w := PATIO_X1 - PATIO_X0
-	var d := -OUT_Z - PATIO_Z0
-	geom.solid(parent, "PatioFloor",
-			Vector3(w, 0.2, d),
-			Vector3((PATIO_X0 + PATIO_X1) * 0.5, -0.1, (PATIO_Z0 + (-OUT_Z)) * 0.5), mat)
-
-	# 露台栏杆：三面（北、西、东），高 1.0，厚 0.1
-	var rail_h := 1.0
-	var rail_t := 0.12
-	geom.solid(parent, "PatioRailNorth", Vector3(w, rail_h, rail_t),
-			Vector3((PATIO_X0 + PATIO_X1) * 0.5, rail_h * 0.5, PATIO_Z0), mat)
-	geom.solid(parent, "PatioRailWest", Vector3(rail_t, rail_h, d),
-			Vector3(PATIO_X0, rail_h * 0.5, (PATIO_Z0 + (-OUT_Z)) * 0.5), mat)
-	geom.solid(parent, "PatioRailEast", Vector3(rail_t, rail_h, d),
-			Vector3(PATIO_X1, rail_h * 0.5, (PATIO_Z0 + (-OUT_Z)) * 0.5), mat)
+## 门板只是视觉占位，不带碰撞（碰撞由墙体洞口两侧的实墙负责）。
+## 位置刻意避开通行带，避免挡住唯一通路。
+func _build_door_panels(parent: Node, mat: Material) -> void:
+	# 前门：贴在前墙内侧，向屋内开 90°，贴在洞口西侧墙上
+	geom.box(parent, "FrontDoorPanel", Vector3(0.09, 2.05, 1.50),
+			Vector3(-0.82, FLOOR_Y + 1.03, 0.30), mat)
+	# 侧门：贴在东墙内侧
+	geom.box(parent, "SideDoorPanel", Vector3(0.09, 2.05, 1.10),
+			Vector3(OUT_X - 0.20, FLOOR_Y + 1.03, 2.68), mat)
 
 
-func _build_outdoor_ground(parent: Node, mat: Material) -> void:
-	# 室外地面，与室内同高（灰盒阶段不做台阶，避免额外通行问题）
-	geom.solid(parent, "Ground", Vector3(40.0, 0.2, 40.0), Vector3(0, -0.1, 2.0), mat)
+# ------------------------------------------------------------------ 室外过渡区
+
+## 门洞是通的，玩家完全可以在不按交互键的情况下直接走出去。
+## 如果场景里门外没有地面，玩家会立刻掉进虚空（实测前进 5 秒后 y = -25.1）。
+## 因此在房屋四周铺一层缓冲地面，并在前门外做门廊、后门外做露台、东侧做侧院，
+## 让「走出去但还没传送」这个中间状态有落脚点。
+func _build_outdoor(parent: Node, mat: Material) -> void:
+	var patio_mat := geom.mat("outdoor", Color(0.40, 0.39, 0.36), 0.95)
+
+	# 缓冲地面：顶面 y = 0.00，覆盖房屋四周并延伸到街道一带。
+	# 范围 40 × 30（x -20~20，z -17~13）。实测教训：最初只铺 28×22 时，
+	# 玩家从玄关一直朝前门方向走会在 z≈-7 处走出地面边缘并坠落（y 一路掉到 -67）。
+	geom.solid(parent, "OutdoorGround", Vector3(40.0, 0.2, 30.0),
+			Vector3(0, -0.1, -2.0), patio_mat)
+
+	# 门廊：顶面 y = 0.10，前门外 z -2.2 ~ 0（室外比室内低一级台阶）
+	geom.solid(parent, "Porch", Vector3(5.6, 0.3, 2.2),
+			Vector3(0, -0.05, -1.1), patio_mat)
+
+	# 露台：顶面 y = 0.20，与室内齐平，后门外 z 9.4 ~ 11.4
+	geom.solid(parent, "Patio", Vector3(5.5, 0.2, 2.0),
+			Vector3(-4.0, 0.1, 10.4), patio_mat)
+
+	# 侧院：顶面 y = 0.20，东侧门外 x 6.7 ~ 9.6
+	geom.solid(parent, "SideYard", Vector3(2.9, 0.2, 3.4),
+			Vector3(8.15, 0.1, 1.8), patio_mat)
 
 
 # ------------------------------------------------------------------ 热点
 
 func _build_hotspots(parent: Node) -> void:
-	_add_exit(parent, "ExitToExterior", Vector3(0, 1.1, 4.42), "前门", "house_exterior",
-			Vector3(1.3, 2.4, 0.6))
+	# 出门去室外（前门）
+	_add_exit(parent, "FrontDoor", Vector3(0.0, FLOOR_Y + 0.95, 0.0),
+			"前门", "house_exterior")
 
-	_add_examine(parent, "PatioDoor", Vector3(-4.0, 1.1, -4.42), "通向露台的门",
-			"玻璃门没锁。外面很静，只有远处的虫鸣。",
-			Vector3(1.7, 2.4, 0.6))
+	# 侧门去侧院（同一室外场景，通过侧院返回）
+	_add_exit(parent, "SideDoor", Vector3(OUT_X - 0.15, FLOOR_Y + 0.95, 2.0),
+			"侧门", "house_exterior")
 
-	# door to nowhere：原创布点，位于走廊北墙东段
-	_add_examine(parent, "DoorToNowhere", Vector3(1.6, 1.05, 0.88), "一扇打不开的门",
-			"门把手能转动，但门纹丝不动。门缝后面没有光，也没有风。",
-			Vector3(1.2, 2.3, 0.5))
+	# 露台推拉门
+	_add_exit(parent, "PatioDoor", Vector3(-4.0, FLOOR_Y + 0.95, OUT_Z1 - 0.15),
+			"通往后院的推拉门", "house_exterior")
 
-	# 地下室门：只做封闭门，不制作内部
-	_add_examine(parent, "BasementDoor", Vector3(-6.35, 1.05, 2.6), "地下室的门",
-			"门是锁着的。有人说底下堆着旧家具，但今晚没有下去的理由。",
-			Vector3(0.5, 2.3, 1.2))
-
-	_add_examine(parent, "Laptop", Vector3(-5.4, 1.05, 1.6), "一台笔记本电脑",
-			"屏幕还亮着，停在一张看不出内容的图上。",
-			Vector3(0.8, 0.6, 0.8))
-
-	_add_examine(parent, "Fireplace", Vector3(-6.15, 0.9, -1.8), "壁炉",
-			"火还没灭透，余烬偶尔炸开一点火星。",
-			Vector3(0.7, 1.8, 2.0))
-
-	_add_examine(parent, "DiningTable", Vector3(0.75, 0.9, -1.8), "餐桌",
-			"八个人的餐具已经摆好，蜡烛还没点上。",
-			Vector3(1.2, 1.2, 2.4))
-
-	_add_examine(parent, "KitchenIsland", Vector3(4.55, 0.95, -2.6), "厨房岛台",
-			"台面上摆着几只杯子和一瓶没开的酒。",
-			Vector3(2.2, 1.3, 1.1))
+	# 建筑内的可查看对象（灰盒阶段只有骨架，文字先描述结构而非陈设）
+	_add_examine(parent, "DiningTableSpot", Vector3(1.0, FLOOR_Y + 0.65, 6.5),
+			"餐桌的位置", "长桌上还留着杯子的水痕。八把椅子，有一把被推得离桌很远。")
+	_add_examine(parent, "FireplaceSpot", Vector3(-5.0, FLOOR_Y + 0.95, 9.0),
+			"壁炉", "壁炉是冷的。灰烬很平，像是很久没有人用过。")
+	_add_examine(parent, "KitchenCounter", Vector3(6.2, FLOOR_Y + 0.85, 6.2),
+			"厨房台面", "台面上有一圈没擦干净的水渍，是杯子被拿走时留下的。")
+	_add_examine(parent, "StudyDesk", Vector3(-4.6, FLOOR_Y + 0.75, 1.2),
+			"书桌", "桌上摊着一台开着的笔记本电脑，屏幕的光映在墙上。")
 
 
-func _add_exit(parent: Node, node_name: String, pos: Vector3, display_name: String,
-		target: String, hit_size: Vector3) -> void:
+func _add_exit(parent: Node, node_name: String, pos: Vector3,
+		display_name: String, target: String) -> void:
 	var spot := Area3D.new()
 	spot.name = node_name
 	spot.set_script(load("res://core/hotspot.gd"))
@@ -271,12 +317,12 @@ func _add_exit(parent: Node, node_name: String, pos: Vector3, display_name: Stri
 	spot.display_name = display_name
 	spot.action_kind = "exit"
 	spot.target_location = target
-	_col(spot, hit_size)
+	_col(spot, Vector3(1.2, 2.2, 0.8))
 	parent.add_child(spot)
 
 
-func _add_examine(parent: Node, node_name: String, pos: Vector3, display_name: String,
-		text: String, hit_size: Vector3) -> void:
+func _add_examine(parent: Node, node_name: String, pos: Vector3,
+		display_name: String, text: String) -> void:
 	var spot := Area3D.new()
 	spot.name = node_name
 	spot.set_script(load("res://core/hotspot.gd"))
@@ -284,14 +330,13 @@ func _add_examine(parent: Node, node_name: String, pos: Vector3, display_name: S
 	spot.display_name = display_name
 	spot.action_kind = "examine"
 	spot.examine_text = text
-	_col(spot, hit_size)
+	_col(spot, Vector3(1.4, 1.6, 1.4))
 	parent.add_child(spot)
 
 
 func _col(spot: Area3D, size: Vector3) -> void:
-	var cs := CollisionShape3D.new()
-	cs.name = "HitShape"
-	var bs := BoxShape3D.new()
-	bs.size = size
-	cs.shape = bs
-	spot.add_child(cs)
+	var shape_node := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = size
+	shape_node.shape = box
+	spot.add_child(shape_node)

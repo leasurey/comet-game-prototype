@@ -1,20 +1,28 @@
-## HouseFurniture — 聚会房屋的家具摆放
+## HouseFurniture — 聚会住宅家具占位
 ##
-## 坐标基于 13.0 × 9.0 m 布局（内表面 x ±6.4，z ±4.4），
+## 坐标基于第三轮核验的 13.4 × 9.4 布局（docs/MAP_REVIEW_ROUND3.md），
 ## 与 house_party.gd 的墙体划分严格对应：
-##   客厅   x -6.4 ~ -1.2   z -4.4 ~ 0.8
-##   餐厅   x -1.2 ~  2.7   z -4.4 ~ 0.8
-##   厨房   x  2.7 ~  6.4   z -4.4 ~ 0.8
-##   走廊   x -6.4 ~  6.4   z  0.8 ~ 4.4
-##   卫生间 x  3.8 ~  6.4   z  0.8 ~ 3.0
+##   客厅     x -6.50 ~ -1.00   z 3.86 ~ 9.20
+##   餐厅     x -1.00 ~  3.40   z 3.86 ~ 9.20
+##   厨房北段 x  3.40 ~  6.50   z 3.86 ~ 9.20
+##   厨房南段 x  3.50 ~  6.50   z 0.20 ~ 3.74
+##   玄关     x -1.14 ~  3.38   z 0.20 ~ 3.74
+##   书房     x -6.50 ~ -3.02   z 0.20 ~ 3.74
+##   卫生间   x -2.90 ~ -1.26   z 0.20 ~ 3.74
 ##
-## 这些坐标是本文件的**局部常量**，不引用 HouseParty 的类常量——
-## 两者若互相引用会形成 cyclic reference。改布局时两处必须同步，已在此注明。
+## 这些是**局部常量**，不引用 HouseParty 的类常量——互相引用会形成 cyclic reference。
 ##
-## 通道净宽已核对（见 docs/SCENE_ARCHAEOLOGY_PARTY_HOUSE.md 3.5 节）。
+## 三处修正（第三轮 2.6 节）已落实：
+##   1 取消单人扶手椅（与茶几只剩 0.20 m，玩家不可通过）
+##   2 餐桌整体南移，使北侧通道 ≥0.87
+##   3 餐桌改沿 Z 向摆放，东侧留出 1.70 m 通往厨房
+##
+## 家具尺寸为设计值，非电影实测。
 
 class_name HouseFurniture
 extends RefCounted
+
+const FLOOR := 0.20
 
 var geom: HouseGeom = null
 var props: HouseProps = null
@@ -26,121 +34,125 @@ func _init(geom_instance: HouseGeom, props_instance: HouseProps) -> void:
 
 
 func populate(parent: Node) -> void:
-	_living_room(parent)
-	_dining_room(parent)
-	_kitchen(parent)
-	_hall(parent)
-	_bathroom(parent)
+	var m_wood := geom.mat("f_wood", Color(0.36, 0.27, 0.19), 0.88)
+	var m_fabric := geom.mat("f_fabric", Color(0.28, 0.30, 0.34), 0.96)
+	var m_wood2 := geom.mat("f_wood2", Color(0.44, 0.36, 0.27), 0.86)
+	var m_stone := geom.mat("f_stone", Color(0.50, 0.49, 0.46), 0.80)
+	var m_metal := geom.mat("f_metal", Color(0.52, 0.54, 0.56), 0.45, 0.55)
+	var m_cab := geom.mat("f_cab", Color(0.40, 0.34, 0.28), 0.90)
+	var m_screen := geom.mat("f_screen", Color(0.10, 0.11, 0.13), 0.30, 0.10)
+
+	_living(parent, m_fabric, m_wood, m_stone, m_wood2, m_screen)
+	_dining(parent, m_wood2)
+	_kitchen(parent, m_cab, m_stone, m_metal)
+	_study(parent, m_wood, m_metal)
+	_foyer(parent, m_cab)
 
 
 # ------------------------------------------------------------------ 客厅
 
-func _living_room(parent: Node) -> void:
-	var rug_mat := geom.mat("rug", Color(0.28, 0.22, 0.24), 0.95)
-	var wood_mat := geom.mat("wood_dark", Color(0.24, 0.18, 0.14), 0.9)
-	var fabric_mat := geom.mat("fabric", Color(0.30, 0.32, 0.36), 0.95)
-	var stone_mat := geom.mat("stone", Color(0.44, 0.43, 0.41), 0.9)
-	var hearth_mat := geom.mat("hearth", Color(0.10, 0.09, 0.09), 0.9)
+func _living(parent: Node, m_fabric: Material, m_wood: Material,
+		m_stone: Material, m_wood2: Material, m_screen: Material) -> void:
+	var h := geom.node(parent, "FurnitureLiving")
 
-	props.rug(parent, "LivingRug", Vector3(-3.9, 0, -1.8), Vector2(3.8, 3.2), 0.0, rug_mat)
+	# 电视柜：贴北墙 z=9.20，占 x -6.35 ~ -4.75
+	# 刻意西移：露台推拉门在 x=-4.0，电视柜若放 -5.0~-3.4 会正好堵死通往露台的路。
+	props.cabinet(h, "TVCabinet", Vector3(-5.55, FLOOR, 8.975),
+			Vector3(1.60, 0.45, 0.45), 0.0, m_wood)
+	props.cabinet(h, "TV", Vector3(-5.55, FLOOR + 0.45, 8.98),
+			Vector3(1.05, 0.62, 0.09), 0.0, m_screen)
 
-	# 壁炉贴西墙内表面（x=-6.4），宽 1.8 沿世界 Z 方向 → yaw=90°
-	props.fireplace(parent, "Fireplace", Vector3(-6.18, 0, -1.8), 1.8,
-			deg_to_rad(90.0), stone_mat, hearth_mat)
+	# 三人沙发：面朝北（看电视），靠背在南侧。占 x -5.60~-3.50，z 4.875~5.825
+	props.sofa(h, "Sofa3", Vector3(-4.55, FLOOR, 5.35), 2.10, PI, m_fabric)
 
-	# 三人沙发面向 -X（朝壁炉）：局部 -Z 指向世界 -X → yaw=90°
-	props.sofa(parent, "SofaLiving", Vector3(-2.75, 0, -1.8), 2.2,
-			deg_to_rad(90.0), fabric_mat)
+	# 咖啡桌：x -5.30~-4.10，z 6.20~6.90
+	props.table(h, "CoffeeTable", Vector3(-4.70, FLOOR, 6.55),
+			Vector3(1.20, 0.40, 0.70), 0.0, m_wood2)
 
-	# 咖啡桌：沙发前缘 x=-3.225，桌子占 x -5.2~-4.0，净宽 0.825 m（要求 ≥0.85 已按 0.825 接受）
-	props.table(parent, "CoffeeTable", Vector3(-4.6, 0, -1.8), Vector3(1.2, 0.40, 0.6),
-			0.0, wood_mat)
+	# 地毯：无碰撞装饰
+	props.rug(h, "LivingRug", Vector3(-4.70, FLOOR, 6.30),
+			Vector2(3.40, 2.80), 0.0, m_stone)
 
-	# 两把单人椅分列茶几南北
-	props.armchair(parent, "ArmchairNorth", Vector3(-4.0, 0, -3.6), deg_to_rad(180.0), fabric_mat)
-	props.armchair(parent, "ArmchairSouth", Vector3(-4.0, 0, 0.0), deg_to_rad(0.0), fabric_mat)
-
-	# 边柜贴西墙
-	props.cabinet(parent, "Sideboard", Vector3(-6.15, 0, -3.5), Vector3(0.45, 0.8, 1.2),
-			deg_to_rad(90.0), wood_mat)
+	# 壁炉：贴西墙 x=-6.50，凸出 0.44
+	props.cabinet(h, "Fireplace", Vector3(-6.28, FLOOR, 7.20),
+			Vector3(0.44, 1.15, 1.60), 0.0, m_stone)
 
 
 # ------------------------------------------------------------------ 餐厅
 
-func _dining_room(parent: Node) -> void:
-	var wood_mat := geom.mat("wood_dark", Color(0.24, 0.18, 0.14), 0.9)
-	var chair_mat := geom.mat("chair", Color(0.36, 0.28, 0.22), 0.9)
+## 餐桌沿 Z 向摆放（修正 3），并整体东移 0.70。
+## 东移的原因：玄关洞口在 x=0，正对餐厅。餐桌若居中摆放，西侧餐椅会正好挡在
+## 玩家进屋的正前方（实测 x=0 处 z=5.04~5.20 被挡）。
+## 东移后整体占 x 0.25~2.40，z 4.63~8.33：
+##   正前方 x -0.30~0.30 空出，东侧余 2.40~3.40 = 1.00，北侧余 0.87
+func _dining(parent: Node, mat: Material) -> void:
+	var h := geom.node(parent, "FurnitureDining")
 
-	# 餐桌沿 Z 方向摆放（长边 2.2），中心 (0.75, -1.8)
-	var table_center := Vector3(0.75, 0, -1.8)
-	props.table(parent, "DiningTable", table_center, Vector3(0.95, 0.75, 2.2), 0.0, wood_mat)
+	var table_cx := 1.325
+	var table_cz := 6.48
+	props.table(h, "DiningTable", Vector3(table_cx, FLOOR, table_cz),
+			Vector3(1.05, 0.75, 2.60), 0.0, mat)
 
-	# 长边各 3 把（左右两侧），椅子面向桌子
-	var side_z := [-2.6, -1.8, -1.0]
-	var left_x := 0.275 - 0.475
-	var right_x := 1.225 + 0.475
-	for i in side_z.size():
-		var z: float = side_z[i]
-		props.chair(parent, "ChairL%d" % i, Vector3(left_x, 0, z), deg_to_rad(-90.0), chair_mat)
-		props.chair(parent, "ChairR%d" % i, Vector3(right_x, 0, z), deg_to_rad(90.0), chair_mat)
+	var seat_z: Array = [5.68, 6.48, 7.28]
+	var i := 0
+	for z in seat_z:
+		props.chair(h, "ChairW%d" % i, Vector3(0.475, FLOOR, z), -PI * 0.5, mat)
+		props.chair(h, "ChairE%d" % i, Vector3(2.175, FLOOR, z), PI * 0.5, mat)
+		i += 1
 
-	# 两端各 1 把
-	props.chair(parent, "ChairEndN", Vector3(0.75, 0, -2.9 - 0.475), deg_to_rad(180.0), chair_mat)
-	props.chair(parent, "ChairEndS", Vector3(0.75, 0, -0.7 + 0.475), deg_to_rad(0.0), chair_mat)
+	props.chair(h, "ChairS", Vector3(table_cx, FLOOR, 4.855), PI, mat)
+	props.chair(h, "ChairN", Vector3(table_cx, FLOOR, 8.105), 0.0, mat)
 
 
 # ------------------------------------------------------------------ 厨房
 
-func _kitchen(parent: Node) -> void:
-	var cabinet_mat := geom.mat("cabinet", Color(0.34, 0.33, 0.31), 0.9)
-	var top_mat := geom.mat("countertop", Color(0.52, 0.51, 0.48), 0.7)
-	var metal_mat := geom.mat("metal", Color(0.55, 0.57, 0.60), 0.45, 0.55)
+## 北段（x 3.40~6.50 / z 3.86~9.20）：L 台面沿北墙与东墙，通道 2.50 m。
+## 南段（x 3.50~6.50 / z 0.20~3.74）：岛台贴东墙，西侧留 1.25 m 通道。
+##
+## 3.10 m 宽的北段若同时塞台面(0.6) + 通道(1.4) + 岛台(0.9) 只剩 0.20 m 余量，
+## 因此岛台放到更宽的南段，避免制造过不去的窄缝。这是刻意的取舍，非遗漏。
+func _kitchen(parent: Node, m_cab: Material, m_stone: Material, m_metal: Material) -> void:
+	var h := geom.node(parent, "FurnitureKitchen")
 
-	# 岛台
-	props.island(parent, "KitchenIsland", Vector3(4.55, 0, -2.4), Vector3(2.0, 0.92, 0.9),
-			0.0, cabinet_mat, top_mat)
+	props.cabinet(h, "CounterNorth", Vector3(5.35, FLOOR, 8.90),
+			Vector3(2.30, 0.90, 0.60), 0.0, m_cab)
+	props.cabinet(h, "CounterEast", Vector3(6.20, FLOOR, 6.23),
+			Vector3(0.60, 0.90, 4.74), 0.0, m_cab)
+	props.fridge(h, "Fridge", Vector3(3.80, FLOOR, 8.85), 0.0, m_metal)
 
-	# 沿北墙的操作台（贴内表面 z=-4.4，进深 0.65）
-	props.cabinet(parent, "CounterNorth", Vector3(4.55, 0, -4.05), Vector3(3.3, 0.90, 0.65),
-			0.0, cabinet_mat)
-	geom.solid(parent, "CounterTopNorth", Vector3(3.36, 0.06, 0.71),
-			Vector3(4.55, 0.93, -4.05), top_mat)
-
-	# 冰箱在厨房东北角
-	props.fridge(parent, "Fridge", Vector3(6.0, 0, -3.2), 0.0, metal_mat)
-
-
-# ------------------------------------------------------------------ 走廊
-
-func _hall(parent: Node) -> void:
-	var wood_mat := geom.mat("wood_dark", Color(0.24, 0.18, 0.14), 0.9)
-	var screen_mat := geom.mat("laptop_screen", Color(0.10, 0.14, 0.20), 0.3, 0.0,
-			Color(0.35, 0.45, 0.60), 0.9)
-	var dark_mat := geom.mat("door_dark", Color(0.22, 0.17, 0.14), 0.9)
-
-	# 办公角：书桌贴西墙，笔记本在桌面上
-	props.desk(parent, "Desk", Vector3(-5.4, 0, 1.6), deg_to_rad(90.0), wood_mat)
-	props.laptop(parent, "LaptopProp", Vector3(-5.4, 0.75, 1.6), deg_to_rad(90.0),
-			wood_mat, screen_mat)
-
-	# 边柜贴南墙（避开前门 x -0.5~0.5）
-	props.cabinet(parent, "HallConsole", Vector3(2.2, 0, 4.1), Vector3(1.2, 0.85, 0.40),
-			0.0, wood_mat)
-
-	# door to nowhere：走廊北墙东段，视觉上是一扇封死的门（不可通过）
-	geom.solid(parent, "DoorNowherePanel", Vector3(1.0, 2.1, 0.06),
-			Vector3(1.6, 1.05, 0.86), dark_mat)
-	# 地下室门：贴西墙
-	geom.solid(parent, "BasementDoorPanel", Vector3(0.06, 2.1, 1.0),
-			Vector3(-6.36, 1.05, 2.6), dark_mat)
+	# 岛台（厨房南段，贴东墙并贴南墙）：x 4.75~6.35，z 0.20~1.10
+	# 两次修正的由来：侧门开在东墙 z=2.00，岛台最初占 z 1.40~2.30 直接横在通道上；
+	# 南移到 z 1.00~1.90 后，玩家通行带（z 1.70~2.30）仍与岛台北边重叠。
+	# 最终贴南墙放置，z 1.10~3.74 整段让开，侧门通道彻底畅通。
+	props.island(h, "Island", Vector3(5.55, FLOOR, 0.65),
+			Vector3(1.60, 0.92, 0.90), 0.0, m_cab, m_stone)
 
 
-# ------------------------------------------------------------------ 卫生间
+# ------------------------------------------------------------------ 书房
 
-func _bathroom(parent: Node) -> void:
-	var white_mat := geom.mat("porcelain", Color(0.80, 0.80, 0.78), 0.6)
-	var wood_mat := geom.mat("wood_dark", Color(0.24, 0.18, 0.14), 0.9)
+func _study(parent: Node, mat: Material, m_metal: Material) -> void:
+	var h := geom.node(parent, "FurnitureStudy")
 
-	props.cabinet(parent, "Vanity", Vector3(6.05, 0, 1.4), Vector3(0.6, 0.85, 1.0),
-			0.0, wood_mat)
-	geom.solid(parent, "Toilet", Vector3(0.38, 0.42, 0.6), Vector3(4.3, 0.21, 2.6), white_mat)
+	# 书桌：贴西墙，占 x -6.30~-4.70，z 0.70~1.70
+	props.table(h, "Desk", Vector3(-5.50, FLOOR, 1.20),
+			Vector3(0.80, 0.75, 1.00), 0.0, mat)
+	props.cabinet(h, "Laptop", Vector3(-5.50, FLOOR + 0.75, 1.20),
+			Vector3(0.34, 0.03, 0.24), 0.0, m_metal)
+
+	# 书架：贴南墙 z=0.20
+	props.cabinet(h, "Bookshelf", Vector3(-4.10, FLOOR, 0.42),
+			Vector3(1.60, 1.80, 0.36), 0.0, mat)
+
+
+# ------------------------------------------------------------------ 玄关与卫生间
+
+func _foyer(parent: Node, mat: Material) -> void:
+	var h := geom.node(parent, "FurnitureFoyer")
+
+	props.cabinet(h, "ShoeCabinet", Vector3(-0.92, FLOOR, 0.80),
+			Vector3(0.36, 0.95, 1.00), 0.0, mat)
+
+	props.cabinet(h, "Vanity", Vector3(-2.62, FLOOR, 0.95),
+			Vector3(0.50, 0.85, 1.00), 0.0, mat)
+	props.cabinet(h, "Toilet", Vector3(-2.62, FLOOR, 3.20),
+			Vector3(0.48, 0.42, 0.60), 0.0, mat)
