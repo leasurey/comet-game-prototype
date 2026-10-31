@@ -12,6 +12,7 @@
 | 7 处差异的「可辨识度」 | 数值差异已确证，但是否一眼看出来需人眼确认 |
 | 鼠标拖动灵敏度手感 | **未验证** — 当前值 `mouse_sensitivity = 0.0035` 仅为估算 |
 | HUD 排版位置 | **未验证** — 控件位置由代码设定，未实际观看校准 |
+| 对话面板观感 | **未验证** — 逻辑链路已测（dialogue_ui_test 26 断言），版式需实机确认 |
 | 明暗平衡是否过暗/过亮 | **未验证** — 尤其 `dark_road` 场景亮度需实机确认 |
 
 自动化测试证明了「机制正确」，不能证明「体验良好」。
@@ -190,17 +191,21 @@ Godot 4.4 起为每个脚本生成 `.uid` 文件用于资源标识。
 | 物理模拟与战斗 | 任务书明确不需要 |
 | 虚拟桌面 / 聊天 / 浏览器 UI | 挂载点 `register_overlay()` 已预留，尚未实现 |
 
-### 退出时有 2 条资源诊断警告（P3）
+### 退出时的资源诊断警告（P3）——**已修复**
 
-**现象**：headless 退出日志出现
-`WARNING: 2 ObjectDB instances were leaked at exit` 与
-`ERROR: 1 resources still in use at exit`。
+**曾经的现象**：headless 退出日志出现
+`WARNING: N ObjectDB instances were leaked at exit` 与
+`ERROR: M resources still in use at exit`。NPC 系统加入后从 2+1 涨到 9+3。
 
-**范围**：仅进程退出时的诊断输出。不影响启动、游玩、存档读写、场景切换，
-17 个测试 488 条断言全部通过，退出码 0。
+**根因（实测钉死，两处）**：
+1. `NPCManager` 是 Node 却从未 `add_child`，退出时成为孤儿实例，
+   并连带拖住它引用的 cognition/dialogue 两个 RefCounted 及其脚本资源。
+2. 音频：`AudioServer` 侧 voice 引用的回收是**异步**的。
+   退出阶段（`_exit_tree`/PREDELETE）才调用 `stop()` 必定泄漏
+   `AudioStreamPlaybackWAV + AudioStreamWAV`；甚至同一帧 stop 后立刻退出
+   仍有约 40% 概率抢在回收之前（实测 5 跑 2 漏）。
 
-**已排查**：对照实验确认与音频环境音相关（禁用 `set_ambience` 后消失），
-但移除音频流缓存、退出时断开 `stream` 引用、停止循环播放器后警告仍在。
-怀疑与 Godot 的音频播放对象在退出阶段的释放顺序有关，尚未定位到确切对象。
+**修复**：NPCManager 入树；`GameServices.shutdown_audio()` 在主循环仍运转时
+停掉全部播放并留 150 ms 真实时间窗口，由游戏退出路径与全部测试退出前调用。
 
-**状态**：**未修**。属外观级诊断噪音，优先级 P3。
+**验证**：全量 21 测试 / 569 断言通过，连续两轮退出日志零泄漏零报错。

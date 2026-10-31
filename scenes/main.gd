@@ -38,6 +38,12 @@ var _started := false
 var _pending_spawn: Variant = null
 var _pending_yaw_deg: float = 0.0
 
+## 对话会话状态（P7 正式对话 UI）。
+## _dlg_topic_nodes  = 当前话题列表对应的节点；_dlg_replies = 当前台词的回复分支。
+var _dlg_npc: NPC = null
+var _dlg_topic_nodes: Array = []
+var _dlg_replies: Array = []
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -93,6 +99,13 @@ func _bind_services() -> void:
 			_ui.new_game_requested.connect(_on_new_game_requested)
 		if _ui.has_signal("new_game_confirmed"):
 			_ui.new_game_confirmed.connect(_on_new_game_confirmed)
+		# 对话面板
+		if _ui.has_signal("dialogue_topic_chosen"):
+			_ui.dialogue_topic_chosen.connect(_on_dialogue_topic_chosen)
+		if _ui.has_signal("dialogue_reply_chosen"):
+			_ui.dialogue_reply_chosen.connect(_on_dialogue_reply_chosen)
+		if _ui.has_signal("dialogue_close_requested"):
+			_ui.dialogue_close_requested.connect(_on_dialogue_close_requested)
 
 	# 主菜单 / 暂停 / 设置。
 	# MenuController 不碰全局单例，服务引用在这里注入。
@@ -251,6 +264,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		var key := event as InputEventKey
 		if key.pressed and not key.echo:
 			if key.keycode == KEY_ESCAPE:
+				# ESC = 对话面板优先：开着对话时先结束对话，
+				# 其次才是暂停菜单开关。
+				if _ui != null and _ui.is_dialogue_open():
+					_close_dialogue()
+					get_viewport().set_input_as_handled()
+					return
 				# ESC = 暂停菜单开关。菜单开着时它是「返回游戏」，
 				# 关着时它是「暂停」。世界被暂停后不再响应移动与交互。
 				if _is_menu_open():
@@ -266,6 +285,11 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	# 菜单开着时，世界输入全部屏蔽（暂停/主菜单/设置都不该触发交互）。
 	if _is_menu_open():
+		return
+
+	# 对话面板开着时同样屏蔽世界输入：鼠标点击只作用于对话按钮，
+	# E 键与场景交互一律不响应。
+	if _ui != null and _ui.is_dialogue_open():
 		return
 
 	# ---- 交互键 E ----
@@ -304,32 +328,92 @@ func _try_interact() -> void:
 	_notify("这里没有什么可以互动的。", 2.0)
 
 
-## 与某个 NPC 开始对话。取该角色当前可用的台词（经认知闸门过滤）。
+## 与某个 NPC 开始对话：摆出话题列表（认知闸门过滤后的入口节点）。
+## 之后由对话面板的点击驱动 _show_dialogue_node 的分支推进。
 func _start_dialogue(npc: NPC) -> void:
-	if npc == null or GameServices.dialogue_manager == null:
+	if npc == null or GameServices.dialogue_manager == null or _ui == null:
 		return
-	var available: Array = GameServices.dialogue_manager.get_available_for(npc.character_id)
-	if available.is_empty():
+	var entries: Array = GameServices.dialogue_manager.get_entry_nodes_for(npc.character_id)
+	if entries.is_empty():
 		_notify("%s 现在没什么可说的。" % npc.display_name, 3.0)
 		return
-	npc.start_talking(GameServices.player_controller.global_position if GameServices.player_controller != null else Vector3.ZERO)
-	# 灰盒阶段用 HUD 文本呈现对话，正式 UI 属后续
-	var first: Dictionary = available[0]
+	_dlg_npc = npc
+	_dlg_topic_nodes = entries
+	_dlg_replies = []
+	npc.start_talking(GameServices.player_controller.global_position \
+			if GameServices.player_controller != null else Vector3.ZERO)
+	var labels: Array = []
+	for n in entries:
+		var t := str((n as Dictionary).get("topic", ""))
+		if t.is_empty():
+			# 数据没写 topic 时用台词作兜底文案，保证按钮永远有字
+			t = str((n as Dictionary).get("text", ""))
+		labels.append(t)
+	_release_mouse()
+	_ui.show_dialogue_topics(npc.display_name, labels)
+
+
+## 推进到某个对话节点：听取（授予认知）→ 展示台词与回复分支。
+func _show_dialogue_node(node_id: String) -> void:
+	if GameServices.dialogue_manager == null or _ui == null:
+		return
 	var heard: Dictionary = GameServices.dialogue_manager.hear(
-			str(first.get("id", "")),
+			node_id,
 			GameServices.world_manager.get_current_world_id(),
 			GameServices.get_tick())
-	if bool(heard.get("ok", false)):
-		_notify("%s：%s" % [npc.display_name, str(heard.get("text", ""))], 6.0)
-		var granted: Array = heard.get("granted", [])
-		if not granted.is_empty():
-			var labels: Array = []
-			for fid in granted:
-				labels.append(GameServices.cognition.get_label(str(fid)))
-			_notify("你了解到：%s" % "、".join(labels), 5.0)
-	else:
+	if not bool(heard.get("ok", false)):
 		_notify(str(heard.get("error", "对话失败")), 3.0)
-	npc.stop_talking()
+		_close_dialogue()
+		return
+	if _dlg_npc != null and GameServices.player_controller != null:
+		_dlg_npc.start_talking(GameServices.player_controller.global_position)
+	var hint := ""
+	var granted: Array = heard.get("granted", [])
+	if not granted.is_empty():
+		var labels: Array = []
+		for fid in granted:
+			labels.append(GameServices.cognition.get_label(str(fid)))
+		hint = "你了解到：%s" % "、".join(labels)
+	_dlg_replies = (heard.get("replies", []) as Array).duplicate(true)
+	var reply_labels: Array = []
+	for r in _dlg_replies:
+		reply_labels.append(str((r as Dictionary).get("text", "")))
+	_ui.show_dialogue_line(
+			_dlg_npc.display_name if _dlg_npc != null else "",
+			str(heard.get("text", "")),
+			reply_labels,
+			hint)
+
+
+func _on_dialogue_topic_chosen(index: int) -> void:
+	if index < 0 or index >= _dlg_topic_nodes.size():
+		return
+	_show_dialogue_node(str((_dlg_topic_nodes[index] as Dictionary).get("id", "")))
+
+
+func _on_dialogue_reply_chosen(index: int) -> void:
+	if index < 0 or index >= _dlg_replies.size():
+		return
+	var goto_id: Variant = (_dlg_replies[index] as Dictionary).get("goto", null)
+	if goto_id == null:
+		_close_dialogue()
+		return
+	_show_dialogue_node(str(goto_id))
+
+
+func _on_dialogue_close_requested() -> void:
+	_close_dialogue()
+
+
+func _close_dialogue() -> void:
+	if _ui != null:
+		_ui.hide_dialogue()
+	if _dlg_npc != null:
+		_dlg_npc.stop_talking()
+	_dlg_npc = null
+	_dlg_topic_nodes = []
+	_dlg_replies = []
+	_capture_mouse()
 
 
 

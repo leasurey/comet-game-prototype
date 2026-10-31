@@ -2,6 +2,7 @@
   "nodes": [
     {
       "id": "kevin_greet",
+      "topic": "打个招呼",
       "speaker": "kevin",
       "requires": [],
       "grants": [],
@@ -32,6 +33,7 @@
     },
     {
       "id": "kevin_sticky",
+      "topic": "问门上的便签",
       "speaker": "kevin",
       "requires": ["fact_sticky_note"],
       "grants": ["fact_kevin_denies_sticky"],
@@ -52,6 +54,7 @@
 
     {
       "id": "mike_greet",
+      "topic": "打个招呼",
       "speaker": "mike",
       "requires": [],
       "grants": [],
@@ -82,6 +85,7 @@
     },
     {
       "id": "mike_dark",
+      "topic": "问那段黑路",
       "speaker": "mike",
       "requires": ["fact_dark_road"],
       "grants": ["fact_mike_warns_dark"],
@@ -102,6 +106,7 @@
 
     {
       "id": "lee_greet",
+      "topic": "问屋子的异样",
       "speaker": "lee",
       "requires": [],
       "grants": [],
@@ -129,6 +134,7 @@
     },
     {
       "id": "lee_dark",
+      "topic": "说说黑路之后的发现",
       "speaker": "lee",
       "requires": ["fact_dark_road", "fact_identity_doubt"],
       "grants": ["fact_lee_deep"],
@@ -149,6 +155,7 @@
 
     {
       "id": "beth_greet",
+      "topic": "打个招呼",
       "speaker": "beth",
       "requires": [],
       "grants": [],
@@ -180,6 +187,7 @@
 
     {
       "id": "hugh_greet",
+      "topic": "聊彗星",
       "speaker": "hugh",
       "requires": [],
       "grants": [],
@@ -210,6 +218,7 @@
     },
     {
       "id": "hugh_sticky",
+      "topic": "问门上的数字",
       "speaker": "hugh",
       "requires": ["fact_sticky_note", "fact_parallel_theory"],
       "grants": ["fact_hugh_explains_note"],
@@ -219,6 +228,7 @@
 
     {
       "id": "amir_greet",
+      "topic": "打个招呼",
       "speaker": "amir",
       "requires": [],
       "grants": [],
@@ -239,6 +249,7 @@
 
     {
       "id": "laurie_greet",
+      "topic": "问问外面的路",
       "speaker": "laurie",
       "requires": [],
       "grants": [],
@@ -269,6 +280,7 @@
     },
     {
       "id": "laurie_after",
+      "topic": "问回来之后的事",
       "speaker": "laurie",
       "requires": ["fact_dark_road"],
       "grants": ["fact_laurie_saw_you"],

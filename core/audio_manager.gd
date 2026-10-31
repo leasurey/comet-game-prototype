@@ -150,10 +150,12 @@ func stop_all_loops() -> void:
 
 ## 退出时把循环停掉并断开资源引用，避免「退出时资源仍在使用」。
 func _exit_tree() -> void:
-	# 安全网：多数退出路径已在正常帧里调用过 shutdown()。
-	# 这里再拦一次，但不能依赖它——退出阶段才 stop 已经晚了，
-	# AudioServer 侧的 voice 引用回收不掉（实测 P3 泄漏根因）。
+	# 安全网：多数退出路径已在正常帧里调用过 shutdown_audio()。
+	# 这里兜住引擎直接退出的路径（如 --quit-after、平台强退）：
+	# shutdown 后留 150 ms 让混音线程回收 voice 引用——退出阶段不给
+	# 这个窗口就必然泄漏（见 shutdown() 的说明）。
 	shutdown()
+	OS.delay_msec(150)
 
 
 ## 停止全部声音并释放播放器持有的资源引用。

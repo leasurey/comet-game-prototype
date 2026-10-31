@@ -66,6 +66,25 @@ func get_available_for(speaker_id: String) -> Array:
 	return out
 
 
+## 话题入口：可作为对话起点摆上话题列表的节点。
+##
+## 判定：当前可用（requires 已满足）**且不被任何节点的 replies.goto 引用**。
+## 被 goto 引用的节点是分支应答，只能沿对话树走到——
+## 若也列进话题列表，玩家会看到「同一句话既是话题又是回答」的重复入口。
+func get_entry_nodes_for(speaker_id: String) -> Array:
+	var goto_targets := {}
+	for nid in _nodes.keys():
+		for r in (_nodes[nid] as Dictionary).get("replies", []):
+			var g: Variant = (r as Dictionary).get("goto", null)
+			if g != null:
+				goto_targets[str(g)] = true
+	var out: Array = []
+	for n in get_available_for(speaker_id):
+		if not goto_targets.has(str(n.get("id", ""))):
+			out.append(n)
+	return out
+
+
 ## 取某个节点（用于逐层深入对话）。
 func get_node(node_id: String) -> Dictionary:
 	if not _nodes.has(node_id):

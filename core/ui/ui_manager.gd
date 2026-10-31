@@ -26,6 +26,12 @@ signal new_game_requested
 ## 是为了让 UIManager 不承担"删档"这种破坏性决定，只负责问一句。
 signal new_game_confirmed
 
+## 对话面板（P7 正式对话 UI）。
+## 面板只负责呈现与转发点击：说什么、说什么之后发生什么，由 main/对话系统决定。
+signal dialogue_topic_chosen(index: int)
+signal dialogue_reply_chosen(index: int)
+signal dialogue_close_requested
+
 const COLOR_TEXT := Color(0.86, 0.87, 0.88, 1.0)
 const COLOR_MUTED := Color(0.55, 0.57, 0.59, 1.0)
 const COLOR_ACCENT := Color(0.80, 0.65, 0.38, 1.0)
@@ -43,6 +49,13 @@ var _confirm_root: Control = null
 var _confirm_label: Label = null
 var _confirm_callback: Callable = Callable()
 var _root: Control = null
+
+# 对话面板
+var _dialogue_root: Control = null
+var _dlg_speaker: Label = null
+var _dlg_text: Label = null
+var _dlg_hint: Label = null
+var _dlg_list: VBoxContainer = null
 
 
 func _ready() -> void:
@@ -67,6 +80,7 @@ func _build_ui() -> void:
 	_build_message()
 	_build_button_bar()
 	_build_confirm()
+	_build_dialogue()
 
 	_overlay_root = Control.new()
 	_overlay_root.name = "OverlayLayer"
@@ -290,6 +304,90 @@ func _build_confirm() -> void:
 	_confirm_root = root
 
 
+## 对话面板（正式对话 UI）。
+##
+## 形态：底部居中面板 = 说话人 + 台词 + 副提示行 + 回复/话题按钮列表。
+## 全屏透明挡板吞掉世界点击（对话期间不该与场景热点交互），
+## 点挡板空白处 = 结束对话（与「结束对话」按钮等价）。
+func _build_dialogue() -> void:
+	var root := Control.new()
+	root.name = "DialogueRoot"
+	root.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.visible = false
+	_root.add_child(root)
+	_dialogue_root = root
+
+	var dim := ColorRect.new()
+	dim.name = "Dim"
+	dim.color = Color(0.0, 0.0, 0.0, 0.30)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var dim_click := func() -> void:
+		dialogue_close_requested.emit()
+	dim.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+			dim_click.call())
+	root.add_child(dim)
+
+	var panel := PanelContainer.new()
+	panel.name = "Panel"
+	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	panel.offset_left = -340.0
+	panel.offset_right = 340.0
+	panel.offset_top = -330.0
+	panel.offset_bottom = -150.0
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.055, 0.058, 0.070, 0.94)
+	style.set_corner_radius_all(4)
+	style.set_content_margin_all(16.0)
+	panel.add_theme_stylebox_override("panel", style)
+	root.add_child(panel)
+
+	var box := VBoxContainer.new()
+	box.name = "VBox"
+	box.add_theme_constant_override("separation", 10)
+	panel.add_child(box)
+
+	_dlg_speaker = Label.new()
+	_dlg_speaker.name = "SpeakerLabel"
+	_dlg_speaker.text = ""
+	_dlg_speaker.add_theme_font_size_override("font_size", 17)
+	_dlg_speaker.add_theme_color_override("font_color", COLOR_ACCENT)
+	box.add_child(_dlg_speaker)
+
+	_dlg_text = Label.new()
+	_dlg_text.name = "TextLabel"
+	_dlg_text.text = ""
+	_dlg_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dlg_text.custom_minimum_size = Vector2(0.0, 56.0)
+	_dlg_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_dlg_text.add_theme_font_size_override("font_size", 16)
+	_dlg_text.add_theme_color_override("font_color", COLOR_TEXT)
+	box.add_child(_dlg_text)
+
+	_dlg_hint = Label.new()
+	_dlg_hint.name = "HintLabel"
+	_dlg_hint.text = ""
+	_dlg_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_dlg_hint.add_theme_font_size_override("font_size", 13)
+	_dlg_hint.add_theme_color_override("font_color", COLOR_MUTED)
+	box.add_child(_dlg_hint)
+
+	_dlg_list = VBoxContainer.new()
+	_dlg_list.name = "OptionList"
+	_dlg_list.add_theme_constant_override("separation", 6)
+	box.add_child(_dlg_list)
+
+	var close := Button.new()
+	close.name = "DialogueClose"
+	close.text = "结束对话"
+	close.custom_minimum_size = Vector2(110, 30)
+	close.add_theme_font_size_override("font_size", 14)
+	close.pressed.connect(func() -> void: dialogue_close_requested.emit())
+	box.add_child(close)
+
+
 func ask_new_game() -> void:
 	show_confirm("重新开始会清除当前存档，确定吗？", Callable())
 
@@ -312,6 +410,66 @@ func hide_confirm() -> void:
 
 func is_confirm_visible() -> bool:
 	return _confirm_root != null and _confirm_root.visible
+
+
+# ---------------------------------------------------------------- 对话面板 API
+
+## 摆出话题列表（对话开始时）。topics 为 String 数组（按钮文案）。
+func show_dialogue_topics(speaker: String, topics: Array, hint: String = "") -> void:
+	if _dialogue_root == null:
+		return
+	_dlg_speaker.text = speaker
+	_dlg_text.text = "想聊点什么？"
+	_dlg_hint.text = hint
+	_dlg_hint.visible = not hint.is_empty()
+	_rebuild_options(topics, dialogue_topic_chosen)
+	_dialogue_root.visible = true
+
+
+## 摆出台词与回复分支。replies 为 String 数组（玩家回复文案），
+## 点击第 i 个发出 dialogue_reply_chosen(i)；replies 为空表示这条线到头。
+func show_dialogue_line(speaker: String, text: String, replies: Array, hint: String = "") -> void:
+	if _dialogue_root == null:
+		return
+	_dlg_speaker.text = speaker
+	_dlg_text.text = text
+	_dlg_hint.text = hint
+	_dlg_hint.visible = not hint.is_empty()
+	_rebuild_options(replies, dialogue_reply_chosen)
+	_dialogue_root.visible = true
+
+
+func set_dialogue_hint(text: String) -> void:
+	if _dlg_hint == null:
+		return
+	_dlg_hint.text = text
+	_dlg_hint.visible = not text.is_empty()
+
+
+func hide_dialogue() -> void:
+	if _dialogue_root != null:
+		_dialogue_root.visible = false
+
+
+func is_dialogue_open() -> bool:
+	return _dialogue_root != null and _dialogue_root.visible
+
+
+## 重建选项按钮。按钮名带序号（OptionButton0…），便于测试定位。
+func _rebuild_options(labels: Array, signal_ref: Signal) -> void:
+	for c in _dlg_list.get_children():
+		_dlg_list.remove_child(c)
+		c.queue_free()
+	for i in range(labels.size()):
+		var b := Button.new()
+		b.name = "OptionButton%d" % i
+		b.text = str(labels[i])
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		b.custom_minimum_size = Vector2(0.0, 32.0)
+		b.add_theme_font_size_override("font_size", 15)
+		var idx := i
+		b.pressed.connect(func() -> void: signal_ref.emit(idx))
+		_dlg_list.add_child(b)
 
 
 # ---------------------------------------------------------------- 对外 API
