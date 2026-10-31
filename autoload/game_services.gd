@@ -128,7 +128,7 @@ func _bootstrap() -> void:
 	add_child(npc_manager)
 	npc_manager.name = "NPCManager"
 
-	scene_manager.world_manager = world_manager
+	scene_manager.set_world_manager(world_manager)
 	scene_manager.event_manager = event_manager
 	scene_manager.interaction_manager = interaction_manager
 
@@ -367,7 +367,7 @@ func new_game(seed_value: int = -1) -> bool:
 	if not event_manager.load_from_data(events_result.get("data", {}), transitions_result.get("data", {}), errors):
 		return false
 
-	scene_manager.world_manager = world_manager
+	scene_manager.set_world_manager(world_manager)
 	scene_manager.event_manager = event_manager
 
 	if time_service != null:

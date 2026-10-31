@@ -23,6 +23,18 @@ const ENVIRONMENT_ROOT := "Environment"
 const MAX_BACK_STACK := 16
 
 var world_manager = null
+
+## 注入世界管理器并连接 world_changed → 刷新场景变体。
+## 此前 world_manager 是裸赋值，直接切换世界（不换地点）时没人刷新变体——
+## 实测 Variant 节点的 visible 不会更新（reality_switch_state_test W4）。
+func set_world_manager(wm) -> void:
+	world_manager = wm
+	if wm != null and not wm.world_changed.is_connected(_on_world_changed_presentation):
+		wm.world_changed.connect(_on_world_changed_presentation)
+
+
+func _on_world_changed_presentation(_from_id: String, _to_id: String, _reason: String) -> void:
+	_refresh_world_presentation()
 var event_manager = null
 var interaction_manager = null
 
