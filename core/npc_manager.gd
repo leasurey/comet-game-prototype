@@ -16,6 +16,10 @@ class_name NPCManager
 extends Node
 
 signal navigation_ready
+
+## 第一阶段：只生成指定 NPC（空=生成全部）
+## 垂直切片只出 Kevin，避免方块人出现
+@export var spawn_list: Array[String] = []
 signal npc_talk_requested(npc_id: String)
 ## NPC 到达行走目标（CT-021 接线：NPC 行为 → 事件系统）。
 signal npc_arrived(npc_id: String, room_id: String)
@@ -161,6 +165,14 @@ func is_nav_ready() -> bool:
 ## 在给定容器（地点实例）下生成所有 NPC 并烘焙导航。
 ## container 必须是场景几何所在的节点，region 会挂在它上面成为几何祖先。
 func spawn_all(container: Node) -> void:
+	# 垂直切片：只生成 spawn_list 中的 NPC（空=全部）
+	var to_spawn: Array = []
+	if spawn_list.size() > 0:
+		for nid in spawn_list:
+			if _characters.has(nid):
+				to_spawn.append(nid)
+	else:
+		to_spawn = _characters.keys()
 	_despawn_all()
 	_pending_container = container
 	if container == null:

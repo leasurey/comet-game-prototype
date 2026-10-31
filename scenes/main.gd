@@ -656,6 +656,8 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 	if GameServices.npc_manager != null:
 		var inst2 := GameServices.scene_manager.get_current_instance()
 		if location_id == "party_house" and inst2 != null:
+			# 垂直切片：只生成 Kevin（后续阶段可扩展）
+			GameServices.npc_manager.spawn_list = ["kevin"]
 			GameServices.npc_manager.spawn_all(inst2)
 		else:
 			GameServices.npc_manager._despawn_all()

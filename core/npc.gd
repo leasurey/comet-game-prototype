@@ -183,58 +183,120 @@ func _build_body() -> void:
 
 	var skin_mat := StandardMaterial3D.new()
 	skin_mat.albedo_color = _skin_color
-	skin_mat.roughness = 0.7
+	skin_mat.roughness = 0.65
+	skin_mat.metallic_specular = 0.3
 
 	var hair_mat := StandardMaterial3D.new()
 	hair_mat.albedo_color = _hair_color
-	hair_mat.roughness = 0.8
+	hair_mat.roughness = 0.85
 
 	var shirt_mat := StandardMaterial3D.new()
 	shirt_mat.albedo_color = _shirt_color
-	shirt_mat.roughness = 0.85
+	shirt_mat.roughness = 0.82
 
 	var pants_mat := StandardMaterial3D.new()
 	pants_mat.albedo_color = _pants_color
-	pants_mat.roughness = 0.85
+	pants_mat.roughness = 0.82
 
-	# 躯干（上衣）
-	_add_box(_body_mesh, "Torso", Vector3(0.38, 0.55, 0.22),
-			Vector3(0, 1.15, 0), shirt_mat)
-	# 骨盆（裤子）
-	_add_box(_body_mesh, "Pelvis", Vector3(0.36, 0.18, 0.22),
+	var shoe_mat := StandardMaterial3D.new()
+	shoe_mat.albedo_color = Color(0.2, 0.18, 0.15)
+	shoe_mat.roughness = 0.6
+
+	# --- 躯干 ---
+	# 上胸（衬衫）
+	_add_box(_body_mesh, "Chest", Vector3(0.36, 0.28, 0.22),
+			Vector3(0, 1.22, 0), shirt_mat)
+	# 下胸（衬衫）
+	_add_box(_body_mesh, "Abdomen", Vector3(0.33, 0.22, 0.20),
+			Vector3(0, 1.00, 0), shirt_mat)
+	# 骨盆
+	_add_box(_body_mesh, "Pelvis", Vector3(0.32, 0.16, 0.20),
 			Vector3(0, 0.82, 0), pants_mat)
-	# 头（皮肤）
-	_add_sphere(_body_mesh, "Head", 0.13, Vector3(0, 1.55, 0), skin_mat)
-	# 头发（略大半球盖在头顶）
-	_add_sphere(_body_mesh, "Hair", 0.14, Vector3(0, 1.58, 0), hair_mat)
-	# 颈
-	_add_box(_body_mesh, "Neck", Vector3(0.10, 0.10, 0.10),
-			Vector3(0, 1.42, 0), skin_mat)
-	# 左臂（上臂 + 前臂）
-	_add_box(_body_mesh, "ArmLUpper", Vector3(0.10, 0.32, 0.10),
+
+	# --- 颈与头 ---
+	_add_cylinder(_body_mesh, "Neck", 0.055, 0.10,
+			Vector3(0, 1.40, 0), skin_mat)
+	# 头部（椭球：SphereMesh 缩放）
+	var head := MeshInstance3D.new()
+	head.name = "Head"
+	var hs := SphereMesh.new()
+	hs.radius = 0.115
+	hs.height = 0.24
+	head.mesh = hs
+	head.position = Vector3(0, 1.55, 0.01)
+	head.material_override = skin_mat
+	_body_mesh.add_child(head)
+	# 面部特征（鼻/下巴阴影感：小盒）
+	_add_box(_body_mesh, "Nose", Vector3(0.025, 0.035, 0.03),
+			Vector3(0, 1.53, 0.12), skin_mat)
+	_add_box(_body_mesh, "Chin", Vector3(0.06, 0.025, 0.02),
+			Vector3(0, 1.47, 0.10), skin_mat)
+	# 耳朵
+	_add_box(_body_mesh, "EarL", Vector3(0.02, 0.045, 0.025),
+			Vector3(-0.115, 1.55, 0), skin_mat)
+	_add_box(_body_mesh, "EarR", Vector3(0.02, 0.045, 0.025),
+			Vector3(0.115, 1.55, 0), skin_mat)
+	# 头发（顶部+后部）
+	var hair := MeshInstance3D.new()
+	hair.name = "Hair"
+	var hsm := SphereMesh.new()
+	hsm.radius = 0.125
+	hsm.height = 0.22
+	hair.mesh = hsm
+	hair.position = Vector3(0, 1.58, -0.015)
+	hair.material_override = hair_mat
+	_body_mesh.add_child(hair)
+	# 发际线（前额头发带）
+	_add_box(_body_mesh, "HairFront", Vector3(0.22, 0.04, 0.04),
+			Vector3(0, 1.64, 0.09), hair_mat)
+
+	# --- 左臂 ---
+	_add_cylinder(_body_mesh, "ShoulderL", 0.055, 0.08,
+			Vector3(-0.22, 1.30, 0), shirt_mat)
+	_add_cylinder(_body_mesh, "ArmLUpper", 0.048, 0.28,
 			Vector3(-0.27, 1.15, 0), shirt_mat)
-	_add_box(_body_mesh, "ArmLLower", Vector3(0.09, 0.28, 0.09),
-			Vector3(-0.27, 0.83, 0.03), skin_mat)
-	# 右臂
-	_add_box(_body_mesh, "ArmRUpper", Vector3(0.10, 0.32, 0.10),
+	_add_cylinder(_body_mesh, "ElbowL", 0.042, 0.06,
+			Vector3(-0.27, 0.98, 0), shirt_mat)
+	_add_cylinder(_body_mesh, "ArmLLower", 0.038, 0.26,
+			Vector3(-0.27, 0.84, 0.015), skin_mat)
+	_add_sphere(_body_mesh, "HandL", 0.045, Vector3(-0.27, 0.68, 0.03), skin_mat)
+
+	# --- 右臂 ---
+	_add_cylinder(_body_mesh, "ShoulderR", 0.055, 0.08,
+			Vector3(0.22, 1.30, 0), shirt_mat)
+	_add_cylinder(_body_mesh, "ArmRUpper", 0.048, 0.28,
 			Vector3(0.27, 1.15, 0), shirt_mat)
-	_add_box(_body_mesh, "ArmRLower", Vector3(0.09, 0.28, 0.09),
-			Vector3(0.27, 0.83, 0.03), skin_mat)
-	# 左腿（大腿 + 小腿）
-	_add_box(_body_mesh, "LegLUpper", Vector3(0.12, 0.38, 0.12),
-			Vector3(-0.11, 0.56, 0), pants_mat)
-	_add_box(_body_mesh, "LegLLower", Vector3(0.11, 0.38, 0.11),
+	_add_cylinder(_body_mesh, "ElbowR", 0.042, 0.06,
+			Vector3(0.27, 0.98, 0), shirt_mat)
+	_add_cylinder(_body_mesh, "ArmRLower", 0.038, 0.26,
+			Vector3(0.27, 0.84, 0.015), skin_mat)
+	_add_sphere(_body_mesh, "HandR", 0.045, Vector3(0.27, 0.68, 0.03), skin_mat)
+
+	# --- 左腿 ---
+	_add_cylinder(_body_mesh, "LegLUpper", 0.062, 0.36,
+			Vector3(-0.11, 0.58, 0), pants_mat)
+	_add_cylinder(_body_mesh, "KneeL", 0.055, 0.06,
+			Vector3(-0.11, 0.38, 0), pants_mat)
+	_add_cylinder(_body_mesh, "LegLLower", 0.048, 0.34,
 			Vector3(-0.11, 0.22, 0), pants_mat)
-	# 右腿
-	_add_box(_body_mesh, "LegRUpper", Vector3(0.12, 0.38, 0.12),
-			Vector3(0.11, 0.56, 0), pants_mat)
-	_add_box(_body_mesh, "LegRLower", Vector3(0.11, 0.38, 0.11),
+	# 脚（鞋）
+	_add_box(_body_mesh, "FootL", Vector3(0.095, 0.055, 0.23),
+			Vector3(-0.11, 0.028, 0.045), shoe_mat)
+
+	# --- 右腿 ---
+	_add_cylinder(_body_mesh, "LegRUpper", 0.062, 0.36,
+			Vector3(0.11, 0.58, 0), pants_mat)
+	_add_cylinder(_body_mesh, "KneeR", 0.055, 0.06,
+			Vector3(0.11, 0.38, 0), pants_mat)
+	_add_cylinder(_body_mesh, "LegRLower", 0.048, 0.34,
 			Vector3(0.11, 0.22, 0), pants_mat)
-	# 脚
-	_add_box(_body_mesh, "FootL", Vector3(0.10, 0.06, 0.22),
-			Vector3(-0.11, 0.03, 0.04), pants_mat)
-	_add_box(_body_mesh, "FootR", Vector3(0.10, 0.06, 0.22),
-			Vector3(0.11, 0.03, 0.04), pants_mat)
+	_add_box(_body_mesh, "FootR", Vector3(0.095, 0.055, 0.23),
+			Vector3(0.11, 0.028, 0.045), shoe_mat)
+
+	# 骨架节点（未来动画用）
+	var skeleton := Skeleton3D.new()
+	skeleton.name = "Skeleton"
+	_body_mesh.add_child(skeleton)
 
 
 func _add_box(parent: Node3D, box_name: String, size: Vector3, pos: Vector3,
@@ -244,6 +306,21 @@ func _add_box(parent: Node3D, box_name: String, size: Vector3, pos: Vector3,
 	var bm := BoxMesh.new()
 	bm.size = size
 	mi.mesh = bm
+	mi.position = pos
+	mi.material_override = mat
+	parent.add_child(mi)
+	return mi
+
+
+func _add_cylinder(parent: Node3D, cyl_name: String, radius: float, height: float,
+		pos: Vector3, mat: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = cyl_name
+	var cm := CylinderMesh.new()
+	cm.top_radius = radius
+	cm.bottom_radius = radius
+	cm.height = height
+	mi.mesh = cm
 	mi.position = pos
 	mi.material_override = mat
 	parent.add_child(mi)

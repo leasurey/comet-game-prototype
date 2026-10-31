@@ -28,6 +28,12 @@ func sofa(parent: Node, node_name: String, pos: Vector3, length: float,
 	var depth := 0.95
 	var seat_h := 0.42
 	var back_h := 0.82
+	# 电影写实升级：坐垫分割 + 扶手弧度 + 靠背分段
+	var cushion_w := length / 3.0 - 0.02
+	var m_frame := mat
+	var m_cushion: StandardMaterial3D = mat.duplicate()
+	if mat is StandardMaterial3D:
+		m_cushion.albedo_color = (mat as StandardMaterial3D).albedo_color * Color(1.08, 1.08, 1.08)
 
 	geom.solid(holder, "Seat", Vector3(length, seat_h, depth),
 			Vector3(0, seat_h * 0.5, 0), mat, facing_yaw)

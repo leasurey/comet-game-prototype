@@ -685,6 +685,125 @@
      "goto": null
     }
    ]
+  },
+  {
+   "id": "kevin_vs_open",
+   "speaker": "kevin",
+   "text": "嘿，Em。你站那儿有一会儿了……怎么了？看起来心不在焉的。",
+   "replies": [
+    {
+     "text": "没什么，就是有点走神。今晚的彗星你看了吗？",
+     "next": "kevin_vs_comet",
+     "effects": []
+    },
+    {
+     "text": "Kevin……你有没有觉得今晚有点不对劲？",
+     "next": "kevin_vs_uneasy",
+     "effects": [
+      {
+       "kind": "set_flag",
+       "name": "asked_kevin_uneasy"
+      }
+     ]
+    },
+    {
+     "text": "嗯，没事。就是有点累。",
+     "next": "kevin_vs_tired",
+     "effects": []
+    }
+   ],
+   "requires": [
+    "fact_sticky_note"
+   ],
+   "entry": false
+  },
+  {
+   "id": "kevin_vs_comet",
+   "speaker": "kevin",
+   "text": "看了，挺壮观的。Miller 彗星，据说一百年才来一次。Mike 说他小时候他爷爷就见过一次。",
+   "replies": [
+    {
+     "text": "一百年一次……那我们还挺幸运的。",
+     "next": "kevin_vs_end",
+     "effects": []
+    },
+    {
+     "text": "希望只是普通的彗星。",
+     "next": "kevin_vs_end",
+     "effects": [
+      {
+       "kind": "grant_fact",
+       "fact_id": "obs_comet_discussion"
+      }
+     ]
+    }
+   ],
+   "requires": [
+    "fact_sticky_note"
+   ],
+   "entry": false
+  },
+  {
+   "id": "kevin_vs_uneasy",
+   "speaker": "kevin",
+   "text": "不对劲？你是说彗星……还是别的？Laurie 来了让你不高兴了，对吧？",
+   "replies": [
+    {
+     "text": "不全是 Laurie。我说不上来……就是一种感觉。",
+     "next": "kevin_vs_end",
+     "effects": [
+      {
+       "kind": "grant_fact",
+       "fact_id": "obs_kevin_notices_tension"
+      }
+     ]
+    },
+    {
+     "text": "也许是我多心了。别管它。",
+     "next": "kevin_vs_end",
+     "effects": []
+    }
+   ],
+   "requires": [
+    "fact_sticky_note"
+   ],
+   "entry": false
+  },
+  {
+   "id": "kevin_vs_tired",
+   "speaker": "kevin",
+   "text": "也是，最近你一直在忙那个舞团的事……对了，你下周还去试镜吗？",
+   "replies": [
+    {
+     "text": "还没想好。也许吧。",
+     "next": "kevin_vs_end",
+     "effects": [
+      {
+       "kind": "grant_fact",
+       "fact_id": "obs_kevin_knows_dance"
+      }
+     ]
+    },
+    {
+     "text": "再说吧。今晚不想聊这个。",
+     "next": "kevin_vs_end",
+     "effects": []
+    }
+   ],
+   "requires": [
+    "fact_sticky_note"
+   ],
+   "entry": false
+  },
+  {
+   "id": "kevin_vs_end",
+   "speaker": "kevin",
+   "text": "好吧。不管怎样，今晚好好享受聚会。Lee 做的菜还不错。",
+   "replies": [],
+   "requires": [
+    "fact_sticky_note"
+   ],
+   "entry": false
   }
  ],
  "facts": {

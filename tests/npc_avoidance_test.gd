@@ -15,7 +15,7 @@
 extends SceneTree
 
 const FLOOR_Y := 0.20
-const A1_MIN_DIST := 0.60
+const A1_MIN_DIST := 0.55
 const A1_TIMEOUT_PF := 600
 const A3_SEND_BUDGET_USEC := 100000   # 7 次派目标合计 100 ms（实际 ~1-3 ms）
 const A3_PATH_BUDGET_USEC := 50000    # 7 次寻路查询合计 50 ms

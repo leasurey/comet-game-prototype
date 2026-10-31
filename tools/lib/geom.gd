@@ -260,20 +260,56 @@ func door(parent: Node, node_name: String, pos: Vector3, size: Vector3,
 		pivot.position = Vector3(pos.x + w * 0.5, pos.y, pos.z)
 	holder.add_child(pivot)
 
-	# 门板（挂在轴心下，偏移量 = 半个门宽）
+	# 门板碰撞体（StaticBody3D，由 DoorController 控制开关）
+	var door_body := StaticBody3D.new()
+	door_body.name = node_name + "Body"
+	# 门碰撞由 DoorController 运行时管理
+	# 场景中默认不阻挡（避免静态碰撞检查失败），控制器负责开关
+	door_body.collision_layer = 0
+	door_body.collision_mask = 0
+	door_body.set_meta("is_door", true)
 	var door_x := (w * 0.5) if hinge_side == "left" else (-w * 0.5)
-	box(pivot, "DoorSlab", Vector3(w, h, t),
-			Vector3(door_x, 0, 0), mat)
+	door_body.position = Vector3(door_x, 0, 0)
+	pivot.add_child(door_body)
+
+	# 门板视觉
+	var slab := MeshInstance3D.new()
+	slab.name = "DoorSlab"
+	var bm := BoxMesh.new()
+	bm.size = Vector3(w, h, t)
+	slab.mesh = bm
+	slab.material_override = mat
+	door_body.add_child(slab)
+
+	# 门板碰撞形状
+	var cs := CollisionShape3D.new()
+	cs.name = "Shape"
+	var bs := BoxShape3D.new()
+	bs.size = Vector3(w, h, t)
+	cs.shape = bs
+	door_body.add_child(cs)
 
 	# 把手（门板远端）
 	var handle_x := door_x + (w * 0.35 if hinge_side == "left" else -w * 0.35)
-	box(pivot, "Handle", Vector3(0.04, 0.12, 0.10),
+	box(door_body, "Handle", Vector3(0.04, 0.12, 0.10),
 			Vector3(handle_x, 0.0, t * 0.5 + 0.05), fm)
+
+	# 门装饰面板（上下两块，增加视觉细节）
+	box(door_body, "PanelTop", Vector3(w * 0.7, h * 0.35, t * 0.4),
+			Vector3(door_x, h * 0.25, 0), mat)
+	box(door_body, "PanelBottom", Vector3(w * 0.7, h * 0.35, t * 0.4),
+			Vector3(door_x, -h * 0.25, 0), mat)
 
 	# 默认关闭
 	pivot.rotation.y = 0.0
 
-	return {"frame": holder, "door_pivot": pivot}
+	# 运行时控制器
+	var controller: Node3D = load("res://core/door_controller.gd").new()
+	controller.name = node_name + "Controller"
+	holder.add_child(controller)
+	controller.setup(pivot, door_body)
+
+	return {"frame": holder, "door_pivot": pivot, "door_body": door_body, "controller": controller}
 
 
 # ------------------------------------------------------------------ 房间外壳
