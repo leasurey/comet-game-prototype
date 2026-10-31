@@ -254,7 +254,7 @@
 | BUG-014 EventBus 无订阅者 | **已修已验证** | main 改为订阅总线，`ui_flow_test` 断言连接存在 |
 | BUG-015 `interact` 从未求值 / 死事件 | **未修** | `TRIGGER_INTERACT` 仍无调用点；`evt_return_to_house` 仍无规则 |
 | BUG-016 三处双份真相 | **部分修** | `variants` 已成为校验源；`initial_world`（transitions 内）与 `exits` 仍只作装饰 |
-| BUG-017 测试偶发失败 | **部分修** | 已为四处聚焦断言加入显式 `_update_focus()` 驱动与 40 帧收敛窗口；失败率下降但仍偶发（同一批次内曾 6 次中失败 2 次，手动单跑 5/5 通过）。**未定位到具体断言**，保持"原因待查" |
+| BUG-017 测试偶发失败 | **已修已验证** | **根因定位（P11 期间）**：`SettingsManager.apply()` 无条件设 `Engine.max_fps=60`，headless 测试从不限帧变为限帧，所有基于帧计数的等待变慢并抖动。表现为 `fps_input_test` T09 在同一批次内偶发失败、单跑常通过。修复：headless 下跳过 `max_fps`。修后连跑多次 T09 全绿，全量 448 条断言稳定通过。另注：早前加入的显式 `_update_focus()` 驱动与 40 帧收敛窗口也已保留（消除单帧脆弱性），两者共同解决 |
 | BUG-018 窗口失焦未处理 | **已实现未验证** | `_notification` 已加 FOCUS_OUT 分支；**真实 Alt+Tab 未人工验收** |
 | BUG-019 HUD 无缩放 | **部分修** | 已配 `stretch/mode=canvas_items` + `aspect=keep`；三档分辨率未人工截图验收 |
 | BUG-020 无音频系统 | **未修** | 未实现（缺素材与授权确认） |
@@ -267,4 +267,4 @@
 | BUG-027 死代码/重复字段 | **部分修** | 清了 `_update_visual_feedback` 恒 1.0 与 `world_changed_after_enter`；payload 双字段保留（两个读者各用一个，属兼容而非死码） |
 | BUG-028 鸭子类型耦合 | **未修** | `AutoPortal` 仍用 `has_method("is_mouse_captured")`；`main` 仍直写 `pc.yaw` |
 
-**统计（v0.6.0）**：已修已验证 **18** 条，已实现未验证 **2** 条，部分修 **5** 条，未修 **3** 条。
+**统计（v0.6.1）**：已修已验证 **19** 条，已实现未验证 **2** 条，部分修 **4** 条，未修 **3** 条。

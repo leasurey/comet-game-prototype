@@ -178,9 +178,11 @@ func _check_apply_world() -> void:
 	_check(ok_alpha, "apply_world 命中已知现实时返回 true")
 	_check(inst.get_applied_world_id() == "world_alpha", "apply_world 记录了当前现实")
 
-	var ok_ghost: bool = inst.apply_world("world_gamma")
+	# 用一个真正未定义的世界 id 做负例。
+	# （world_gamma 现已真实存在，不能再当「缺失变体」的例子。）
+	var ok_ghost: bool = inst.apply_world("world_ghost")
 	_check(not ok_ghost, "apply_world 缺变体时返回 false（不再静默）")
-	_check(inst.get_applied_world_id() == "world_gamma",
+	_check(inst.get_applied_world_id() == "world_ghost",
 		"缺变体时仍记录请求的现实，便于定位")
 
 	# 共享几何不得被隐藏：Environment 下非 Variant_ 的节点必须保持 visible

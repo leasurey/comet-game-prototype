@@ -10,8 +10,14 @@
     {
       "id": "world_beta",
       "label": "Beta timeline",
-      "descriptor": "穿越黑暗道路之后落入的时间线，房屋外部已出现可观察差异",
+      "descriptor": "第一次穿越黑暗道路之后落入的时间线，停电、门牌歪斜、碎玻璃",
       "origin": "world_alpha"
+    },
+    {
+      "id": "world_gamma",
+      "label": "Gamma timeline",
+      "descriptor": "第二次穿越后落入的时间线。灯亮着但发冷，且停电时才该有的蜡烛同时亮着",
+      "origin": "world_beta"
     }
   ]
 }

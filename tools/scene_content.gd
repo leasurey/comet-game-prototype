@@ -203,6 +203,8 @@ func assemble_living_room(root: Node3D) -> void:
 	var vb := _n(env, "Variant_world_beta")
 	var hotspots := _n(root, "Hotspots")
 
+	var vc_lr := _n(env, "Variant_world_gamma")
+
 	var m_wall := _mat("lr_wall", Color(0.70, 0.67, 0.61))
 	var m_floor := _mat("lr_floor", Color(0.40, 0.30, 0.21))
 	var m_ceil := _mat("lr_ceil", Color(0.60, 0.58, 0.55))
@@ -261,6 +263,9 @@ func assemble_living_room(root: Node3D) -> void:
 	# ---- 差异二：电视屏幕。alpha 有微光（还开着），beta 彻底黑掉。
 	_box(va, "TVScreen", Vector3(1.48, 0.84, 0.03), Vector3(0, 1.10, -2.515), m_tv_on)
 	_box(vb, "TVScreen", Vector3(1.48, 0.84, 0.03), Vector3(0, 1.10, -2.515), m_tv_off)
+	# gamma：电视开着，但画面发冷发白，与 alpha 的暖光明显不同
+	var m_tv_cold := _mat("lr_tv_cold", Color(0.62, 0.74, 0.94), 0.4, 0.0, Color(0.58, 0.72, 0.96), 1.1)
+	_box(vc_lr, "TVScreen", Vector3(1.48, 0.84, 0.03), Vector3(0, 1.10, -2.515), m_tv_cold)
 
 	_world_env(root, Color(0.020, 0.020, 0.026), Color(0.17, 0.16, 0.15))
 
@@ -318,6 +323,7 @@ func assemble_house_exterior(root: Node3D) -> void:
 	var shared := _n(env, "Shared")
 	var va := _n(env, "Variant_world_alpha")
 	var vb := _n(env, "Variant_world_beta")
+	var vc := _n(env, "Variant_world_gamma")
 	var hotspots := _n(root, "Hotspots")
 
 	var m_ground := _mat("he_ground", Color(0.23, 0.22, 0.19))
@@ -467,6 +473,21 @@ func assemble_house_exterior(root: Node3D) -> void:
 	# ---- 差异四（门牌歪斜）：同一个门牌，beta 里歪了
 	_box(va, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, -0.13), m_signboard)
 	_box(vb, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, -0.13), m_signboard, 0.0, deg_to_rad(24.0))
+
+	# ---- gamma：灯亮着但发冷，门牌朝反方向歪，木箱回到右侧但立着。
+	# 三个现实各自有独立的可观察标记，玩家靠这些判断自己落在哪一条线上。
+	var m_porch_bulb_cold := _mat("he_bulb_cold", Color(0.62, 0.76, 1.00), 0.35, 0.0, Color(0.55, 0.72, 1.00), 1.8)
+	var m_win_glow_cold := _mat("he_win_cold", Color(0.55, 0.72, 1.00), 0.30, 0.0, Color(0.50, 0.68, 1.00), 1.1)
+	_box(vc, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, -0.22), m_porch_bulb_cold)
+	_omni(vc, "PorchLight", Vector3(0.0, 2.45, -0.55), Color(0.66, 0.80, 1.00), 4.2, 15.0)
+	_box(vc, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-3.50, 1.85, -0.04), m_win_glow_cold)
+	_box(vc, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(3.50, 1.85, -0.04), m_win_glow_cold)
+	_omni(vc, "WindowSpill", Vector3(-3.50, 1.80, -0.40), Color(0.58, 0.74, 1.00), 1.1, 7.0)
+	_box(vc, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, -0.13), m_signboard, 0.0, deg_to_rad(-31.0))
+
+	var crate_c := _n(vc, "Crate")
+	_solid(crate_c, "CrateBody", Vector3(0.78, 0.58, 0.62), Vector3(1.75, 0.29, -1.35), m_crate, deg_to_rad(6.0))
+	_solid(crate_c, "CrateLid", Vector3(0.82, 0.06, 0.66), Vector3(1.75, 0.58, -1.35), m_crate, deg_to_rad(6.0))
 
 	_world_env(root, Color(0.016, 0.018, 0.028), Color(0.13, 0.14, 0.19))
 
@@ -631,6 +652,8 @@ func assemble_dark_road(root: Node3D) -> void:
 	var vb := _n(env, "Variant_world_beta")
 	var hotspots := _n(root, "Hotspots")
 
+	var vc_dr := _n(env, "Variant_world_gamma")
+
 	var m_ground := _mat("dr_ground", Color(0.115, 0.115, 0.108))
 	var m_road := _mat("dr_road", Color(0.235, 0.228, 0.212))
 	var m_tree := _mat("dr_tree", Color(0.045, 0.062, 0.052))
@@ -680,6 +703,10 @@ func assemble_dark_road(root: Node3D) -> void:
 	_box(vb, "Puddle1", Vector3(1.60, 0.02, 2.30), Vector3(-0.35, 0.07, -3.20), m_puddle, deg_to_rad(8.0))
 	_box(vb, "Puddle2", Vector3(1.10, 0.02, 1.60), Vector3(0.55, 0.07, -6.40), m_puddle, deg_to_rad(-14.0))
 	_box(vb, "Puddle3", Vector3(0.90, 0.02, 1.30), Vector3(-0.70, 0.07, -9.10), m_puddle, deg_to_rad(22.0))
+
+	# gamma：路面既没有 alpha 那样干燥，也没有 beta 那么多积水——
+	# 只剩一滩，位置还和 beta 的都不一样，让人说不清刚才到底走过了什么。
+	_box(vc_dr, "Puddle1", Vector3(1.30, 0.02, 1.90), Vector3(0.30, 0.07, -5.10), m_puddle, deg_to_rad(-30.0))
 
 	_world_env(root, Color(0.008, 0.010, 0.016), Color(0.07, 0.08, 0.12), true,
 			Color(0.020, 0.024, 0.034), 0.055)

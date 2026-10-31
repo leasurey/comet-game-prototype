@@ -58,6 +58,7 @@ func build(root: Node3D) -> Dictionary:
 	var shared := geom.node(env, "Shared")
 	var va := geom.node(env, "Variant_world_alpha")
 	var vb := geom.node(env, "Variant_world_beta")
+	var vc := geom.node(env, "Variant_world_gamma")
 	var hotspots := geom.node(root, "Hotspots")
 
 	var wall_mat := geom.mat("wall", Color(0.72, 0.70, 0.66), 0.95)
@@ -88,6 +89,14 @@ func build(root: Node3D) -> Dictionary:
 	# beta：全屋停电。只留餐桌上一支蜡烛，用来让玩家察觉「这里已经不是原来那栋房子」。
 	light.omni(vb, "Candle", Vector3(1.325, 1.00, 6.48), Color(1.0, 0.72, 0.40), 0.9, 5.0)
 
+	# gamma：电灯亮着，但颜色发冷，而且停电时才该有的蜡烛同时也亮着。
+	# 这个「不该同时成立」的组合是给玩家的第三层线索：不是没电，也不是正常。
+	# 另外玄关灯刻意熄灭，制造不对称。
+	light.omni(vc, "LivingLamp", Vector3(-4.50, 2.55, 6.60), Color(0.72, 0.82, 1.00), 2.0, 9.0)
+	light.omni(vc, "DiningLamp", Vector3(1.30, 2.55, 6.60), Color(0.72, 0.82, 1.00), 2.0, 9.0)
+	light.omni(vc, "KitchenLamp", Vector3(5.00, 2.55, 6.60), Color(0.78, 0.86, 1.00), 1.8, 9.0)
+	light.omni(vc, "Candle", Vector3(1.325, 1.00, 6.48), Color(1.0, 0.72, 0.40), 0.9, 5.0)
+
 	_build_hotspots(hotspots)
 
 	return {
@@ -95,6 +104,7 @@ func build(root: Node3D) -> Dictionary:
 		"shared": shared,
 		"variant_alpha": va,
 		"variant_beta": vb,
+		"variant_gamma": vc,
 		"hotspots": hotspots,
 	}
 
