@@ -13,13 +13,16 @@
 
 extends Node
 
-## 日志文件路径（绝对路径，ChatGPT 直接读取）。
-const LOG_PATH := "D:/新建文件夹/game_log.jsonl"
+## 日志文件路径。user://logs/ 是 Godot 标准用户数据目录。
+## 同时写一份到项目根目录供 ChatGPT 直接读取。
+var LOG_PATH := "D:/新建文件夹/game_log.jsonl"
+var _user_log_path := "user://logs/game_log.jsonl"
 
 ## 单条日志最大长度（截断超长字段防止文件膨胀）。
 const MAX_FIELD_LEN := 500
 
 var _file: FileAccess = null
+var _user_file: FileAccess = null
 var _session_start: String = ""
 var _log_count: int = 0
 var _max_logs_per_session: int = 2000  # 防止无限增长
@@ -78,7 +81,11 @@ func log_state(game_services: Node) -> void:
 	# 事件
 	if game_services.event_manager != null:
 		state["events_fired"] = game_services.event_manager.get_sequence().size()
-		state["event_flags"] = game_services.event_manager.get_history().get("flags", {}).keys()
+		# 修复：event_manager 的 flags 在 _flags 字典中（通过 set_flag 设置）。
+		# get_history() 返回事件历史，不是 flags。用 serialize() 的 flags 字段。
+		var em_ser: Dictionary = game_services.event_manager.serialize()
+		state["event_flags"] = (em_ser.get("flags", {}) as Dictionary).keys()
+		state["event_phase"] = game_services.event_manager.get_phase() if game_services.event_manager.has_method("get_phase") else ""
 	# 认知
 	if game_services.cognition != null:
 		state["player_facts"] = game_services.cognition.get_known_count()
@@ -91,6 +98,17 @@ func log_state(game_services: Node) -> void:
 			var npc = game_services.npc_manager.get_npc(nid)
 			if npc == null:
 				continue
+			# 诊断改进：区分 memory（经历记忆）和 known_facts（学到的事实）。
+			# 两者是不同系统——memory 由 remember() 填充，known_facts 由 teach/learn_fact 填充。
+			var last_mem: Dictionary = {}
+			if npc.memory.size() > 0:
+				var lm: Dictionary = npc.memory[npc.memory.size() - 1]
+				last_mem = {
+					"kind": str(lm.get("kind", "")),
+					"content": str(lm.get("content", "")).substr(0, 50),
+					"source": str(lm.get("about", "")),
+					"world": str(lm.get("world", "")),
+				}
 			npc_states.append({
 				"id": nid,
 				"pos": [round(npc.global_position.x * 100) / 100.0,
@@ -99,8 +117,12 @@ func log_state(game_services: Node) -> void:
 				"state": npc.state,
 				"behavior": npc.behavior,
 				"memory_count": npc.memory.size(),
-				"known_facts": npc.known_facts.size(),
-				"said_nodes": npc.said_nodes.size(),
+				"last_memory": last_mem,
+				"known_facts_count": npc.known_facts.size(),
+				"known_facts": npc.known_facts.duplicate(),
+				"said_nodes_count": npc.said_nodes.size(),
+				"trust_player": round(npc.get_trust("player") * 100) / 100.0,
+				"familiarity_player": round(npc.get_relationship("player").get("familiarity", 0.0) * 100) / 100.0,
 			})
 		state["npcs"] = npc_states
 	# 玩家
@@ -131,7 +153,7 @@ func log_interaction(target: String, action: String, result: String = "") -> voi
 	})
 
 
-## 记录对话事件。
+## 记录对话事件（简单版，向后兼容）。
 func log_dialogue(speaker: String, node_id: String, text_preview: String = "") -> void:
 	log_event("dialogue", {
 		"speaker": speaker,
@@ -140,12 +162,48 @@ func log_dialogue(speaker: String, node_id: String, text_preview: String = "") -
 	})
 
 
-## 记录世界/现实切换。
-func log_world_switch(from_id: String, to_id: String, reason: String = "") -> void:
+## 记录完整对话上下文（批次审查版）。
+## text 必须是 hear() 返回的已解析文本（经 variants 处理后），
+## 不得从静态 JSON 读取——最终显示内容可能因条件不同而不同。
+func log_dialogue_full(speaker: String, node_id: String, text: String,
+		world: String, location: String, tick: int) -> void:
+	log_event("dialogue", {
+		"speaker": speaker,
+		"node_id": node_id,
+		"dialogue_text": text,
+		"world": world,
+		"location": location,
+		"tick": tick,
+		"session_id": _session_start,
+	})
+
+
+## 记录事件触发（专用事件日志，区分于 game_state 的统计数字）。
+## effects_applied: 实际生效的 effect 描述列表。
+func log_event_trigger(event_id: String, trigger_reason: String,
+		world_before: String, world_after: String,
+		location: String, tick: int,
+		effects_applied: Array = []) -> void:
+	log_event("event_trigger", {
+		"event_id": event_id,
+		"trigger_reason": trigger_reason,
+		"world_before": world_before,
+		"world_after": world_after,
+		"location": location,
+		"tick": tick,
+		"effects_applied": effects_applied,
+	})
+
+
+## 记录世界/现实切换（含切换前后的完整玩家状态）。
+func log_world_switch(from_id: String, to_id: String, reason: String = "",
+		player_state_before: Dictionary = {}, player_state_after: Dictionary = {}) -> void:
 	log_event("world_switch", {
 		"from": from_id,
 		"to": to_id,
 		"reason": reason,
+		"player_before": player_state_before,
+		"player_after": player_state_after,
 	})
 
 
@@ -184,20 +242,37 @@ func log_raw(json_text: String) -> void:
 func _open_log() -> void:
 	if _file != null:
 		_file.close()
-	_file = FileAccess.open(LOG_PATH, FileAccess.WRITE)  # 每次会话覆盖
+	if _user_file != null:
+		_user_file.close()
+	# 主日志（用户指定路径）
+	_file = FileAccess.open(LOG_PATH, FileAccess.WRITE)
 	if _file == null:
 		push_warning("GameLogger: 无法打开日志文件 %s (err=%d)" % [
 			LOG_PATH, FileAccess.get_open_error()])
+	# 备份到 user://logs/（Godot 标准目录）
+	var dir := DirAccess.open("user://")
+	if dir != null and not dir.dir_exists("logs"):
+		dir.make_dir("logs")
+	_user_file = FileAccess.open(_user_log_path, FileAccess.WRITE)
+	if _user_file == null:
+		push_warning("GameLogger: 无法打开备用日志 %s" % _user_log_path)
 
 
 func _write_line(obj: Dictionary) -> void:
 	if _file == null:
 		return
 	if _log_count >= _max_logs_per_session:
-		return  # 超过上限不再写入（防止文件无限增长）
-	_file.store_line(JSON.stringify(obj))
-	_file.flush()  # 立即写入磁盘，AI 可实时读取
+		if _log_count == _max_logs_per_session:
+			push_warning("GameLogger: 日志条数达到上限 %d，后续记录被丢弃" % _max_logs_per_session)
+		return
+	var line := JSON.stringify(obj)
+	_file.store_line(line)
+	_file.flush()
 	_log_count += 1
+	# 同步写到 user://logs/（保留会话完整性）
+	if _user_file != null:
+		_user_file.store_line(line)
+		_user_file.flush()
 
 
 func _write_raw(text: String) -> void:
@@ -229,3 +304,6 @@ func _exit_tree() -> void:
 	if _file != null:
 		_file.close()
 		_file = null
+	if _user_file != null:
+		_user_file.close()
+		_user_file = null

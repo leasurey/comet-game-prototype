@@ -318,7 +318,23 @@ func _on_world_changed(from_id: String, to_id: String, reason_id: String) -> voi
 	if event_bus != null:
 		event_bus.world_changed.emit(from_id, to_id, reason_id)
 	if GameLogger != null:
-		GameLogger.log_world_switch(from_id, to_id, reason_id)
+		var pstate := {}
+		if player_controller != null:
+			var pc = player_controller
+			pstate = {
+				"pos": [round(pc.global_position.x * 100) / 100.0,
+						round(pc.global_position.y * 100) / 100.0,
+						round(pc.global_position.z * 100) / 100.0],
+				"yaw": round(rad_to_deg(pc.yaw) * 10) / 10.0,
+				"pitch": round(rad_to_deg(pc.pitch) * 10) / 10.0,
+				"velocity": [round(pc.velocity.x * 100) / 100.0,
+						round(pc.velocity.y * 100) / 100.0,
+						round(pc.velocity.z * 100) / 100.0],
+			}
+		var loc := scene_manager.get_current_location_id() if scene_manager != null else ""
+		GameLogger.log_world_switch(from_id, to_id, reason_id,
+				{"world": from_id, "location": loc, "player": pstate},
+				{"world": to_id, "location": loc, "player": pstate})
 	if audio_manager != null:
 		audio_manager.play_reality_shift()
 
