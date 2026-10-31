@@ -45,6 +45,9 @@ var interaction_manager: InteractionManager = null
 # 玩家设置（灵敏度/音量/分辨率）。与游戏存档分离：删档不会重置玩家偏好。
 var settings: SettingsManager = null
 
+# 音频播放与分类音量。
+var audio_manager: AudioManager = null
+
 # L0 核心服务：时钟、随机、信号总线。三者都不含业务规则，可被任意层使用。
 var time_service: TimeService = null
 var rng_service: RngService = null
@@ -81,6 +84,11 @@ func _bootstrap() -> void:
 	# 设置先于一切加载：玩家的灵敏度/帧率偏好应在第一帧就生效。
 	settings = SettingsManager.new()
 	settings.load_settings()
+
+	audio_manager = AudioManager.new()
+	audio_manager.name = "AudioManager"
+	add_child(audio_manager)
+	audio_manager.bind_settings(settings)
 
 	time_service = TimeService.new()
 	time_service.configure(DEFAULT_MINUTES_PER_TICK, START_CLOCK_MINUTES)
@@ -223,9 +231,41 @@ func _wire_signals() -> void:
 			scene_manager.location_failed.connect(_on_location_failed)
 
 
+## 玩家控制器绑定后接上音频（脚部/跳跃/落地）。
+## 由 main._bind_services 在拿到 player_controller 时调用。
+func wire_player_audio(player) -> void:
+	if audio_manager == null or player == null:
+		return
+	if not player.jumped.is_connected(_on_player_jumped):
+		player.jumped.connect(_on_player_jumped)
+	if not player.landed.is_connected(_on_player_landed):
+		player.landed.connect(_on_player_landed)
+	if not player.footstep.is_connected(_on_player_footstep):
+		player.footstep.connect(_on_player_footstep)
+
+
+func _on_player_jumped() -> void:
+	if audio_manager != null:
+		audio_manager.play_jump()
+
+
+func _on_player_landed(_impact: float) -> void:
+	if audio_manager != null:
+		audio_manager.play_land()
+
+
+## 脚步由 PlayerController 按实际位移触发（步距 STRIDE_DISTANCE），
+## 因此频率与移动速度一致，停下立即停止，不依赖任何定时循环。
+func _on_player_footstep() -> void:
+	if audio_manager != null:
+		audio_manager.play_footstep("wood")
+
+
 func _on_world_changed(from_id: String, to_id: String, reason_id: String) -> void:
 	if event_bus != null:
 		event_bus.world_changed.emit(from_id, to_id, reason_id)
+	if audio_manager != null:
+		audio_manager.play_reality_shift()
 
 
 func _on_event_triggered(event_id: String, from_id: String, to_id: String, log_text: String) -> void:

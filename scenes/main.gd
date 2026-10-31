@@ -108,6 +108,9 @@ func _bind_services() -> void:
 	if GameServices.settings != null:
 		GameServices.settings.apply(_camera_rig, false)
 
+	# 移动/跳跃/落地音效跟随玩家状态
+	GameServices.wire_player_audio(_camera_rig)
+
 
 func _start_flow() -> void:
 	if _started:
@@ -337,10 +340,14 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 				GameServices.get_current_location_id(), spot.target_location
 			)
 			_notify(label)
+			if GameServices.audio_manager != null:
+				GameServices.audio_manager.play_door_open()
 			if not GameServices.go_to(spot.target_location):
 				_pending_spawn = null
 				_notify("无法前往那里。")
 		"examine":
+			if GameServices.audio_manager != null:
+				GameServices.audio_manager.play_examine()
 			var text := spot.examine_text
 			if text.is_empty():
 				text = "你看不出它有什么特别。"
@@ -352,6 +359,10 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 
 
 func _on_location_entered(location_id: String, display_name: String) -> void:
+	# 环境音随地点切换：室内房间底噪，室外风声。
+	if GameServices.audio_manager != null:
+		var indoor: bool = location_id != "house_exterior" and location_id != "dark_road"
+		GameServices.audio_manager.set_ambience(indoor)
 	if _ui != null:
 		_ui.set_location_name(display_name)
 		_ui.set_back_enabled(GameServices.scene_manager.can_go_back())

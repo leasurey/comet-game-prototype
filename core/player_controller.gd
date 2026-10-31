@@ -37,6 +37,8 @@ const DEFAULT_SENSITIVITY_X := 0.0035
 const DEFAULT_SENSITIVITY_Y := 0.0035
 
 ## 移动参数默认值。
+## 一个步距的水平距离。行走 2.6 m/s 时约每 0.5 秒一步，符合真实步频。
+const STRIDE_DISTANCE := 1.30
 const DEFAULT_MOVE_SPEED := 2.6
 const DEFAULT_RUN_SPEED := 4.2
 const DEFAULT_GRAVITY := 18.0
@@ -48,6 +50,9 @@ const JUMP_BUFFER_SECONDS := 0.12
 signal jumped
 signal landed(impact_speed: float)
 signal movement_state_changed(state: String)
+## 每走完一个步距发出一次。音频层据此播脚步，频率天然与移动速度一致，
+## 停下即停——不使用定时循环，避免角色静止后脚声还在响。
+signal footstep
 
 @export_group("鼠标灵敏度")
 @export_range(0.0002, 0.02, 0.0001) var sensitivity_x: float = DEFAULT_SENSITIVITY_X
@@ -69,6 +74,9 @@ signal movement_state_changed(state: String)
 var input_enabled: bool = true
 var yaw: float = 0.0
 var pitch: float = 0.0
+
+## 已走过的水平距离残量，用于触发 footstep。
+var _stride_accum: float = 0.0
 ## 对外只读的移动状态：idle/walking/running/jumping/falling/landing。
 var movement_state: String = "idle"
 var _jump_buffer: float = 0.0
@@ -181,8 +189,25 @@ func _physics_process(delta: float) -> void:
 	_try_jump()
 	_apply_horizontal_velocity()
 	var fall_speed: float = -velocity.y
+	var pos_before := global_position
 	move_and_slide()
 	_update_movement_state(delta, fall_speed)
+	_update_footsteps(pos_before)
+
+
+## 按实际位移触发脚步，而非定时循环。
+## 停下即停、快走更密——频率天然与移动速度一致。
+func _update_footsteps(pos_before: Vector3) -> void:
+	if not is_on_floor():
+		_stride_accum = 0.0
+		return
+	var moved := Vector2(global_position.x - pos_before.x, global_position.z - pos_before.z).length()
+	if moved <= 0.0001:
+		return
+	_stride_accum += moved
+	while _stride_accum >= STRIDE_DISTANCE:
+		_stride_accum -= STRIDE_DISTANCE
+		footstep.emit()
 
 
 ## 键盘与测试共用的跳跃入口。只设置短输入缓冲，不直接改坐标。
