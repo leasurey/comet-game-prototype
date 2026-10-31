@@ -47,7 +47,7 @@ Miller 彗星在聚会当晚近距离经过地球。此后手机信号消失、�
 
 **核心机制**：
 - 穿过室外黑暗区域 → 到达另一个现实的房子。目的地看起来随机 [INFERENCE|LOW|HYPOTHESIS]（电影未证明"完全随机"，见 OPEN_QUESTIONS U12）
-- 目的地完全随机（类似轮盘） [FILM|HIGH|CONFIRMED]
+- 目的地看起来随机 [INFERENCE|LOW|HYPOTHESIS]（电影未证明"完全随机"，见 U12）
 - 返回原现实纯靠运气 [FILM|HIGH|CONFIRMED]
 - 不止两个现实——至少存在多个 [FILM|HIGH|CONFIRMED]
 - 人物可能**不知不觉**穿越现实 [FILM|HIGH|CONFIRMED]
@@ -57,7 +57,7 @@ Miller 彗星在聚会当晚近距离经过地球。此后手机信号消失、�
 房屋之间的浓密黑暗区域是现实之间的"通道"。[FILM|HIGH|CONFIRMED]
 
 **已确认性质**：
-- 穿越者到达的是随机现实 [FILM|HIGH|CONFIRMED]
+- 穿越者到达另一个现实 [FILM|HIGH|CONFIRMED]；目的地随机性为推断 [INFERENCE|LOW|HYPOTHESIS]
 - 不保证回到出发点 [FILM|HIGH|CONFIRMED]
 - 黑暗区域穿越：电影未展示身体伤害 [INFERENCE|LOW|UNVERIFIED]（"未展示伤害"≠"穿越必然安全"，见 OPEN_QUESTIONS U11）
 - 两个群体在黑暗中相遇（蓝/红荧光棒） [FILM|HIGH|CONFIRMED]
