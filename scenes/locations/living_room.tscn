@@ -226,289 +226,289 @@ ambient_light_color = Color(0.17, 0.16, 0.15, 1)
 ambient_light_sky_contribution = 0.0
 tonemap_mode = 2
 
-[node name="living_room" type="Node3D" unique_id=358321382]
+[node name="living_room" type="Node3D" unique_id=1005272890]
 script = ExtResource("1_u0lct")
 
-[node name="Environment" type="Node3D" parent="." unique_id=2054840537]
+[node name="Environment" type="Node3D" parent="." unique_id=214561271]
 
-[node name="Shared" type="Node3D" parent="Environment" unique_id=461664208]
+[node name="Shared" type="Node3D" parent="Environment" unique_id=1522467583]
 
-[node name="Floor" type="StaticBody3D" parent="Environment/Shared" unique_id=214865483]
+[node name="Floor" type="StaticBody3D" parent="Environment/Shared" unique_id=1789655841]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.06, 0)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/Floor" unique_id=188539504]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/Floor" unique_id=2059569626]
 material_override = SubResource("StandardMaterial3D_34ro7")
 mesh = SubResource("BoxMesh_0ej82")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/Floor" unique_id=460014926]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/Floor" unique_id=462014153]
 shape = SubResource("BoxShape3D_jmmdu")
 
-[node name="Ceiling" type="StaticBody3D" parent="Environment/Shared" unique_id=1004439142]
+[node name="Ceiling" type="StaticBody3D" parent="Environment/Shared" unique_id=1152275968]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.76, 0)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/Ceiling" unique_id=1706255825]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/Ceiling" unique_id=834513297]
 material_override = SubResource("StandardMaterial3D_rkeyg")
 mesh = SubResource("BoxMesh_o7nfg")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/Ceiling" unique_id=577782211]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/Ceiling" unique_id=640785143]
 shape = SubResource("BoxShape3D_ah6wv")
 
-[node name="WallBack" type="StaticBody3D" parent="Environment/Shared" unique_id=645170141]
+[node name="WallBack" type="StaticBody3D" parent="Environment/Shared" unique_id=1988219984]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, -3.1)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/WallBack" unique_id=871011117]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/WallBack" unique_id=357684063]
 material_override = SubResource("StandardMaterial3D_y4qho")
 mesh = SubResource("BoxMesh_cybs6")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/WallBack" unique_id=1649901170]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/WallBack" unique_id=1117316896]
 shape = SubResource("BoxShape3D_r1kyh")
 
-[node name="WallFront" type="StaticBody3D" parent="Environment/Shared" unique_id=1142453748]
+[node name="WallFront" type="StaticBody3D" parent="Environment/Shared" unique_id=1970871264]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.35, 3.1)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/WallFront" unique_id=1648330760]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/WallFront" unique_id=1306210041]
 material_override = SubResource("StandardMaterial3D_y4qho")
 mesh = SubResource("BoxMesh_04553")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/WallFront" unique_id=872382128]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/WallFront" unique_id=518648882]
 shape = SubResource("BoxShape3D_qf0xe")
 
-[node name="WallLeft" type="StaticBody3D" parent="Environment/Shared" unique_id=1099293469]
+[node name="WallLeft" type="StaticBody3D" parent="Environment/Shared" unique_id=201533090]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6, 1.35, 0)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/WallLeft" unique_id=702699913]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/WallLeft" unique_id=475617333]
 material_override = SubResource("StandardMaterial3D_y4qho")
 mesh = SubResource("BoxMesh_jjctl")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/WallLeft" unique_id=1987153679]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/WallLeft" unique_id=101408997]
 shape = SubResource("BoxShape3D_j3qrp")
 
-[node name="WallRight" type="StaticBody3D" parent="Environment/Shared" unique_id=1147922922]
+[node name="WallRight" type="StaticBody3D" parent="Environment/Shared" unique_id=803152403]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 1.35, 0)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/WallRight" unique_id=1905920097]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/WallRight" unique_id=527891174]
 material_override = SubResource("StandardMaterial3D_y4qho")
 mesh = SubResource("BoxMesh_2o18k")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/WallRight" unique_id=1970794942]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/WallRight" unique_id=45782778]
 shape = SubResource("BoxShape3D_hi70j")
 
-[node name="Rug" type="MeshInstance3D" parent="Environment/Shared" unique_id=516301553]
+[node name="Rug" type="MeshInstance3D" parent="Environment/Shared" unique_id=1993363425]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.02, -1.2)
 material_override = SubResource("StandardMaterial3D_ej4wj")
 mesh = SubResource("BoxMesh_bwwij")
 
-[node name="SofaBase" type="StaticBody3D" parent="Environment/Shared" unique_id=1929258436]
+[node name="SofaBase" type="StaticBody3D" parent="Environment/Shared" unique_id=2039308289]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0.24, -0.55)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/SofaBase" unique_id=1028621106]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/SofaBase" unique_id=1406174118]
 material_override = SubResource("StandardMaterial3D_rpkun")
 mesh = SubResource("BoxMesh_me8ss")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/SofaBase" unique_id=581202550]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/SofaBase" unique_id=574698284]
 shape = SubResource("BoxShape3D_7c3qx")
 
-[node name="SofaBack" type="StaticBody3D" parent="Environment/Shared" unique_id=1094569612]
+[node name="SofaBack" type="StaticBody3D" parent="Environment/Shared" unique_id=817478007]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 0.62, -0.95)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/SofaBack" unique_id=416468026]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/SofaBack" unique_id=1335836831]
 material_override = SubResource("StandardMaterial3D_rpkun")
 mesh = SubResource("BoxMesh_cpfnu")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/SofaBack" unique_id=2131416498]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/SofaBack" unique_id=1374873480]
 shape = SubResource("BoxShape3D_5d573")
 
-[node name="SofaArmL" type="MeshInstance3D" parent="Environment/Shared" unique_id=1189597185]
+[node name="SofaArmL" type="MeshInstance3D" parent="Environment/Shared" unique_id=925989518]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.38, 0.5, -0.55)
 material_override = SubResource("StandardMaterial3D_rpkun")
 mesh = SubResource("BoxMesh_qllt7")
 
-[node name="SofaArmR" type="MeshInstance3D" parent="Environment/Shared" unique_id=22288356]
+[node name="SofaArmR" type="MeshInstance3D" parent="Environment/Shared" unique_id=83477278]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32, 0.5, -0.55)
 material_override = SubResource("StandardMaterial3D_rpkun")
 mesh = SubResource("BoxMesh_4hvoc")
 
-[node name="TableTop" type="StaticBody3D" parent="Environment/Shared" unique_id=1498843378]
+[node name="TableTop" type="StaticBody3D" parent="Environment/Shared" unique_id=472417409]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.4, -1.25)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/TableTop" unique_id=246170396]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/TableTop" unique_id=2033195396]
 material_override = SubResource("StandardMaterial3D_f3e4l")
 mesh = SubResource("BoxMesh_4wun0")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/TableTop" unique_id=2072965239]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/TableTop" unique_id=1626208284]
 shape = SubResource("BoxShape3D_51r61")
 
-[node name="TableBase" type="StaticBody3D" parent="Environment/Shared" unique_id=124225368]
+[node name="TableBase" type="StaticBody3D" parent="Environment/Shared" unique_id=69006814]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.22, -1.25)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/TableBase" unique_id=912715128]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/TableBase" unique_id=1912135262]
 material_override = SubResource("StandardMaterial3D_f3e4l")
 mesh = SubResource("BoxMesh_ifk0f")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/TableBase" unique_id=240465888]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/TableBase" unique_id=178979014]
 shape = SubResource("BoxShape3D_em7th")
 
-[node name="TVCabinet" type="StaticBody3D" parent="Environment/Shared" unique_id=277209041]
+[node name="TVCabinet" type="StaticBody3D" parent="Environment/Shared" unique_id=325326001]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.28, -2.55)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/TVCabinet" unique_id=1757385148]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/TVCabinet" unique_id=883128101]
 material_override = SubResource("StandardMaterial3D_f3e4l")
 mesh = SubResource("BoxMesh_1mlju")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/TVCabinet" unique_id=719472203]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/TVCabinet" unique_id=1631955976]
 shape = SubResource("BoxShape3D_b2md2")
 
-[node name="TVBody" type="MeshInstance3D" parent="Environment/Shared" unique_id=780403915]
+[node name="TVBody" type="MeshInstance3D" parent="Environment/Shared" unique_id=492470187]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.58)
 material_override = SubResource("StandardMaterial3D_u027k")
 mesh = SubResource("BoxMesh_ft0pt")
 
-[node name="LampPole" type="MeshInstance3D" parent="Environment/Shared" unique_id=244220997]
+[node name="LampPole" type="MeshInstance3D" parent="Environment/Shared" unique_id=1508572790]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 0.72, -1.75)
 material_override = SubResource("StandardMaterial3D_qjb3b")
 mesh = SubResource("BoxMesh_xp2ye")
 
-[node name="LampShade" type="MeshInstance3D" parent="Environment/Shared" unique_id=142189484]
+[node name="LampShade" type="MeshInstance3D" parent="Environment/Shared" unique_id=905055695]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 1.52, -1.75)
 material_override = SubResource("StandardMaterial3D_0m13b")
 mesh = SubResource("CylinderMesh_bvvyv")
 
-[node name="ShelfBody" type="StaticBody3D" parent="Environment/Shared" unique_id=726570714]
+[node name="ShelfBody" type="StaticBody3D" parent="Environment/Shared" unique_id=1185355157]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.05, 0.92, -0.4)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/ShelfBody" unique_id=1114006411]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/ShelfBody" unique_id=1970765728]
 material_override = SubResource("StandardMaterial3D_f3e4l")
 mesh = SubResource("BoxMesh_6s11k")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/ShelfBody" unique_id=1408275995]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/ShelfBody" unique_id=2064307880]
 shape = SubResource("BoxShape3D_cep82")
 
-[node name="ShelfBoard" type="MeshInstance3D" parent="Environment/Shared" unique_id=1598064009]
+[node name="ShelfBoard" type="MeshInstance3D" parent="Environment/Shared" unique_id=633205920]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.05, 1.3, -0.4)
 material_override = SubResource("StandardMaterial3D_f3e4l")
 mesh = SubResource("BoxMesh_ubkm2")
 
-[node name="RoomFill" type="OmniLight3D" parent="Environment/Shared" unique_id=278733100]
+[node name="RoomFill" type="OmniLight3D" parent="Environment/Shared" unique_id=1177404135]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.3, 0)
 light_color = Color(0.95, 0.88, 0.8, 1)
 light_energy = 0.45
 omni_range = 16.0
 
-[node name="LampLight" type="OmniLight3D" parent="Environment/Shared" unique_id=339721956]
+[node name="LampLight" type="OmniLight3D" parent="Environment/Shared" unique_id=84779611]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 1.52, -1.75)
 light_color = Color(1, 0.76, 0.44, 1)
 light_energy = 3.0
 omni_range = 9.0
 
-[node name="Variant_world_alpha" type="Node3D" parent="Environment" unique_id=549516311]
+[node name="Variant_world_alpha" type="Node3D" parent="Environment" unique_id=629981429]
 
-[node name="PhotoFrame" type="Node3D" parent="Environment/Variant_world_alpha" unique_id=369231577]
+[node name="PhotoFrame" type="Node3D" parent="Environment/Variant_world_alpha" unique_id=1346919495]
 transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, 3.05, 1.62, -0.4)
 
-[node name="FrameBody" type="MeshInstance3D" parent="Environment/Variant_world_alpha/PhotoFrame" unique_id=106239767]
+[node name="FrameBody" type="MeshInstance3D" parent="Environment/Variant_world_alpha/PhotoFrame" unique_id=733476029]
 material_override = SubResource("StandardMaterial3D_2tqfl")
 mesh = SubResource("BoxMesh_rk5xx")
 
-[node name="PhotoFace" type="MeshInstance3D" parent="Environment/Variant_world_alpha/PhotoFrame" unique_id=88028975]
+[node name="PhotoFace" type="MeshInstance3D" parent="Environment/Variant_world_alpha/PhotoFrame" unique_id=1215288597]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.036)
 material_override = SubResource("StandardMaterial3D_8dep0")
 mesh = SubResource("BoxMesh_usjyq")
 
-[node name="TVScreen" type="MeshInstance3D" parent="Environment/Variant_world_alpha" unique_id=1460383828]
+[node name="TVScreen" type="MeshInstance3D" parent="Environment/Variant_world_alpha" unique_id=802252615]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.515)
 material_override = SubResource("StandardMaterial3D_kp4j4")
 mesh = SubResource("BoxMesh_ibg48")
 
-[node name="Variant_world_beta" type="Node3D" parent="Environment" unique_id=415027641]
+[node name="Variant_world_beta" type="Node3D" parent="Environment" unique_id=2040374]
 
-[node name="PhotoFrame" type="Node3D" parent="Environment/Variant_world_beta" unique_id=550578369]
+[node name="PhotoFrame" type="Node3D" parent="Environment/Variant_world_beta" unique_id=369302605]
 transform = Transform3D(-4.371139e-08, 0, 1, 0, 1, 0, -1, 0, -4.371139e-08, 3.05, 1.62, -0.4)
 
-[node name="FrameBody" type="MeshInstance3D" parent="Environment/Variant_world_beta/PhotoFrame" unique_id=720609724]
+[node name="FrameBody" type="MeshInstance3D" parent="Environment/Variant_world_beta/PhotoFrame" unique_id=167796359]
 material_override = SubResource("StandardMaterial3D_2tqfl")
 mesh = SubResource("BoxMesh_6xedd")
 
-[node name="PhotoFace" type="MeshInstance3D" parent="Environment/Variant_world_beta/PhotoFrame" unique_id=142485445]
+[node name="PhotoFace" type="MeshInstance3D" parent="Environment/Variant_world_beta/PhotoFrame" unique_id=2047594668]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.036)
 material_override = SubResource("StandardMaterial3D_8dep0")
 mesh = SubResource("BoxMesh_icqw0")
 
-[node name="TVScreen" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=1402240176]
+[node name="TVScreen" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=1659406339]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.515)
 material_override = SubResource("StandardMaterial3D_lcent")
 mesh = SubResource("BoxMesh_dfsdj")
 
-[node name="Variant_world_gamma" type="Node3D" parent="Environment" unique_id=1908291492]
+[node name="Variant_world_gamma" type="Node3D" parent="Environment" unique_id=506655714]
 
-[node name="TVScreen" type="MeshInstance3D" parent="Environment/Variant_world_gamma" unique_id=1790525053]
+[node name="TVScreen" type="MeshInstance3D" parent="Environment/Variant_world_gamma" unique_id=1839513624]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.515)
 material_override = SubResource("StandardMaterial3D_7e81g")
 mesh = SubResource("BoxMesh_61xog")
 
-[node name="Hotspots" type="Node3D" parent="." unique_id=1612823534]
+[node name="Hotspots" type="Node3D" parent="." unique_id=831182107]
 
-[node name="FrontDoor" type="Area3D" parent="Hotspots" unique_id=591329825]
+[node name="FrontDoor" type="Area3D" parent="Hotspots" unique_id=1685071377]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.15, 2.95)
 script = ExtResource("2_cmyu2")
 display_name = "前门"
 action_kind = "exit"
 target_location = "house_exterior"
 
-[node name="DoorPanel" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=1926141276]
+[node name="DoorPanel" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=1059077606]
 material_override = SubResource("StandardMaterial3D_vvomh")
 mesh = SubResource("BoxMesh_i1a52")
 
-[node name="DoorFrameTop" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=2017641859]
+[node name="DoorFrameTop" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=1924740584]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.16, 0)
 material_override = SubResource("StandardMaterial3D_f3e4l")
 mesh = SubResource("BoxMesh_ks5wh")
 
-[node name="DoorKnob" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=335918721]
+[node name="DoorKnob" type="MeshInstance3D" parent="Hotspots/FrontDoor" unique_id=223923851]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0, 0.09)
 material_override = SubResource("StandardMaterial3D_qwvjj")
 mesh = SubResource("BoxMesh_8yqs4")
 
-[node name="HitShape" type="CollisionShape3D" parent="Hotspots/FrontDoor" unique_id=2099305356]
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/FrontDoor" unique_id=330530845]
 shape = SubResource("BoxShape3D_f0ayb")
 
-[node name="Television" type="Area3D" parent="Hotspots" unique_id=89887130]
+[node name="Television" type="Area3D" parent="Hotspots" unique_id=1241541327]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -2.55)
 script = ExtResource("2_cmyu2")
 display_name = "那台没有声音的电视"
 examine_text = "画面里是一片缓慢移动的光点。没有声音，也没有节目。"
 
-[node name="HitShape" type="CollisionShape3D" parent="Hotspots/Television" unique_id=1062132591]
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/Television" unique_id=1551548176]
 shape = SubResource("BoxShape3D_p2q0i")
 
-[node name="PhotoFrameSpot" type="Area3D" parent="Hotspots" unique_id=790472539]
+[node name="PhotoFrameSpot" type="Area3D" parent="Hotspots" unique_id=2146583922]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.05, 1.62, -0.4)
 script = ExtResource("2_cmyu2")
 display_name = "书架上的相框"
 examine_text = "一张压在玻璃下的旧合影。你记得它一直面朝房间放着。"
 
-[node name="HitShape" type="CollisionShape3D" parent="Hotspots/PhotoFrameSpot" unique_id=900524611]
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/PhotoFrameSpot" unique_id=875482674]
 shape = SubResource("BoxShape3D_1ues5")
 
-[node name="FloorLamp" type="Area3D" parent="Hotspots" unique_id=1356821980]
+[node name="FloorLamp" type="Area3D" parent="Hotspots" unique_id=167413806]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.25, 1.2, -1.75)
 script = ExtResource("2_cmyu2")
 display_name = "落地灯"
 examine_text = "灯罩边缘有一圈长期烘烤留下的黄痕。"
 
-[node name="HitShape" type="CollisionShape3D" parent="Hotspots/FloorLamp" unique_id=880995235]
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/FloorLamp" unique_id=1903057877]
 shape = SubResource("BoxShape3D_wmlg7")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1962716168]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1422841827]
 environment = SubResource("Environment_c0wvp")

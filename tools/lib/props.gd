@@ -151,5 +151,7 @@ func laptop(parent: Node, node_name: String, pos: Vector3, yaw: float,
 ## 地毯（纯视觉，无碰撞，避免绊人）。
 func rug(parent: Node, node_name: String, pos: Vector3, size: Vector2,
 		yaw: float, mat: Material) -> MeshInstance3D:
+	# P0-zfight 修复：偏移从 0.011（1mm）增到 0.015（5mm），
+	# 消除地毯底面与地板顶面的近共面 z-fighting。
 	return geom.box(parent, node_name, Vector3(size.x, 0.02, size.y),
-			pos + Vector3(0, 0.011, 0), mat, yaw)
+			pos + Vector3(0, 0.015, 0), mat, yaw)

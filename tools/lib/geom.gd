@@ -151,12 +151,16 @@ func wall_with_opening(parent: Node, node_name: String, cfg: Dictionary, mat: Ma
 	var thickness := float(cfg.get("thickness", 0.2))
 	var height := float(cfg.get("height", 2.7))
 	var base_y := float(cfg.get("base_y", 0.0))
+	# 每端裁剪量（消除墙角 z-fighting）。默认 0——只有外轮廓墙在
+	# house_party.gd 中显式传 corner_trim。内墙 T 接头不需要裁剪，
+	# 强制裁剪会破坏连通性（navigation_feasibility_test N2/N3）。
+	var corner_trim := float(cfg.get("corner_trim", 0.0))
 
 	var holder := node(parent, node_name)
 
 	if not cfg.has("opening"):
-		_segment(holder, "Solid", axis, center, -length * 0.5, length, base_y, height,
-				thickness, mat)
+		_segment(holder, "Solid", axis, center, -length * 0.5 + corner_trim,
+				length - corner_trim * 2.0, base_y, height, thickness, mat)
 		return holder
 
 	var op: Dictionary = cfg["opening"]
@@ -165,15 +169,16 @@ func wall_with_opening(parent: Node, node_name: String, cfg: Dictionary, mat: Ma
 	var op_height := float(op.get("height", 2.1))
 	var op_bottom := float(op.get("bottom", 0.0))
 
-	# 洞口沿墙方向的两端（相对墙中心）
+	# 洞口沿墙方向的两端（相对墙中心），受 corner_trim 裁剪
 	var open_start := op_offset - op_width * 0.5
 	var open_end := op_offset + op_width * 0.5
-	var half := length * 0.5
+	var half := length * 0.5 - corner_trim
+	var neg_half := -length * 0.5 + corner_trim
 
 	# 左段
-	var left_len := open_start - (-half)
+	var left_len := open_start - neg_half
 	if left_len > 0.0005:
-		_segment(holder, "Left", axis, center, -half, left_len, base_y, height, thickness, mat)
+		_segment(holder, "Left", axis, center, neg_half, left_len, base_y, height, thickness, mat)
 
 	# 右段
 	var right_len := half - open_end

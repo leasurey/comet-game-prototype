@@ -130,6 +130,7 @@ func _build_outer_walls(parent: Node, mat: Material) -> void:
 		"center": Vector3(0, 0, OUT_Z0),
 		"length": OUT_X * 2.0,
 		"thickness": WALL_T_OUT,
+		"corner_trim": WALL_T_OUT * 0.5,
 		"height": WALL_H,
 		"base_y": FLOOR_Y,
 		"opening": {"offset": 0.0, "width": 1.6, "height": 2.1, "bottom": 0.0},
@@ -141,6 +142,7 @@ func _build_outer_walls(parent: Node, mat: Material) -> void:
 		"center": Vector3(0, 0, OUT_Z1),
 		"length": OUT_X * 2.0,
 		"thickness": WALL_T_OUT,
+		"corner_trim": WALL_T_OUT * 0.5,
 		"height": WALL_H,
 		"base_y": FLOOR_Y,
 		"opening": {"offset": -4.0, "width": 1.8, "height": 2.1, "bottom": 0.0},
@@ -152,6 +154,7 @@ func _build_outer_walls(parent: Node, mat: Material) -> void:
 		"center": Vector3(-OUT_X, 0, OUT_Z_MID),
 		"length": OUT_D,
 		"thickness": WALL_T_OUT,
+		"corner_trim": WALL_T_OUT * 0.5,
 		"height": WALL_H,
 		"base_y": FLOOR_Y,
 	}, mat)
@@ -163,6 +166,7 @@ func _build_outer_walls(parent: Node, mat: Material) -> void:
 		"center": Vector3(OUT_X, 0, OUT_Z_MID),
 		"length": OUT_D,
 		"thickness": WALL_T_OUT,
+		"corner_trim": WALL_T_OUT * 0.5,
 		"height": WALL_H,
 		"base_y": FLOOR_Y,
 		"opening": {"offset": -2.70, "width": 1.2, "height": 2.1, "bottom": 0.0},
@@ -280,8 +284,10 @@ func _build_outdoor(parent: Node, mat: Material) -> void:
 			Vector3(0, -0.1, -2.0), patio_mat)
 
 	# 门廊：顶面 y = 0.10，前门外 z -2.2 ~ 0（室外比室内低一级台阶）
-	geom.solid(parent, "Porch", Vector3(5.6, 0.3, 2.2),
-			Vector3(0, -0.05, -1.1), patio_mat)
+	# P0-zfight 修复：bottom 从 y=-0.20 抬到 y=0.00（与 OutdoorGround 顶面平齐），
+	# 消除 5.6×2.2m 的平面重叠 z-fighting。高度从 0.3 缩到 0.10。
+	geom.solid(parent, "Porch", Vector3(5.6, 0.10, 2.2),
+			Vector3(0, 0.05, -1.1), patio_mat)
 
 	# 露台：顶面 y = 0.20，与室内齐平，后门外 z 9.4 ~ 11.4
 	geom.solid(parent, "Patio", Vector3(5.5, 0.2, 2.0),

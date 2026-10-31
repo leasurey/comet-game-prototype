@@ -444,13 +444,13 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_sun(vb, "MoonlightBeta", -35.0, -42.0, Color(0.52, 0.64, 0.98), 0.85)
 
 	# ---- 差异二（灯光）：alpha 门廊灯亮着、窗户透出暖光；beta 门廊灯熄灭、窗户全黑
-	_box(va, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, -0.22), m_porch_bulb)
+	_box(va, "PorchBulb", Vector3(0.14, 0.14, 0.14), Vector3(0, 2.42, -0.28), m_porch_bulb)  # P0-zfight: 从灯罩内偏出
 	_omni(va, "PorchLight", Vector3(0.0, 2.45, -0.55), Color(1.0, 0.78, 0.46), 5.5, 16.0)
 	_box(va, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-3.50, 1.85, -0.04), m_win_glow)
 	_box(va, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(3.50, 1.85, -0.04), m_win_glow)
 	_omni(va, "WindowSpill", Vector3(-3.50, 1.80, -0.40), Color(1.0, 0.72, 0.40), 1.2, 7.0)
 
-	_box(vb, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, -0.22), m_porch_bulb_off)
+	_box(vb, "PorchBulb", Vector3(0.14, 0.14, 0.14), Vector3(0, 2.42, -0.28), m_porch_bulb_off)
 	_box(vb, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-3.50, 1.85, -0.04), m_win_dark)
 	_box(vb, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(3.50, 1.85, -0.04), m_win_dark)
 
@@ -478,7 +478,7 @@ func assemble_house_exterior(root: Node3D) -> void:
 	# 三个现实各自有独立的可观察标记，玩家靠这些判断自己落在哪一条线上。
 	var m_porch_bulb_cold := _mat("he_bulb_cold", Color(0.62, 0.76, 1.00), 0.35, 0.0, Color(0.55, 0.72, 1.00), 1.8)
 	var m_win_glow_cold := _mat("he_win_cold", Color(0.55, 0.72, 1.00), 0.30, 0.0, Color(0.50, 0.68, 1.00), 1.1)
-	_box(vc, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, -0.22), m_porch_bulb_cold)
+	_box(vc, "PorchBulb", Vector3(0.14, 0.14, 0.14), Vector3(0, 2.42, -0.28), m_porch_bulb_cold)
 	_omni(vc, "PorchLight", Vector3(0.0, 2.45, -0.55), Color(0.66, 0.80, 1.00), 4.2, 15.0)
 	_box(vc, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-3.50, 1.85, -0.04), m_win_glow_cold)
 	_box(vc, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(3.50, 1.85, -0.04), m_win_glow_cold)
