@@ -29,6 +29,20 @@ const SOURCE_INFER := "infer"
 
 var _facts: Dictionary = {}
 var _learned_order: Array = []
+
+## 三本账之二：观察记录（只增不改，retract 不删观察）。
+## 条目：{tick, kind, content, source, world, hearsay}
+## kind: "inspect" | "observe" | "dialogue"
+## hearsay: true = 从别人那听来的（转述），false = 亲眼所见
+var _observations: Array = []
+
+## 三本账之三：推断（置信度 high/low，不得作为 requires 硬条件）。
+## 条目：{tick, content, confidence, about, world}
+var _inferences: Array = []
+
+## 手机已读标记（entry id → true）。只存已读，不改内容。
+var _read_marks: Dictionary = {}
+
 var _is_ready := false
 
 
@@ -136,6 +150,93 @@ func has_learned_from(source_kind: String) -> bool:
 	return false
 
 
+# ---------------------------------------------------------------- 三本账之二：观察
+
+## 记录一条观察。observes 是「我看到/听到什么」的原始记录。
+## hearsay=true 表示从别人那听来的（转述），区别于亲眼所见。
+func record_observation(kind: String, content: String, source: String = "",
+		world_id: String = "", tick: int = -1, hearsay: bool = false) -> void:
+	_observations.append({
+		"tick": tick,
+		"kind": kind,
+		"content": content,
+		"source": source,
+		"world": world_id,
+		"hearsay": hearsay,
+	})
+	# 上限 80 条
+	if _observations.size() > 80:
+		_observations.pop_front()
+
+
+## 获取观察（可按现实过滤）。world_id 为空 = 全部。
+func get_observations(world_id: String = "") -> Array:
+	if world_id.is_empty():
+		return _observations.duplicate(true)
+	var out: Array = []
+	for o in _observations:
+		if str((o as Dictionary).get("world", "")) == world_id \
+				or str((o as Dictionary).get("world", "")).is_empty():
+			out.append(o)
+	return out
+
+
+## 观察条数。
+func get_observation_count() -> int:
+	return _observations.size()
+
+
+# ---------------------------------------------------------------- 三本账之三：推断
+
+## 记录一条推断。confidence: "high" | "low"。
+## 推断不等于事实——不得作为 requires 硬条件。
+func record_inference(content: String, confidence: String = "low",
+		about: String = "", world_id: String = "", tick: int = -1) -> void:
+	_inferences.append({
+		"tick": tick,
+		"content": content,
+		"confidence": confidence,
+		"about": about,
+		"world": world_id,
+	})
+	if _inferences.size() > 40:
+		_inferences.pop_front()
+
+
+## 获取推断（可按现实过滤）。
+func get_inferences(world_id: String = "") -> Array:
+	if world_id.is_empty():
+		return _inferences.duplicate(true)
+	var out: Array = []
+	for i in _inferences:
+		if str((i as Dictionary).get("world", "")) == world_id \
+				or str((i as Dictionary).get("world", "")).is_empty():
+			out.append(i)
+	return out
+
+
+## 推断条数。
+func get_inference_count() -> int:
+	return _inferences.size()
+
+
+# ---------------------------------------------------------------- 手机已读标记
+
+## 标记某条目已读。
+func mark_read(entry_id: String) -> void:
+	_read_marks[entry_id] = true
+
+
+## 某条目是否已读。
+func is_read(entry_id: String) -> bool:
+	return _read_marks.has(entry_id)
+
+
+## 所有已读标记。
+func get_read_marks() -> Dictionary:
+	return _read_marks.duplicate(true)
+
+
 ## 清空（开新局）。
 func reset() -> void:
 	for fid in _facts.keys():
@@ -148,6 +249,9 @@ func reset() -> void:
 		e.erase("retracted")
 		e.erase("retract_reason")
 	_learned_order.clear()
+	_observations.clear()
+	_inferences.clear()
+	_read_marks.clear()
 
 
 # ---------------------------------------------------------------- 存档
@@ -156,6 +260,9 @@ func serialize() -> Dictionary:
 	return {
 		"known_order": _learned_order.duplicate(true),
 		"facts": _facts.duplicate(true),
+		"observations": _observations.duplicate(true),
+		"inferences": _inferences.duplicate(true),
+		"read_marks": _read_marks.duplicate(true),
 	}
 
 
@@ -164,7 +271,6 @@ func restore(data: Dictionary, out_error: Array = []) -> bool:
 	if typeof(raw_facts) != TYPE_DICTIONARY:
 		out_error.append("认知存档缺少 facts 字典")
 		return false
-	# 只恢复目录里已知的 id，外来 id 也接受（向前兼容）
 	for fid in (raw_facts as Dictionary).keys():
 		_facts[str(fid)] = (raw_facts as Dictionary)[fid].duplicate(true)
 	var order: Variant = data.get("known_order", [])
@@ -173,4 +279,14 @@ func restore(data: Dictionary, out_error: Array = []) -> bool:
 		for fid in (order as Array):
 			if _facts.has(str(fid)) and bool((_facts[str(fid)] as Dictionary).get("known", false)):
 				_learned_order.append(str(fid))
+	# 三本账之二/三（旧档兼容：无字段时为空）
+	var obs_raw: Variant = data.get("observations", [])
+	if typeof(obs_raw) == TYPE_ARRAY:
+		_observations = (obs_raw as Array).duplicate(true)
+	var inf_raw: Variant = data.get("inferences", [])
+	if typeof(inf_raw) == TYPE_ARRAY:
+		_inferences = (inf_raw as Array).duplicate(true)
+	var rm_raw: Variant = data.get("read_marks", {})
+	if typeof(rm_raw) == TYPE_DICTIONARY:
+		_read_marks = (rm_raw as Dictionary).duplicate(true)
 	return true

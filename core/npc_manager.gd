@@ -142,6 +142,10 @@ func get_all_npcs() -> Array:
 	return out
 
 
+func get_all_npc_ids() -> Array:
+	return _npcs.keys().duplicate()
+
+
 func is_nav_ready() -> bool:
 	return _nav_ready
 

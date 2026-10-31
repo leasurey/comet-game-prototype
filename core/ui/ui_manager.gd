@@ -81,6 +81,7 @@ func _build_ui() -> void:
 	_build_button_bar()
 	_build_confirm()
 	_build_dialogue()
+	_build_phone()
 
 	_overlay_root = Control.new()
 	_overlay_root.name = "OverlayLayer"
@@ -203,7 +204,9 @@ func _build_button_bar() -> void:
 	_back_button.text = "返回"
 	_back_button.custom_minimum_size = Vector2(80, 30)
 	_back_button.add_theme_font_size_override("font_size", 14)
-	_back_button.pressed.connect(func() -> void: back_requested.emit())
+	_back_button.pressed.connect(func() -> void:
+		if GameServices.audio_manager != null: GameServices.audio_manager.play_ui_click()
+		back_requested.emit())
 	bar.add_child(_back_button)
 
 	var save_button := Button.new()
@@ -211,7 +214,9 @@ func _build_button_bar() -> void:
 	save_button.text = "保存"
 	save_button.custom_minimum_size = Vector2(80, 30)
 	save_button.add_theme_font_size_override("font_size", 14)
-	save_button.pressed.connect(func() -> void: save_requested.emit())
+	save_button.pressed.connect(func() -> void:
+		if GameServices.audio_manager != null: GameServices.audio_manager.play_ui_confirm()
+		save_requested.emit())
 	bar.add_child(save_button)
 
 	var restart_button := Button.new()
@@ -219,7 +224,9 @@ func _build_button_bar() -> void:
 	restart_button.text = "重新开始"
 	restart_button.custom_minimum_size = Vector2(84, 30)
 	restart_button.add_theme_font_size_override("font_size", 14)
-	restart_button.pressed.connect(func() -> void: new_game_requested.emit())
+	restart_button.pressed.connect(func() -> void:
+		if GameServices.audio_manager != null: GameServices.audio_manager.play_ui_click()
+		new_game_requested.emit())
 	bar.add_child(restart_button)
 
 	var quit_button := Button.new()
@@ -227,7 +234,9 @@ func _build_button_bar() -> void:
 	quit_button.text = "退出"
 	quit_button.custom_minimum_size = Vector2(72, 30)
 	quit_button.add_theme_font_size_override("font_size", 14)
-	quit_button.pressed.connect(func() -> void: quit_requested.emit())
+	quit_button.pressed.connect(func() -> void:
+		if GameServices.audio_manager != null: GameServices.audio_manager.play_ui_cancel()
+		quit_requested.emit())
 	bar.add_child(quit_button)
 
 
@@ -525,3 +534,224 @@ func register_overlay(panel: Control) -> void:
 	if panel == null or _overlay_root == null:
 		return
 	_overlay_root.add_child(panel)
+
+
+# ---------------------------------------------------------------- 手机（批次 5）
+
+var _phone_root: Control = null
+var _phone_tab_buttons: Array = []
+var _phone_pages: Array = []
+var _phone_current_tab := 0
+
+func _build_phone() -> void:
+	var root := Control.new()
+	root.name = "PhoneRoot"
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.visible = false
+	_root.add_child(root)
+	_phone_root = root
+
+	# 背景遮罩
+	var bg := ColorRect.new()
+	bg.color = Color(0.0, 0.0, 0.0, 0.55)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.add_child(bg)
+
+	# 手机面板
+	var panel := PanelContainer.new()
+	panel.name = "Panel"
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.13, 0.16, 0.97)
+	style.corner_radius_top_left = 18
+	style.corner_radius_top_right = 18
+	style.corner_radius_bottom_left = 18
+	style.corner_radius_bottom_right = 18
+	style.content_margin_left = 16
+	style.content_margin_right = 16
+	style.content_margin_top = 12
+	style.content_margin_bottom = 12
+	panel.add_theme_stylebox_override("panel", style)
+	panel.anchor_left = 0.5
+	panel.anchor_right = 0.5
+	panel.anchor_top = 0.5
+	panel.anchor_bottom = 0.5
+	panel.offset_left = -280
+	panel.offset_right = 280
+	panel.offset_top = -260
+	panel.offset_bottom = 260
+	root.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "VBox"
+	panel.add_child(vbox)
+
+	# 标题行
+	var title_row := HBoxContainer.new()
+	title_row.name = "TitleRow"
+	var title := Label.new()
+	title.text = "手机"
+	title.add_theme_font_size_override("font_size", 18)
+	title_row.add_child(title)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(spacer)
+	var close_btn := Button.new()
+	close_btn.text = "关闭 (TAB)"
+	close_btn.name = "PhoneClose"
+	close_btn.pressed.connect(func() -> void:
+		hide_phone())
+	title_row.add_child(close_btn)
+	vbox.add_child(title_row)
+
+	# 页签栏
+	var tab_bar := HBoxContainer.new()
+	tab_bar.name = "TabBar"
+	var tab_labels := ["事实台账", "事件时间线", "联系人"]
+	for i in range(tab_labels.size()):
+		var tb := Button.new()
+		tb.text = tab_labels[i]
+		tb.name = "PhoneTab%d" % i
+		tb.toggle_mode = true
+		tb.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		tb.pressed.connect(_on_phone_tab.bind(i))
+		tab_bar.add_child(tb)
+		_phone_tab_buttons.append(tb)
+	vbox.add_child(tab_bar)
+
+	# 分隔
+	vbox.add_child(HSeparator.new())
+
+	# 三个页签页面（用 ScrollContainer + VBox）
+	for i in range(3):
+		var scroll := ScrollContainer.new()
+		scroll.name = "Page%d" % i
+		scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		scroll.visible = i == 0
+		var pv := VBoxContainer.new()
+		pv.name = "Content"
+		pv.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(pv)
+		vbox.add_child(scroll)
+		_phone_pages.append(pv)
+
+	# 默认选中第一个页签
+	_phone_current_tab = 0
+	if _phone_tab_buttons.size() > 0:
+		(_phone_tab_buttons[0] as Button).button_pressed = true
+
+
+func _on_phone_tab(index: int) -> void:
+	_phone_current_tab = index
+	for i in range(_phone_pages.size()):
+		var scroll: Control = _phone_pages[i].get_parent()
+		scroll.visible = i == index
+	# 页签按钮按下状态
+	for i in range(_phone_tab_buttons.size()):
+		(_phone_tab_buttons[i] as Button).button_pressed = (i == index)
+	if GameServices.audio_manager != null:
+		GameServices.audio_manager.play_ui_click()
+
+
+## 刷新手机内容（每次打开时调用）。data 参数由 GameServices 组装。
+## data 格式：{"observations": [...], "facts": [...], "events": [...], "contacts": [...]}
+func refresh_phone(data: Dictionary) -> void:
+	if _phone_pages.size() < 3:
+		return
+	# 页签 0：事实台账（observations + facts + inferences）
+	_clear_page(0)
+	var obs: Array = data.get("observations", [])
+	var facts: Array = data.get("facts", [])
+	var inferences: Array = data.get("inferences", [])
+	var pv0: VBoxContainer = _phone_pages[0]
+	if not obs.is_empty():
+		_add_section(pv0, "观察记录 (%d)" % obs.size())
+		for o in obs:
+			_add_entry(pv0, str((o as Dictionary).get("content", "")),
+					"来源：%s" % str((o as Dictionary).get("source", "")))
+	if not facts.is_empty():
+		_add_section(pv0, "已知事实 (%d)" % facts.size())
+		for f in facts:
+			_add_entry(pv0, str((f as Dictionary).get("label", str(f))),
+					"来源：%s" % str((f as Dictionary).get("source_kind", "")))
+	if not inferences.is_empty():
+		_add_section(pv0, "推断 (%d)" % inferences.size())
+		for inf in inferences:
+			_add_entry(pv0, str((inf as Dictionary).get("content", "")),
+					"置信度：%s" % str((inf as Dictionary).get("confidence", "")))
+	if obs.is_empty() and facts.is_empty() and inferences.is_empty():
+		_add_entry(pv0, "（暂无记录）", "")
+
+	# 页签 1：事件时间线
+	_clear_page(1)
+	var events: Array = data.get("events", [])
+	var pv1: VBoxContainer = _phone_pages[1]
+	if events.is_empty():
+		_add_entry(pv1, "（暂无事件记录）", "")
+	else:
+		for e in events:
+			_add_entry(pv1, str((e as Dictionary).get("label", str(e))),
+					"tick %d" % int((e as Dictionary).get("tick", 0)))
+
+	# 页签 2：联系人（NPC 关系）
+	_clear_page(2)
+	var contacts: Array = data.get("contacts", [])
+	var pv2: VBoxContainer = _phone_pages[2]
+	if contacts.is_empty():
+		_add_entry(pv2, "（暂无联系人）", "")
+	else:
+		for c in contacts:
+			var trust := float((c as Dictionary).get("trust", 0.0))
+			var trust_text := "中性" if absf(trust) < 0.1 else ("信任" if trust > 0 else "戒备")
+			_add_entry(pv2, str((c as Dictionary).get("name", str(c))),
+					"关系：%s (%.1f)" % [trust_text, trust])
+
+
+func _clear_page(index: int) -> void:
+	if index >= _phone_pages.size():
+		return
+	var pv: VBoxContainer = _phone_pages[index]
+	for c in pv.get_children():
+		c.queue_free()
+
+
+func _add_section(parent: VBoxContainer, text: String) -> void:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", 14)
+	label.add_theme_color_override("font_color", Color(0.85, 0.82, 0.7))
+	parent.add_child(label)
+	parent.add_child(HSeparator.new())
+
+
+func _add_entry(parent: VBoxContainer, title: String, subtitle: String) -> void:
+	var label := Label.new()
+	label.text = title
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.add_theme_font_size_override("font_size", 13)
+	parent.add_child(label)
+	if not subtitle.is_empty():
+		var sub := Label.new()
+		sub.text = subtitle
+		sub.add_theme_font_size_override("font_size", 11)
+		sub.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
+		parent.add_child(sub)
+
+
+func show_phone() -> void:
+	if _phone_root == null:
+		return
+	_phone_root.visible = true
+	if GameServices.audio_manager != null:
+		GameServices.audio_manager.play_ui_confirm()
+
+
+func hide_phone() -> void:
+	if _phone_root == null:
+		return
+	_phone_root.visible = false
+	if GameServices.audio_manager != null:
+		GameServices.audio_manager.play_ui_cancel()
+
+
+func is_phone_open() -> bool:
+	return _phone_root != null and _phone_root.visible

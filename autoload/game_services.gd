@@ -590,6 +590,51 @@ func shutdown_audio() -> void:
 	OS.delay_msec(150)
 
 
+## 手机数据组装（批次 5）：从认知/事件/NPC 汇总手机三个页签的内容。
+func get_phone_data() -> Dictionary:
+	var data := {
+		"observations": [],
+		"facts": [],
+		"inferences": [],
+		"events": [],
+		"contacts": [],
+	}
+	if cognition != null:
+		data["observations"] = cognition.get_observations()
+		data["facts"] = cognition.get_known_labels().map(
+				func(label): return {"label": label, "source_kind": "learned"})
+		# facts 需要 source_kind，用 get_known_facts + get_source
+		var facts_detail: Array = []
+		for fid in cognition.get_known_facts():
+			var src := cognition.get_source(str(fid))
+			src["label"] = cognition.get_label(str(fid))
+			facts_detail.append(src)
+		data["facts"] = facts_detail
+		data["inferences"] = cognition.get_inferences()
+	if event_manager != null:
+		var seq: Array = event_manager.get_sequence()
+		for eid in seq:
+			var def := event_manager.get_definition(str(eid))
+			data["events"].append({
+				"label": str(def.get("label", str(eid))),
+				"id": str(eid),
+				"tick": event_manager.get_occurrence_count(str(eid)),
+			})
+	if npc_manager != null:
+		for npc_id in npc_manager.get_all_npc_ids():
+			var npc = npc_manager.get_npc(npc_id)
+			if npc == null:
+				continue
+			var rel := npc.get_relationship("player")
+			data["contacts"].append({
+				"name": npc.display_name,
+				"id": npc_id,
+				"trust": float(rel.get("trust", 0.0)),
+				"familiarity": float(rel.get("familiarity", 0.0)),
+			})
+	return data
+
+
 func has_save() -> bool:
 	if not is_ready:
 		return false

@@ -292,6 +292,20 @@ func _unhandled_input(event: InputEvent) -> void:
 				_on_quit_requested()
 				get_viewport().set_input_as_handled()
 				return
+			if key.keycode == KEY_TAB:
+				# TAB = 手机开关（批次 5）
+				if _is_menu_open():
+					return
+				if _ui != null:
+					if _ui.is_phone_open():
+						_ui.hide_phone()
+						_capture_mouse()
+					else:
+						_ui.show_phone()
+						_ui.refresh_phone(GameServices.get_phone_data())
+						_release_mouse()
+					get_viewport().set_input_as_handled()
+					return
 
 	# 菜单开着时，世界输入全部屏蔽（暂停/主菜单/设置都不该触发交互）。
 	if _is_menu_open():
@@ -528,21 +542,35 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 			if GameServices.audio_manager != null:
 				GameServices.audio_manager.play_examine()
 			# P6：亲眼检查过物品，玩家才「知道」它。
-			# 这是认知的 inspect 来源，与世界状态无关。
 			if GameServices.cognition != null and not spot.name.is_empty():
 				var fid := "fact_inspected_%s" % spot.name
 				if GameServices.cognition.learn(fid, "inspect", str(spot.name),
 						GameServices.world_manager.get_current_world_id(),
 						GameServices.get_tick()):
 					_notify("你记下了关于「%s」的情况。" % spot.get_hint_text(), 3.0)
-				# 语义事实（CT-019）：对话闸门用语义 id，必须由亲眼检查接通，
-				# 否则「门上的便签」等话题在真实游玩中永远无法解锁。
 				if not spot.grants_fact.is_empty():
 					if GameServices.cognition.learn(spot.grants_fact, "inspect",
 							str(spot.name),
 							GameServices.world_manager.get_current_world_id(),
 							GameServices.get_tick()):
 						_notify("你了解到：%s。" % GameServices.cognition.get_label(spot.grants_fact), 4.0)
+				# 二级观察点（批次 5）：observes[] 每条产生一条观察记录
+				for obs in spot.observes:
+					if typeof(obs) != TYPE_DICTIONARY:
+						continue
+					var od: Dictionary = obs
+					GameServices.cognition.record_observation(
+							"inspect",
+							str(od.get("text", "")),
+							str(spot.name),
+							GameServices.world_manager.get_current_world_id(),
+							GameServices.get_tick(),
+							bool(od.get("hearsay", false)))
+					var obs_fact: String = str(od.get("fact_id", ""))
+					if not obs_fact.is_empty():
+						GameServices.cognition.learn(obs_fact, "inspect", str(spot.name),
+								GameServices.world_manager.get_current_world_id(),
+								GameServices.get_tick())
 			var text := spot.examine_text
 			if text.is_empty():
 				text = "你看不出它有什么特别。"

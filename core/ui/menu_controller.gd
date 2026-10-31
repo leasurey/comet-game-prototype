@@ -166,7 +166,11 @@ func _button(text: String, action: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(0, 34)
-	b.pressed.connect(action)
+	b.pressed.connect(func() -> void:
+		var gs = get_node_or_null("/root/GameServices")
+		if gs != null and gs.audio_manager != null:
+			gs.audio_manager.play_ui_click()
+		action.call())
 	_content.add_child(b)
 	return b
 

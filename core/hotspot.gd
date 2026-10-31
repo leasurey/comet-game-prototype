@@ -28,6 +28,13 @@ signal focus_changed(hotspot: Hotspot, focused: bool)
 ## 「对话可引用」接通。留空则行为与旧版完全一致。
 @export var grants_fact: String = ""
 
+## 二级观察点（CT-016）：检查物品时可产生多条子观察。
+## 格式：[{"text": "屏幕上有几个数字", "fact_id": "obs_screen_digits", "hearsay": false}]
+## text: 观察内容；fact_id: 可选，非空时同时授予玩家认知事实；
+## hearsay: true = 转述（从别人那听来），false = 亲眼所见。
+## examine 处理链会为每条 observe 写入 CognitionManager 的 observations 账本。
+@export var observes: Array = []
+
 ## exit 热点的门级落点。
 ##
 ## 地点级 spawn 只能回答「这个场景从哪儿开始」，回答不了「玩家是从哪扇门进来的」。
