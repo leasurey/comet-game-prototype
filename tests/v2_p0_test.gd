@@ -74,6 +74,9 @@ func _report() -> void:
 		print(l)
 	print("")
 	print("=== V2 P0 RESULT: PASS=%d FAIL=%d SKIP=%d ===" % [_pass, _fail, _skip])
+	var gs = root.get_node_or_null("GameServices")
+	if gs != null:
+		gs.shutdown_audio()
 	quit(1 if _fail > 0 else 0)
 
 

@@ -67,6 +67,9 @@ func _initialize() -> void:
 		print(l)
 	print("")
 	print("=== SAVE ISOLATION RESULT: PASS=%d FAIL=%d ===" % [_pass, _fail])
+	var gs = root.get_node_or_null("GameServices")
+	if gs != null:
+		gs.shutdown_audio()
 	quit(1 if _fail > 0 else 0)
 
 

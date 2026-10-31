@@ -121,6 +121,12 @@ func _bootstrap() -> void:
 	interaction_manager.name = "InteractionManager"
 	add_child(scene_manager)
 	add_child(interaction_manager)
+	# NPCManager 是 Node，必须入树。
+	# 此前它只被成员变量引用、从未 add_child——Node 不会被引用计数释放，
+	# 退出时就成了孤儿实例（「9 ObjectDB instances were leaked」的主源），
+	# 并连带拖住它引用的 cognition/dialogue 两个 RefCounted。
+	add_child(npc_manager)
+	npc_manager.name = "NPCManager"
 
 	scene_manager.world_manager = world_manager
 	scene_manager.event_manager = event_manager
@@ -540,6 +546,18 @@ func _serialize_player_position() -> Array:
 
 
 # ---------------------------------------------------------------- 导航 API
+
+## 退出前的统一清理入口。必须在主循环仍运转时调用（quit 之前）。
+##
+## stop 之后必须给音频混音线程留一个真实时间窗口：voice 的回收是异步的，
+## 抢在回收之前退出会把 AudioStreamPlaybackWAV + AudioStreamWAV 留在
+## ObjectDB 清点里（实测同帧 stop 后立刻退出仍有约 40% 概率泄漏）。
+## 150ms 对退出体感无影响，换来退出日志确定性干净。
+func shutdown_audio() -> void:
+	if audio_manager != null:
+		audio_manager.shutdown()
+	OS.delay_msec(150)
+
 
 func has_save() -> bool:
 	if not is_ready:

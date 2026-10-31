@@ -568,6 +568,10 @@ func _on_new_game_confirmed() -> void:
 func _on_quit_requested() -> void:
 	# 退出前必须把鼠标交还系统，否则可能残留捕获状态
 	_release_mouse()
+	# 音频必须在主循环仍运转时停掉：放到退出阶段再释放，
+	# AudioServer 侧的 voice 引用回收不掉，退出日志会报对象泄漏（P3）。
+	if GameServices != null:
+		GameServices.shutdown_audio()
 	get_tree().quit()
 
 
@@ -575,6 +579,8 @@ func _notification(what: int) -> void:
 	# 窗口关闭按钮同样需要释放鼠标
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		_release_mouse()
+		if GameServices != null:
+			GameServices.shutdown_audio()
 		get_tree().quit()
 	# 窗口失焦时必须交出鼠标：否则 Alt+Tab 切走后回来，
 	# 鼠标可能仍处于捕获态，玩家既看不见光标也点不到界面。

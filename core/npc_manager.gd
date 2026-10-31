@@ -32,6 +32,8 @@ const NAV_SOURCE_GROUP := "nav_source"
 ## 烘焙与查询的物理帧等待（依据可行性报告）
 const BAKE_WAIT_FRAMES := 8
 const SYNC_WAIT_FRAMES := 12
+## 烘焙出 0 多边形时的重试上限（碰撞体偶发未就绪，重烘即可恢复）
+const MAX_BAKE_RETRIES := 2
 
 var _cognition = null
 var _dialogue = null
@@ -41,6 +43,7 @@ var _npcs: Dictionary = {}
 var _region: NavigationRegion3D = null
 var _nav_ready := false
 var _bake_phase := 0
+var _bake_retries := 0
 var _pf_mark := 0
 var _pending_container: Node = null
 
@@ -144,7 +147,11 @@ func spawn_all(container: Node) -> void:
 
 	_nav_ready = false
 	_bake_phase = 1
-	_pf_mark = 0
+	# 必须记「此刻」的物理帧号。此前误写 0，等于「引擎启动满 8 帧」——
+	# bootstrap 早超 8 帧，烘焙实际紧跟生成立刻跑，撞上物理服务器的
+	# 碰撞体注册窗口就烘出 0 多边形（N3 连通性 0/42 的抖动根因）。
+	_pf_mark = Engine.get_physics_frames()
+	_bake_retries = 0
 
 
 func _spawn_one(id: String, container: Node) -> void:
@@ -199,18 +206,13 @@ func _despawn_all() -> void:
 
 
 ## 每帧驱动：烘焙时序与 NPC 状态推进。
-## 退出时显式拆除，避免「ObjectDB instances leaked at exit」。
+## 退出清理说明：NPC 与 region 都是场景树节点，退出时随树一起释放，
+## 这里**不能**再 queue_free——退出阶段消息队列已不再消化，
+## 排队释放反而制造孤儿。只需断开引用，防止脚本成员把它们拖到泄漏名单。
 func _exit_tree() -> void:
-	# 退出时显式拆除全部子节点，否则退出日志报
-	# 「ObjectDB instances were leaked at exit」。
-	for id in _npcs.keys():
-		var n: Node = _npcs[id]
-		if is_instance_valid(n):
-			n.queue_free()
 	_npcs.clear()
-	if _region != null and is_instance_valid(_region):
-		_region.queue_free()
 	_region = null
+	_pending_container = null
 	_nav_ready = false
 	_bake_phase = 0
 
@@ -226,9 +228,24 @@ func tick() -> void:
 	elif _bake_phase == 2:
 		# 必须等 NavigationServer 同步，否则查询返回空
 		if Engine.get_physics_frames() - _pf_mark >= SYNC_WAIT_FRAMES:
+			# 同步后先验收再宣称就绪：0 多边形说明碰撞体当时没就绪，
+			# 直接就绪会让所有寻路静默失败（表现为 NPC 站着不动、
+			# 连通性测试 0/42）。重烘几次几乎总能恢复。
+			if get_nav_polygon_count() == 0 and _bake_retries < MAX_BAKE_RETRIES:
+				_bake_retries += 1
+				_bake_phase = 1
+				_pf_mark = Engine.get_physics_frames()
+				return
 			_bake_phase = 0
 			_nav_ready = true
 			navigation_ready.emit()
+
+
+## 当前导航网格的多边形数。0 = 烘焙失败/未烘焙，用于验收与诊断。
+func get_nav_polygon_count() -> int:
+	if _region == null or _region.navigation_mesh == null:
+		return 0
+	return _region.navigation_mesh.get_polygon_count()
 
 
 ## 让 NPC 走向某个房间。

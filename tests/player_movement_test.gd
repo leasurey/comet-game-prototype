@@ -633,5 +633,8 @@ func step_report() -> bool:
 		print(line)
 	print("")
 	print("=== MOVEMENT RESULT: PASS=%d FAIL=%d ===" % [_pass, _fail])
+	var gs = root.get_node_or_null("GameServices")
+	if gs != null:
+		gs.shutdown_audio()
 	quit(1 if _fail > 0 else 0)
 	return true

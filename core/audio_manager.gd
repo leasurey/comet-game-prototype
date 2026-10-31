@@ -150,10 +150,22 @@ func stop_all_loops() -> void:
 
 ## 退出时把循环停掉并断开资源引用，避免「退出时资源仍在使用」。
 func _exit_tree() -> void:
+	# 安全网：多数退出路径已在正常帧里调用过 shutdown()。
+	# 这里再拦一次，但不能依赖它——退出阶段才 stop 已经晚了，
+	# AudioServer 侧的 voice 引用回收不掉（实测 P3 泄漏根因）。
+	shutdown()
+
+
+## 停止全部声音并释放播放器持有的资源引用。
+##
+## 必须在**正常运行帧**里调用（退出请求一到达就调）。
+## 实测结论：stop_playback_stream() 只有在主循环仍运转时才能把
+## AudioServer 侧的 voice 引用回收掉；放到退出阶段（_exit_tree /
+## PREDELETE）再停，AudioStreamPlaybackWAV + AudioStreamWAV 会以
+## refcount 1 泄漏到 ObjectDB 清点——这正是 P3「退出时对象泄漏」的根因。
+func shutdown() -> void:
 	for cat in _looping.keys().duplicate():
 		stop_loop(cat)
-	# 必须把 stream 置空：否则播放器仍持有 AudioStream 引用，
-	# 退出时会报「resources still in use」。
 	for cat in _players.keys():
 		var p: AudioStreamPlayer = _players[cat]
 		if is_instance_valid(p):

@@ -272,16 +272,38 @@ func step_n2_on_ground() -> bool:
 
 func step_n3_nav_to_room() -> bool:
 	if _t_state == 0:
-		_check(_npcm.is_nav_ready(), "N3 前置：导航已就绪")
 		_pf_mark = Engine.get_physics_frames()
 		_t_state = 1
 		return false
 	if _t_state == 1:
-		if not _wait_pf(20):
+		# 等导航真正就绪（烘焙+同步+验收），不再依赖固定帧数。
+		# 不能用 _ticks_over()：步骤切换会把 _pf_mark 清 0，
+		# 而此时引擎帧数早已超阈值，超时判定会瞬间误判。
+		if not _npcm.is_nav_ready():
+			if _wait_pf(200):
+				_rec(false, "N3 前置：导航已就绪",
+					"超时，polys=%d" % _npcm.get_nav_polygon_count())
+				return true
 			return false
+		_check(_npcm.get_nav_polygon_count() > 0,
+			"N3 前置：导航网格非空", "polys=%d" % _npcm.get_nav_polygon_count())
+		_pf_mark = Engine.get_physics_frames()
+		_t_state = 2
+		return false
+	if _t_state == 2:
+		# 轮询一条探针路径，确认 NavigationServer 真的可查询，
+		# 再跑 42 对全量断言。固定等 20 帧在慢机上会抢跑（实测抖动）。
+		var map: RID = _npcm._region.get_navigation_map()
+		var probe := NavigationServer3D.map_get_path(map,
+				Vector3(0.0, FLOOR_Y, 1.6), Vector3(-4.5, FLOOR_Y, 6.6), true)
+		if probe.size() < 2:
+			if not _wait_pf(150):
+				return false
+			_rec(false, "N3 导航查询就绪", "150 帧内探针路径始终为空，polys=%d" %
+				_npcm.get_nav_polygon_count())
+			return true
 		# 直接测 navmesh 连通性——这才是「NPC 能否导航」的本质。
 		# 用可行性验证里 72/72 通过的那批采样点。
-		var map: RID = _npcm._region.get_navigation_map()
 		var pts := {
 			"玄关": Vector3(0.0, FLOOR_Y, 1.6),
 			"客厅": Vector3(-4.5, FLOOR_Y, 6.6),
@@ -370,6 +392,8 @@ func step_n6_npc_save_restore() -> bool:
 		var p: Variant = (map["kevin"] as Dictionary).get("position", null)
 		_check(typeof(p) == TYPE_ARRAY and absf(float((p as Array)[0]) - 2.0) < 0.01,
 			"N6 位置被正确序列化", str(p))
+	# NPCManager 是 Node，用完必须 free——否则退出时报孤儿实例
+	fresh.free()
 	# 恢复回去
 	_npcm.restore(moved)
 	var kevin2: NPC = _npcm.get_npc("kevin")
@@ -392,5 +416,8 @@ func step_report() -> bool:
 		print(l)
 	print("")
 	print("=== COGNITION & NPC RESULT: PASS=%d FAIL=%d ===" % [_pass, _fail])
+	var gs = root.get_node_or_null("GameServices")
+	if gs != null:
+		gs.shutdown_audio()
 	quit(1 if _fail > 0 else 0)
 	return true
