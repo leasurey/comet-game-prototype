@@ -22,6 +22,27 @@ const MOVE_SPEED := 1.6          # 比玩家 2.6 慢，符合「NPC 自然走动
 const TURN_SPEED := 6.0
 const ARRIVE_DISTANCE := 0.35
 
+## 动态避让（邻近 NPC 分离转向）。
+##
+## 为什么不用 NavigationAgent3D 的 RVO（avoidance_enabled）：
+## RVO 的 velocity_computed 回调在 NavigationServer 同步帧异步到达，
+## 与重力、move_and_slide 的组合在 headless 下时序不确定，没法写稳定的
+## 行为断言。分离转向是纯确定性计算：每物理帧对附近 NPC 产生推离速度，
+## 7 个 NPC 只有 21 对检查，开销可忽略。
+##
+## 参数依据（胶囊半径 0.28，两人并排需 ≥0.56 m）：
+##   AVOID_RADIUS    推离作用半径 1.10 m
+##   AVOID_STRENGTH  推力增益 4.0 → 对向相逢的平衡距离约 0.66 m（> 0.56）
+##   AVOID_MAX_PUSH  推力上限 2.2 m/s（可完全抵消前进 1.6 并后退）
+const AVOID_RADIUS := 1.10
+const AVOID_STRENGTH := 4.0
+const AVOID_MAX_PUSH := 2.2
+## 侧向分量比例。纯粹径向推离会让两个对向而行的 NPC 在平衡距离上「顶牛」
+## 死锁（实测双双停在离目标 2.8 m 处）。附加绕自身前进方向的侧向分量后，
+## 两人自动各走自己一侧错车（keep-right 约定，由 away 向量互反自动保证）。
+const AVOID_TURN_RATIO := 0.9
+const GROUP_NPCS := "npcs"
+
 ## 状态
 const STATE_IDLE := "idle"
 const STATE_WALKING := "walking"
@@ -47,13 +68,15 @@ var _has_look := false
 ## NPC 只与环境碰撞（站着不掉、不穿墙），但**不与玩家碰撞**——
 ## 任务书要求「NPC 不应频繁堵住门口和主要通道」，而实测发现
 ## 有碰撞的 NPC 会堵死门洞并破坏路线连通性测试。
-## 玩家可以穿过 NPC（灰盒阶段可接受；正式版需另行设计避让）。
+## 玩家可以穿过 NPC（有意取舍：保证门口与通道永远畅通）。
+## NPC 之间的动态避让由 _separation_push() 分离转向负责（见下方常量区）。
 const NPC_LAYER := 4
 const ENV_LAYER := 1
 
 func _ready() -> void:
 	collision_layer = NPC_LAYER
 	collision_mask = ENV_LAYER
+	add_to_group(GROUP_NPCS)
 	# 碰撞体：比玩家略小，留出避让余量
 	_body = CollisionShape3D.new()
 	_body.name = "Body"
@@ -144,8 +167,9 @@ func _physics_process(delta: float) -> void:
 		dir.y = 0.0
 		if dir.length() > 0.05:
 			dir = dir.normalized()
-			velocity.x = dir.x * MOVE_SPEED
-			velocity.z = dir.z * MOVE_SPEED
+			var desired := dir * MOVE_SPEED + _separation_push()
+			velocity.x = desired.x
+			velocity.z = desired.z
 			# 平滑转向
 			var want := atan2(dir.x, dir.z)
 			rotation.y = lerp_angle(rotation.y, want, TURN_SPEED * delta)
@@ -173,6 +197,33 @@ func _physics_process(delta: float) -> void:
 			rotation.y = lerp_angle(rotation.y, want2, TURN_SPEED * delta)
 
 	move_and_slide()
+
+
+## 邻近 NPC 分离推力（动态避让）。
+## 对半径 AVOID_RADIUS 内的每个其他 NPC 产生背离它的速度分量，
+## 就近越近推力越大，上限 AVOID_MAX_PUSH。只作用于走动中的 NPC。
+## 侧向分量（垂直于两人连线）让对向而行的两人从彼此侧面错开，
+## 不会僵持在正前方互相顶住。
+func _separation_push() -> Vector3:
+	var push := Vector3.ZERO
+	var me := Vector3(global_position.x, 0.0, global_position.z)
+	for other in get_tree().get_nodes_in_group(GROUP_NPCS):
+		if other == self or not (other is NPC):
+			continue
+		var op: Vector3 = (other as NPC).global_position
+		var away := me - Vector3(op.x, 0.0, op.z)
+		var d := away.length()
+		if d >= AVOID_RADIUS or d < 0.001:
+			continue
+		var falloff := 1.0 - d / AVOID_RADIUS
+		var radial := away.normalized()
+		# 垂直于连线的侧向：两人的 away 互反 → 侧向也互反 → 各走各的一侧
+		var perp := Vector3(-away.z, 0.0, away.x).normalized()
+		push += (radial + perp * AVOID_TURN_RATIO) * falloff
+	push *= AVOID_STRENGTH
+	if push.length() > AVOID_MAX_PUSH:
+		push = push.normalized() * AVOID_MAX_PUSH
+	return push
 
 
 # ---------------------------------------------------------------- 存档
