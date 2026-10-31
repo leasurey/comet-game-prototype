@@ -94,15 +94,37 @@ func get_node(node_id: String) -> Dictionary:
 	return (_nodes[node_id] as Dictionary).duplicate(true)
 
 
+## 解析对话文本：按 variants 优先级选择最匹配的文本变体。
+##
+## variants 格式：[{"when": {...条件...}, "text": "替换文本"}]
+## 条件与 requires 共用谓词白名单，外加 "world" 键（匹配当前现实 id）。
+## 取第一个满足条件的 variant；无匹配则用默认 text。
+## 依赖 npc_context（npc_knows/relationships/said_nodes）和 world_id。
+func resolve_text(node: Dictionary, npc_context: Dictionary = {}, world_id: String = "") -> String:
+	var variants_raw: Variant = node.get("variants", null)
+	if typeof(variants_raw) != TYPE_ARRAY or (variants_raw as Array).is_empty():
+		return str(node.get("text", ""))
+	# 构建完整上下文（world 加入 npc_context 供统一谓词使用）
+	var ctx := npc_context.duplicate(true)
+	ctx["world"] = world_id
+	for v in (variants_raw as Array):
+		if typeof(v) != TYPE_DICTIONARY:
+			continue
+		var vd: Dictionary = v
+		if _requirements_met(vd.get("when", null), ctx):
+			return str(vd.get("text", node.get("text", "")))
+	return str(node.get("text", ""))
+
+
 ## 玩家"听到"某段对话：登记认知并返回这段的内容。
-## 返回值含 grants 实际生效了哪些、fires 待触发事件、teaches_npc NPC 学到什么。
+## 文本经 resolve_text 解析（variants 按现实/认知/关系/进度选择变体）。
 func hear(node_id: String, world_id: String = "", tick: int = -1,
 		npc_context: Dictionary = {}) -> Dictionary:
 	if not _nodes.has(node_id):
-		return {"ok": false, "error": "对话节点不存在: %s" % node_id, "granted": [], "fired": [], "teaches_npc": []}
+		return {"ok": false, "error": "对话节点不存在: %s" % node_id, "granted": [], "fired": [], "teaches_npc": [], "text": ""}
 	var n: Dictionary = _nodes[node_id]
 	if not _requirements_met(n.get("requires", []), npc_context):
-		return {"ok": false, "error": "前置条件未满足", "granted": [], "fired": [], "teaches_npc": []}
+		return {"ok": false, "error": "前置条件未满足", "granted": [], "fired": [], "teaches_npc": [], "text": ""}
 
 	var granted: Array = []
 	var speaker := str(n.get("speaker", ""))
@@ -113,16 +135,18 @@ func hear(node_id: String, world_id: String = "", tick: int = -1,
 	var fired: Array = []
 	for eid in (n.get("fires", []) as Array):
 		fired.append(str(eid))
-	# teaches_npc：这段对话让 NPC 学到什么（调用方负责写入 NPC.known_facts）
 	var teaches_npc: Array = []
 	for fid in (n.get("teaches_npc", []) as Array):
 		teaches_npc.append(str(fid))
+	# 文本变体解析（批次 4）：根据现实/认知/关系/进度选最匹配的文本
+	var resolved_text := resolve_text(n, npc_context, world_id)
 	return {
 		"ok": true,
 		"error": "",
 		"id": node_id,
 		"speaker": speaker,
-		"text": str(n.get("text", "")),
+		"text": resolved_text,
+		"base_text": str(n.get("text", "")),
 		"replies": (n.get("replies", []) as Array).duplicate(true),
 		"granted": granted,
 		"fired": fired,
@@ -154,6 +178,15 @@ func _requirements_met(requires: Variant, npc_context: Dictionary = {}) -> bool:
 	var req: Dictionary = requires
 	if req.is_empty():
 		return true
+
+	# world: 只在特定现实下可用（variants 用）
+	var world_req: Variant = req.get("world", null)
+	if world_req != null:
+		var expect := str(world_req)
+		var actual := str(npc_context.get("world", ""))
+		# 空 actual 表示调用方未提供现实信息，无法匹配 → 不满足
+		if expect != actual:
+			return false
 
 	# player_knows：玩家认知
 	var pk: Variant = req.get("player_knows", [])

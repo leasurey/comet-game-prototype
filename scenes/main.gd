@@ -338,7 +338,7 @@ func _try_interact() -> void:
 	_notify("这里没有什么可以互动的。", 2.0)
 
 
-## 构建对话闸门所需的 NPC 上下文（批次 3）。
+## 构建对话闸门所需的 NPC 上下文（批次 3/4）。
 func _build_npc_context(npc: NPC) -> Dictionary:
 	if npc == null:
 		return {}
@@ -346,6 +346,8 @@ func _build_npc_context(npc: NPC) -> Dictionary:
 		"npc_knows": npc.known_facts.duplicate(),
 		"relationships": npc.relationships.duplicate(true),
 		"said_nodes": npc.said_nodes.duplicate(),
+		"world": GameServices.world_manager.get_current_world_id() \
+				if GameServices.world_manager != null else "",
 	}
 
 

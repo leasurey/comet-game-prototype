@@ -16,6 +16,20 @@
      "text": "没事，我随便看看。",
      "goto": null
     }
+   ],
+   "variants": [
+    {
+     "when": {
+      "world": "world_beta"
+     },
+     "text": "这地方……好像有点不太一样。你感觉到了吗？"
+    },
+    {
+     "when": {
+      "world": "world_gamma"
+     },
+     "text": "不对，真的不对。这屋子的光变了。"
+    }
    ]
   },
   {
@@ -34,6 +48,16 @@
     {
      "text": "好。",
      "goto": null
+    }
+   ],
+   "variants": [
+    {
+     "when": {
+      "said": [
+       "kevin_far_house"
+      ]
+     },
+     "text": "远处那栋房子？我说过了，它一直在那里。"
     }
    ]
   },
@@ -77,6 +101,19 @@
    ],
    "fires": [
     "evt_sticky_discussed"
+   ],
+   "teaches_npc": [
+    "fact_player_told_sticky"
+   ],
+   "variants": [
+    {
+     "when": {
+      "said": [
+       "kevin_sticky"
+      ]
+     },
+     "text": "我们刚才不是说过了吗？门上那张便签，你也注意到了。"
+    }
    ]
   },
   {
@@ -111,6 +148,20 @@
     {
      "text": "我先转转。",
      "goto": null
+    }
+   ],
+   "variants": [
+    {
+     "when": {
+      "world": "world_beta"
+     },
+     "text": "这地方……好像有点不太一样。你感觉到了吗？"
+    },
+    {
+     "when": {
+      "world": "world_gamma"
+     },
+     "text": "不对，真的不对。这屋子的光变了。"
     }
    ]
   },
@@ -170,6 +221,16 @@
      "text": "你想多了。",
      "goto": null
     }
+   ],
+   "variants": [
+    {
+     "when": {
+      "npc_knows": [
+       "fact_player_told_sticky"
+      ]
+     },
+     "text": "那段黑路我也走过。Kevin 说门上有张便签？也许和这事有关。"
+    }
    ]
   },
   {
@@ -204,6 +265,20 @@
     {
      "text": "哪里不对？",
      "goto": "lee_detail"
+    }
+   ],
+   "variants": [
+    {
+     "when": {
+      "world": "world_beta"
+     },
+     "text": "这地方……好像有点不太一样。你感觉到了吗？"
+    },
+    {
+     "when": {
+      "world": "world_gamma"
+     },
+     "text": "不对，真的不对。这屋子的光变了。"
     }
    ]
   },
@@ -258,6 +333,17 @@
      "text": "别说了。",
      "goto": null
     }
+   ],
+   "variants": [
+    {
+     "when": {
+      "relationship_at_least": {
+       "target": "player",
+       "trust": 0.3
+      }
+     },
+     "text": "说实话吧——那段黑路之后，我看到了不该看到的东西。"
+    }
    ]
   },
   {
@@ -292,6 +378,20 @@
     {
      "text": "不用了，谢谢。",
      "goto": null
+    }
+   ],
+   "variants": [
+    {
+     "when": {
+      "world": "world_beta"
+     },
+     "text": "这地方……好像有点不太一样。你感觉到了吗？"
+    },
+    {
+     "when": {
+      "world": "world_gamma"
+     },
+     "text": "不对，真的不对。这屋子的光变了。"
     }
    ]
   },
@@ -346,6 +446,20 @@
     {
      "text": "没兴趣。",
      "goto": null
+    }
+   ],
+   "variants": [
+    {
+     "when": {
+      "world": "world_beta"
+     },
+     "text": "这地方……好像有点不太一样。你感觉到了吗？"
+    },
+    {
+     "when": {
+      "world": "world_gamma"
+     },
+     "text": "不对，真的不对。这屋子的光变了。"
     }
    ]
   },
@@ -420,6 +534,20 @@
      "text": "我有分寸。",
      "goto": null
     }
+   ],
+   "variants": [
+    {
+     "when": {
+      "world": "world_beta"
+     },
+     "text": "这地方……好像有点不太一样。你感觉到了吗？"
+    },
+    {
+     "when": {
+      "world": "world_gamma"
+     },
+     "text": "不对，真的不对。这屋子的光变了。"
+    }
    ]
   },
   {
@@ -452,6 +580,20 @@
     {
      "text": "我会小心。",
      "goto": null
+    }
+   ],
+   "variants": [
+    {
+     "when": {
+      "world": "world_beta"
+     },
+     "text": "这地方……好像有点不太一样。你感觉到了吗？"
+    },
+    {
+     "when": {
+      "world": "world_gamma"
+     },
+     "text": "不对，真的不对。这屋子的光变了。"
     }
    ]
   },
@@ -510,6 +652,20 @@
     {
      "text": "你看错了。",
      "goto": null
+    }
+   ],
+   "variants": [
+    {
+     "when": {
+      "world": "world_beta"
+     },
+     "text": "回来以后一切都不一样了。你有没有觉得，这屋子变大了？"
+    },
+    {
+     "when": {
+      "world": "world_gamma"
+     },
+     "text": "第三次了。我开始分不清哪次是真的了。"
     }
    ]
   },
