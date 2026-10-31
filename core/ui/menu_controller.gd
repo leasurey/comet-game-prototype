@@ -24,7 +24,7 @@ var _settings_return: String = "pause"
 
 
 func _ready() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
@@ -39,19 +39,19 @@ func setup(settings: SettingsManager, services = null) -> void:
 func _build() -> void:
 	_root = Control.new()
 	_root.name = "MenuRoot"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 	var dim := ColorRect.new()
 	dim.name = "Dim"
 	dim.color = Color(0.018, 0.020, 0.026, 0.96)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(dim)
 
 	var panel := PanelContainer.new()
 	panel.name = "Panel"
-	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	panel.offset_left = -250
 	panel.offset_top = -270
 	panel.offset_right = 250

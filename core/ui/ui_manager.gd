@@ -71,7 +71,7 @@ func _build_ui() -> void:
 	_root = Control.new()
 	_root.name = "Root"
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_root)
 
 	_build_top_left()
@@ -85,7 +85,7 @@ func _build_ui() -> void:
 	_overlay_root = Control.new()
 	_overlay_root.name = "OverlayLayer"
 	_overlay_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_overlay_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_overlay_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.add_child(_overlay_root)
 
 
@@ -94,7 +94,7 @@ func _build_top_left() -> void:
 	box.name = "TopLeft"
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(box)
-	box.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	box.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	box.offset_left = 22.0
 	box.offset_top = 18.0
 	box.offset_right = 320.0
@@ -123,7 +123,7 @@ func _build_reticle() -> void:
 	holder.name = "Reticle"
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(holder)
-	holder.set_anchors_preset(Control.PRESET_CENTER)
+	holder.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	holder.offset_left = -3.0
 	holder.offset_top = -3.0
 	holder.offset_right = 3.0
@@ -133,7 +133,7 @@ func _build_reticle() -> void:
 	dot.name = "Dot"
 	dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	dot.color = Color(0.92, 0.92, 0.90, 0.42)
-	dot.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dot.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	holder.add_child(dot)
 	_reticle = holder
 
@@ -143,7 +143,7 @@ func _build_focus() -> void:
 	_focus_label.name = "FocusLabel"
 	_focus_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_focus_label)
-	_focus_label.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_focus_label.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	_focus_label.offset_left = -300.0
 	_focus_label.offset_right = 300.0
 	_focus_label.offset_top = -186.0
@@ -158,7 +158,7 @@ func _build_message() -> void:
 	holder.name = "MessageRoot"
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(holder)
-	holder.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	holder.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	holder.offset_left = -320.0
 	holder.offset_right = 320.0
 	holder.offset_top = -136.0
@@ -168,7 +168,7 @@ func _build_message() -> void:
 	_message_bg.name = "MessageBg"
 	_message_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_message_bg.color = COLOR_PANEL
-	_message_bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_message_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	holder.add_child(_message_bg)
 
 	_message_label = Label.new()
@@ -177,7 +177,7 @@ func _build_message() -> void:
 	_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_message_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_message_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_message_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_message_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_message_label.offset_left = 14.0
 	_message_label.offset_top = 8.0
 	_message_label.offset_right = -14.0
@@ -191,7 +191,7 @@ func _build_button_bar() -> void:
 	var bar := HBoxContainer.new()
 	bar.name = "ButtonBar"
 	_root.add_child(bar)
-	bar.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	bar.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
 	bar.offset_left = -372.0
 	bar.offset_top = -56.0
 	bar.offset_right = -20.0
@@ -241,7 +241,7 @@ func _build_confirm() -> void:
 	root.name = "ConfirmRoot"
 	# STOP：面板显示期间吞掉点击，避免同一次点击既确认又落到场景交互上
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.visible = false
 	_root.add_child(root)
 
@@ -249,12 +249,12 @@ func _build_confirm() -> void:
 	dim.name = "Dim"
 	dim.color = Color(0.0, 0.0, 0.0, 0.55)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.add_child(dim)
 
 	var panel := PanelContainer.new()
 	panel.name = "Panel"
-	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	panel.offset_left = -220.0
 	panel.offset_top = -80.0
 	panel.offset_right = 220.0
@@ -313,7 +313,7 @@ func _build_dialogue() -> void:
 	var root := Control.new()
 	root.name = "DialogueRoot"
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.visible = false
 	_root.add_child(root)
 	_dialogue_root = root
@@ -322,7 +322,7 @@ func _build_dialogue() -> void:
 	dim.name = "Dim"
 	dim.color = Color(0.0, 0.0, 0.0, 0.30)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	var dim_click := func() -> void:
 		dialogue_close_requested.emit()
 	dim.gui_input.connect(func(event: InputEvent) -> void:
@@ -332,7 +332,7 @@ func _build_dialogue() -> void:
 
 	var panel := PanelContainer.new()
 	panel.name = "Panel"
-	panel.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER_BOTTOM)
 	panel.offset_left = -340.0
 	panel.offset_right = 340.0
 	panel.offset_top = -330.0
