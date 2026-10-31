@@ -74,6 +74,16 @@ func _check(cond: bool, label: String, detail: String = "") -> void:
 	_lines.append("[%s] %s%s" % ["PASS" if cond else "FAIL", label, suffix])
 
 
+func _find_hotspot(node: Node, hname: String) -> Hotspot:
+	for c in node.get_children():
+		if c is Hotspot and c.name == hname:
+			return c as Hotspot
+		var f := _find_hotspot(c, hname)
+		if f != null:
+			return f
+	return null
+
+
 func step_setup() -> bool:
 	if _t_state == 0:
 		var sm = _svc.save_manager
@@ -100,18 +110,22 @@ func step_setup() -> bool:
 	return _kevin != null
 
 
-## A1  物品线索闭环：检查 → 观察 → 对话变化 → 手机 → 存档恢复
+## A1  物品线索闭环（真实热点交互入口）：检查 → 观察 → 对话变化 → 手机 → 存档恢复
 func step_a1_item_clue_loop() -> bool:
 	if _t_state == 0:
 		var cog = _svc.cognition
 		_check(not cog.knows("fact_sticky_note"), "A1 前置：不知道便签")
 		_check(cog.get_observation_count() == 0, "A1 前置：无观察")
-		# 模拟 examine 链（真实 hotspot 检查）
-		cog.learn("fact_inspected_StickyNote", "inspect", "StickyNote", "world_alpha", 1)
-		cog.learn("fact_sticky_note", "inspect", "StickyNote", "world_alpha", 1)
-		cog.record_observation("inspect", "门上贴着一张手写便签", "StickyNote", "world_alpha", 1)
-		_check(cog.knows("fact_sticky_note"), "A1 检查后知道便签")
-		_check(cog.get_observation_count() == 1, "A1 观察记录 +1")
+		# 真实热点交互入口（P1-5 修复：不再直接 cognition.learn）：
+		# 在场景中找到 StickyNote 热点，通过 main 的 _on_hotspot_activated 处理链触发
+		var spot := _find_hotspot(_main, "StickyNote")
+		_check(spot != null, "A1 StickyNote 热点存在")
+		if spot == null:
+			return true
+		# 走 main._on_hotspot_activated 的完整 examine 链
+		_main._on_hotspot_activated(spot)
+		_check(cog.knows("fact_sticky_note"), "A1 真实交互后知道便签")
+		_check(cog.get_observation_count() >= 1, "A1 观察记录 +1")
 		# 对话变化：便签话题解锁
 		var dm = _svc.dialogue_manager
 		var ctx := {"npc_knows": [], "relationships": {}, "said_nodes": [], "world": "world_alpha"}
@@ -130,7 +144,7 @@ func step_a1_item_clue_loop() -> bool:
 		_check(_kevin.knows_fact("fact_player_told_sticky"), "A1 Kevin 学到便签")
 		# 模拟 main.gd _show_dialogue_node 的后续动作
 		_kevin.mark_said("kevin_sticky")
-		_kevin.remember("dialogue", str(heard.get("text", "")), "player")
+		_kevin.remember("dialogue", str(heard.get("text", "")), "player", _svc.get_tick())
 		# 手机数据
 		var phone: Dictionary = _svc.get_phone_data()
 		_check((phone["observations"] as Array).size() >= 1, "A1 手机含观察")
@@ -142,7 +156,10 @@ func step_a1_item_clue_loop() -> bool:
 	return false
 
 
-## A2  多结局分支：是否检查便签 → 不同对话路径
+## A2  多结局分支（状态分支测试，非完整玩家流程）：
+## 直接操纵认知状态来验证 gate 逻辑的分支差异。
+## 注意：这是独立的状态分支测试，不冒充完整玩家操作流程——
+## 完整流程的便签获取走 A1 的真实热点交互入口。
 func step_a2_branching() -> bool:
 	if _t_state == 0:
 		var dm = _svc.dialogue_manager
@@ -277,7 +294,7 @@ func step_c1_reality_switch() -> bool:
 		_check(cog.knows("fact_dark_road"), "C1 穿越后知道黑路")
 		# 记忆分槽（NPC 应在穿越前已有记忆；补一条穿越观察）
 		if _kevin != null:
-			_kevin.remember("observation", "玩家穿越了黑暗道路", "player")
+			_kevin.remember("observation", "玩家穿越了黑暗道路", "player", _svc.get_tick())
 			_check(_kevin.get_memory().size() > 0,
 				"C1 NPC 记忆有记录", str(_kevin.get_memory().size()))
 		# 存档

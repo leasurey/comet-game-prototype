@@ -534,8 +534,12 @@ func _apply_stateful_effect(eff: Dictionary, ctx: Dictionary, undo_stack: Array)
 			if npc_service.has_method("get_npc_attrs"):
 				old_attrs = (npc_service.get_npc_attrs(npc_id) as Dictionary).duplicate(true)
 			npc_service.set_npc_attrs(npc_id, set_raw as Dictionary)
+			# 回滚用全替换（P0-3）：合并回滚会残留事务新增的键
 			undo_stack.append(func() -> void:
-				npc_service.set_npc_attrs(npc_id, old_attrs))
+				if npc_service.has_method("replace_npc_attrs"):
+					npc_service.replace_npc_attrs(npc_id, old_attrs)
+				else:
+					npc_service.set_npc_attrs(npc_id, old_attrs))
 			return ""
 	return "未知状态类 effect: %s" % ek
 

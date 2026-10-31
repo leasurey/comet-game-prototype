@@ -429,7 +429,7 @@ func _show_dialogue_node(node_id: String) -> void:
 	# NPC 记忆与对话进度（批次 3）
 	if _dlg_npc != null:
 		_dlg_npc.mark_said(node_id)
-		_dlg_npc.remember("dialogue", str(heard.get("text", "")), "player")
+		_dlg_npc.remember("dialogue", str(heard.get("text", "")), "player", GameServices.get_tick())
 		# teaches_npc：NPC 从这段对话学到新事实
 		for fid in (heard.get("teaches_npc", []) as Array):
 			_dlg_npc.learn_fact(str(fid))

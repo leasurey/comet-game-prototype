@@ -40,6 +40,7 @@ func _initialize() -> void:
 		Callable(self, "step_p4_dialogue"),
 		Callable(self, "step_p5_reality"),
 		Callable(self, "step_p6_rel_gate"),
+		Callable(self, "step_p7_attrs_rollback"),
 		Callable(self, "step_report"),
 	]
 
@@ -100,8 +101,8 @@ func step_p1_memory() -> bool:
 			return true
 		_check(_kevin.memory.is_empty(), "P1 前置：记忆为空")
 		_kevin.set_current_world("world_alpha")
-		_kevin.remember("dialogue", "玩家问了我关于便签的事", "player")
-		_kevin.remember("event", "有人穿越了黑暗道路", "player")
+		_kevin.remember("dialogue", "玩家问了我关于便签的事", "player", 1)
+		_kevin.remember("event", "有人穿越了黑暗道路", "player", 2)
 		_check(_kevin.memory.size() == 2, "P1 记忆记录成功", str(_kevin.memory.size()))
 		var all_mem: Array = _kevin.get_memory()
 		_check(all_mem.size() == 2, "P1 get_memory 返回全部")
@@ -160,12 +161,19 @@ func step_p3_autonomy() -> bool:
 		return false
 	if _t_state == 1:
 		# 等游荡间隔过去（NPC 可能已经走开）
-		if _ticks < 40:
+		if _ticks < 60:
 			return false
-		# 检查 NPC 是否有行为记录
+		# P0-1 修复验证：NPC 实际位置变化（不只是 behavior 标记）
 		_check(_kevin.behavior == "wander" or _kevin.state == "walking",
 			"P3 自主游荡行为触发",
 			"behavior=%s state=%s" % [_kevin.behavior, _kevin.state])
+		# 验证 wander_callback 已注入（P0-1：不再依赖 get_parent）
+		_check(_kevin.wander_callback.is_valid(),
+			"P3 wander_callback 已注入")
+		# 验证 NPC 实际发生了位移（或在行走中）
+		var moved: bool = _kevin.state == "walking" or _kevin.has_goal()
+		_check(moved, "P3 NPC 实际位移/行走中（非仅 behavior 标记）",
+			"state=%s has_goal=%s" % [_kevin.state, str(_kevin.has_goal())])
 		# 说话时自主行为挂起
 		_kevin.start_talking(Vector3(1, 0, 1))
 		_check(_kevin.state == "talking", "P3 说话状态")
@@ -211,7 +219,7 @@ func step_p5_reality() -> bool:
 	if _t_state == 0:
 		# 在 world_alpha 记忆基础上，在 world_beta 记一条
 		_kevin.set_current_world("world_beta")
-		_kevin.remember("observation", "这里的灯颜色不对", "")
+		_kevin.remember("observation", "这里的灯颜色不对", "", 3)
 		_check(_kevin.memory.size() == 3, "P5 新记忆已记录", str(_kevin.memory.size()))
 		var alpha_mem: Array = _kevin.get_memory("world_alpha")
 		var beta_mem: Array = _kevin.get_memory("world_beta")
@@ -219,7 +227,7 @@ func step_p5_reality() -> bool:
 		_check(beta_mem.size() == 1, "P5 world_beta 记忆数", str(beta_mem.size()))
 		# 跨现实通用记忆（world 为空）
 		_kevin.set_current_world("")
-		_kevin.remember("player_action", "玩家反复进出屋子", "player")
+		_kevin.remember("player_action", "玩家反复进出屋子", "player", 4)
 		var all_mem: Array = _kevin.get_memory()
 		_check(all_mem.size() == 4, "P5 含通用记忆共 4 条", str(all_mem.size()))
 		var alpha2: Array = _kevin.get_memory("world_alpha")
@@ -255,6 +263,42 @@ func step_p6_rel_gate() -> bool:
 		_check(rec.has("relationships"), "P6 relationships 入档")
 		var rel_dict: Dictionary = rec.get("relationships", {})
 		_check(rel_dict.has("player"), "P6 player 关系入档")
+		return true
+	return false
+
+
+## P7  NPC 属性事务回滚（P0-3 修复验证）：全替换式恢复，字典必须完全一致
+func step_p7_attrs_rollback() -> bool:
+	if _t_state == 0:
+		var npcm = _svc.npc_manager
+		# 设定初始属性
+		npcm.replace_npc_attrs("kevin", {"mood": "calm", "room": "kitchen", "note": "initial"})
+		var before: Dictionary = npcm.get_npc_attrs("kevin")
+		_check(before.size() == 3, "P7 前置：3 个属性", str(before))
+		# 模拟事件效果的事务：新增 key + 修改 key，然后回滚
+		# 这正是 EventManager._apply_stateful_effect 的 npc_state 分支行为
+		var old_attrs: Dictionary = npcm.get_npc_attrs("kevin").duplicate(true)
+		# set_npc_attrs 合并写入（新增 new_key，修改 mood）
+		npcm.set_npc_attrs("kevin", {"mood": "uneasy", "new_key": "added"})
+		var mid: Dictionary = npcm.get_npc_attrs("kevin")
+		_check(mid.size() == 4, "P7 事务中：4 个属性（1 新增 + 1 修改）", str(mid))
+		_check(str(mid.get("mood", "")) == "uneasy", "P7 事务中：mood 已修改")
+		# 回滚：全替换（P0-3 修复的关键）
+		npcm.replace_npc_attrs("kevin", old_attrs)
+		var after: Dictionary = npcm.get_npc_attrs("kevin")
+		# 断言字典完全一致（不是子集，不是合并）
+		_check(after.size() == before.size(),
+			"P7 回滚后属性数完全一致", "%d vs %d" % [after.size(), before.size()])
+		var exact_match := true
+		for k in before.keys():
+			if not after.has(str(k)) or str(after[str(k)]) != str(before[str(k)]):
+				exact_match = false
+		for k in after.keys():
+			if not before.has(str(k)):
+				exact_match = false
+		_check(exact_match, "P7 回滚后字典与执行前完全一致",
+			"before=%s after=%s" % [str(before), str(after)])
+		_check(not after.has("new_key"), "P7 回滚后新增键已删除")
 		return true
 	return false
 

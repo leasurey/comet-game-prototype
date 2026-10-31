@@ -5,8 +5,9 @@
 ##   不决定他该说什么（DialogueManager）、不决定他该怎么走（由外部派目标）。
 ##
 ## 导航约束（依据 docs/NAVIGATION_FEASIBILITY.md）：
-##   1. NavigationAgent3D.radius 必须与 navmesh 的 agent_radius 一致（0.35），
+##   1. NavigationAgent3D.radius 必须与 navmesh 的 agent_radius 一致（0.30），
 ##      否则会出现「导航认为能过、物理上贴墙抖动」。
+##      P0-2 修复：此前 navmesh 用 0.30 而 agent 用 0.35，两者不一致。
 ##   2. 出生 Y 取 FLOOR_Y，不能用 navmesh 点的 Y——navmesh 比地面高 0.2~0.4 m，
 ##      直接用会浮空。
 ##   3. 烘焙与寻路之间必须等物理帧，本类不自己烘焙，由 NPCManager 负责。
@@ -86,6 +87,9 @@ var _wander_timer: float = 0.0
 var wander_interval: float = 10.0
 var _wander_rooms: Array = []   # 可游荡的房间 id 列表（NPCManager 注入）
 var _current_world: String = ""  # 当前现实（记忆归档用）
+## 游荡回调（显式注入，不依赖 get_parent 链——NPC 的 parent 是地点容器，
+## 不是 NPCManager，get_parent().has_method("npc_wander_to") 永远找不到）。
+var wander_callback: Callable = Callable()
 
 @onready var _agent: NavigationAgent3D = null
 @onready var _body: CollisionShape3D = null
@@ -118,8 +122,8 @@ func _ready() -> void:
 
 	_agent = NavigationAgent3D.new()
 	_agent.name = "NavAgent"
-	# 与 navmesh 的 agent_radius 一致（可行性报告推荐值）
-	_agent.radius = 0.35
+	# 与 navmesh 的 agent_radius 一致（NPCManager.AGENT_RADIUS = 0.30，精确量化值）
+	_agent.radius = 0.30
 	_agent.height = 1.68
 	_agent.path_desired_distance = 0.35
 	_agent.target_desired_distance = 0.35
@@ -159,9 +163,10 @@ func set_current_world(world_id: String) -> void:
 
 ## 记录一条记忆。kind: "dialogue" | "event" | "observation" | "player_action"
 ## about: 关于谁（"player" 或 NPC id 或 ""）
-func remember(kind: String, content: String, about: String = "") -> void:
+## tick: 真实游戏时间（P1-4 修复：此前固定写 0）。
+func remember(kind: String, content: String, about: String = "", tick: int = -1) -> void:
 	memory.append({
-		"tick": 0,   # 由外部填入时间
+		"tick": tick,
 		"kind": kind,
 		"content": content,
 		"about": about,
@@ -389,9 +394,10 @@ func _process_autonomy(delta: float) -> void:
 	if candidates.is_empty():
 		return
 	var pick: String = str(candidates[randi() % candidates.size()])
-	# 交给 NPCManager 的游荡回调（可解析房间坐标 + 吸附 navmesh）
-	if get_parent() != null and get_parent().has_method("npc_wander_to"):
-		get_parent().npc_wander_to(character_id, pick)
+	# 通过显式注入的回调交给 NPCManager（P0-1 修复）：
+	# NPC 的 parent 是地点容器而非 NPCManager，get_parent() 找不到 npc_wander_to。
+	if wander_callback.is_valid():
+		wander_callback.call(character_id, pick)
 	# 标记行为意图（入档用）
 	behavior = BEHAVIOR_WANDER
 

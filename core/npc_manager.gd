@@ -87,6 +87,14 @@ func get_npc_attrs(npc_id: String) -> Dictionary:
 	return (_npc_attrs[npc_id] as Dictionary).duplicate(true)
 
 
+## 全替换式写入（事务回滚用）：丢弃现有属性，完全替换为给定字典。
+## 与 set_npc_attrs（合并语义）互补——合并回滚会残留新增键，全替换不会。
+func replace_npc_attrs(npc_id: String, attrs: Dictionary) -> void:
+	if npc_id.is_empty():
+		return
+	_npc_attrs[npc_id] = attrs.duplicate(true)
+
+
 ## 更新当前现实 id 并同步到所有在场 NPC（记忆归档用）。
 func update_world(world_id: String) -> void:
 	_current_world_id = world_id
@@ -216,9 +224,10 @@ func _spawn_one(id: String, container: Node) -> void:
 	var info: Dictionary = _characters[id]
 	var npc := NPC.new()
 	npc.setup(id, str(info.get("name", id)), str(info.get("home", "")))
-	# 人物系统：注入行为参数与可游荡房间
+	# 人物系统：注入行为参数与可游荡房间 + 游荡回调（P0-1：显式注入）
 	npc.setup_personality(info.get("traits", []) as Array)
 	npc.set_wander_rooms(_rooms.keys())
+	npc.wander_callback = npc_wander_to
 	# 行为 → 事件（CT-021）：NPC 到达目标时交给上层求值 npc_arrived 事件
 	npc.arrived.connect(_on_npc_arrived.bind(id))
 	container.add_child(npc)

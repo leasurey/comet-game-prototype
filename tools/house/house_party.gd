@@ -325,6 +325,13 @@ func _build_hotspots(parent: Node) -> void:
 			"厨房台面", "台面上有一圈没擦干净的水渍，是杯子被拿走时留下的。")
 	_add_examine(parent, "StudyDesk", Vector3(-4.6, FLOOR_Y + 0.75, 1.2),
 			"书桌", "桌上摊着一台开着的笔记本电脑，屏幕的光映在墙上。")
+	# 二级观察（CT-016）：书桌可产生多条子观察
+	var desk: Node = parent.get_node_or_null("StudyDesk")
+	if desk != null and desk is Hotspot:
+		(desk as Hotspot).observes = [
+			{"text": "屏幕上有一串数字在闪烁", "fact_id": "obs_screen_digits", "hearsay": false},
+			{"text": "键盘旁边放着一张折叠的纸", "fact_id": "", "hearsay": false},
+		]
 
 	# 门上的便签（CT-019 的钥匙之一）：对话闸门 fact_sticky_note 必须
 	# 由亲眼检查授予，否则「问门上的便签」话题在真实游玩中永远锁死。
@@ -333,6 +340,13 @@ func _build_hotspots(parent: Node) -> void:
 			"门上的便签",
 			"一张便签贴在门上，上面手写着一个数字：4。你不记得自己贴过它，也不认得这个笔迹。",
 			"fact_sticky_note")
+	# 便签的二级观察
+	var note: Node = parent.get_node_or_null("StickyNote")
+	if note != null and note is Hotspot:
+		(note as Hotspot).observes = [
+			{"text": "便签上手写着数字 4", "fact_id": "", "hearsay": false},
+			{"text": "笔迹不是我的", "fact_id": "", "hearsay": false},
+		]
 
 
 func _add_exit(parent: Node, node_name: String, pos: Vector3,
