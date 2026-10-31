@@ -28,6 +28,8 @@ const PATH_WORLDS := "res://data/worlds.json"
 const PATH_TRANSITIONS := "res://data/world_transitions.json"
 const PATH_EVENTS := "res://data/events.json"
 const PATH_LOCATIONS := "res://data/locations.json"
+const PATH_CHARACTERS := "res://data/characters.json"
+const PATH_DIALOGUE := "res://data/dialogue.json"
 
 # 输入动作名。集中定义在此，避免各脚本各自硬编码字符串。
 const ACTION_INTERACT := "interact"
@@ -44,6 +46,12 @@ var interaction_manager: InteractionManager = null
 
 # 玩家设置（灵敏度/音量/分辨率）。与游戏存档分离：删档不会重置玩家偏好。
 var settings: SettingsManager = null
+
+# P6 玩家认知：玩家亲证过什么（与客观世界状态严格分离）
+var cognition: CognitionManager = null
+# P7 对话与 NPC
+var dialogue_manager: DialogueManager = null
+var npc_manager: NPCManager = null
 
 # 音频播放与分类音量。
 var audio_manager: AudioManager = null
@@ -95,6 +103,13 @@ func _bootstrap() -> void:
 	rng_service = RngService.new()
 	rng_service.set_seed(DEFAULT_MASTER_SEED)
 	event_bus = EventBus.new()
+
+	cognition = CognitionManager.new()
+	dialogue_manager = DialogueManager.new()
+	dialogue_manager.set_cognition(cognition)
+	npc_manager = NPCManager.new()
+	npc_manager.set_cognition(cognition)
+	npc_manager.set_dialogue(dialogue_manager)
 
 	world_manager = WorldManager.new()
 	event_manager = EventManager.new()
@@ -162,6 +177,29 @@ func _bootstrap() -> void:
 	errors.clear()
 	if not scene_manager.load_from_data(locations_result.get("data", {}), errors):
 		_fail(errors[0] if errors.size() > 0 else "地点数据载入失败")
+		return
+
+	# P6/P7：角色档案与对话树（纯数据，不参与世界状态）
+	var chars_result := DataLoader.load_dictionary(PATH_CHARACTERS)
+	if not bool(chars_result.get("ok", false)):
+		_fail("角色数据载入失败: %s" % str(chars_result.get("error", "")))
+		return
+	errors.clear()
+	if not npc_manager.load_from_data(chars_result.get("data", {}), errors):
+		_fail(errors[0] if errors.size() > 0 else "角色数据解析失败")
+		return
+
+	var dlg_result := DataLoader.load_dictionary(PATH_DIALOGUE)
+	if not bool(dlg_result.get("ok", false)):
+		_fail("对话数据载入失败: %s" % str(dlg_result.get("error", "")))
+		return
+	errors.clear()
+	if not dialogue_manager.load_from_data(dlg_result.get("data", {}), errors):
+		_fail(errors[0] if errors.size() > 0 else "对话数据解析失败")
+		return
+	errors.clear()
+	if not cognition.load_from_data(dlg_result.get("data", {}), errors):
+		_fail(errors[0] if errors.size() > 0 else "认知目录解析失败")
 		return
 
 	is_ready = true
@@ -308,6 +346,11 @@ func new_game(seed_value: int = -1) -> bool:
 		time_service.reset()
 	if rng_service != null:
 		rng_service.set_seed(seed_value if seed_value >= 0 else DEFAULT_MASTER_SEED)
+	# P6/P7：新局的认知与 NPC 必须归零，否则「重新开始」会继承上一局的已知信息
+	if cognition != null:
+		cognition.reset()
+	if npc_manager != null:
+		npc_manager._despawn_all()
 
 	# world_manager / event_manager 被重建，注入与连线必须重做
 	_inject_services()
@@ -388,6 +431,15 @@ func continue_game() -> bool:
 		}, rng_err)
 
 	var target := str(data.get("location_id", scene_manager.get_start_location_id()))
+	# P6 玩家认知：读档后恢复「玩家知道什么」，与世界状态分开恢复
+	if cognition != null:
+		var cog_data: Variant = data.get("cognition", null)
+		if typeof(cog_data) == TYPE_DICTIONARY:
+			var cog_err: Array = []
+			cognition.restore(cog_data as Dictionary, cog_err)
+			for e in cog_err:
+				push_warning("认知恢复: %s" % str(e))
+
 	if not scene_manager.enter_location(target, false):
 		load_completed.emit(false, "恢复地点失败: %s" % target)
 		return false
@@ -448,6 +500,11 @@ func save_game() -> bool:
 		"triggered_events": event_manager.get_sequence(),
 		"event_history": event_manager.get_history(),
 		"event_sequence": event_manager.get_sequence(),
+		# P6 玩家认知：知道什么、怎么知道的
+		"known_facts": cognition.get_known_facts() if cognition != null else [],
+		"cognition": cognition.serialize() if cognition != null else {},
+		# P7 NPC 状态
+		"npc_states": npc_manager.serialize() if npc_manager != null else [],
 		"game_clock_ticks": get_tick(),
 		"game_clock_minutes": get_clock_minutes(),
 		"rng_master_seed": rng_service.master_seed if rng_service != null else 0,

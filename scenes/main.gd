@@ -239,6 +239,12 @@ func _refresh_ui_state() -> void:
 	_ui.set_clock(GameServices.get_clock_text())
 
 
+func _process(_delta: float) -> void:
+	# P7：驱动 NPC 的导航烘焙时序与状态推进
+	if GameServices.npc_manager != null:
+		GameServices.npc_manager.tick()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	# ---- 键盘 ----
 	if event is InputEventKey:
@@ -284,8 +290,47 @@ func _unhandled_input(event: InputEvent) -> void:
 func _try_interact() -> void:
 	if GameServices.interaction_manager == null:
 		return
-	if not GameServices.interaction_manager.activate_focused():
-		_notify("这里没有什么可以互动的。", 2.0)
+	if GameServices.interaction_manager.activate_focused():
+		return
+	# 没有热点被聚焦时，尝试与附近的 NPC 交谈。
+	# 距离上限与热点交互一致（2.5 m），由 NPCManager 判定。
+	if GameServices.npc_manager != null:
+		var pc = GameServices.player_controller
+		if pc != null:
+			var near: NPC = GameServices.npc_manager.find_talkable_near(pc.global_position, 2.5)
+			if near != null:
+				_start_dialogue(near)
+				return
+	_notify("这里没有什么可以互动的。", 2.0)
+
+
+## 与某个 NPC 开始对话。取该角色当前可用的台词（经认知闸门过滤）。
+func _start_dialogue(npc: NPC) -> void:
+	if npc == null or GameServices.dialogue_manager == null:
+		return
+	var available: Array = GameServices.dialogue_manager.get_available_for(npc.character_id)
+	if available.is_empty():
+		_notify("%s 现在没什么可说的。" % npc.display_name, 3.0)
+		return
+	npc.start_talking(GameServices.player_controller.global_position if GameServices.player_controller != null else Vector3.ZERO)
+	# 灰盒阶段用 HUD 文本呈现对话，正式 UI 属后续
+	var first: Dictionary = available[0]
+	var heard: Dictionary = GameServices.dialogue_manager.hear(
+			str(first.get("id", "")),
+			GameServices.world_manager.get_current_world_id(),
+			GameServices.get_tick())
+	if bool(heard.get("ok", false)):
+		_notify("%s：%s" % [npc.display_name, str(heard.get("text", ""))], 6.0)
+		var granted: Array = heard.get("granted", [])
+		if not granted.is_empty():
+			var labels: Array = []
+			for fid in granted:
+				labels.append(GameServices.cognition.get_label(str(fid)))
+			_notify("你了解到：%s" % "、".join(labels), 5.0)
+	else:
+		_notify(str(heard.get("error", "对话失败")), 3.0)
+	npc.stop_talking()
+
 
 
 func _is_menu_open() -> bool:
@@ -348,6 +393,14 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 		"examine":
 			if GameServices.audio_manager != null:
 				GameServices.audio_manager.play_examine()
+			# P6：亲眼检查过物品，玩家才「知道」它。
+			# 这是认知的 inspect 来源，与世界状态无关。
+			if GameServices.cognition != null and not spot.name.is_empty():
+				var fid := "fact_inspected_%s" % spot.name
+				if GameServices.cognition.learn(fid, "inspect", str(spot.name),
+						GameServices.world_manager.get_current_world_id(),
+						GameServices.get_tick()):
+					_notify("你记下了关于「%s」的情况。" % spot.get_hint_text(), 3.0)
 			var text := spot.examine_text
 			if text.is_empty():
 				text = "你看不出它有什么特别。"
@@ -388,6 +441,14 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 
 	# 本场景新建的 portal 需要重新连接（旧实例的连接已随实例销毁）
 	_connect_portals(GameServices.scene_manager.get_current_instance())
+
+	# P7：在住宅里生成 NPC 并烘焙导航（其他地点不生成，避免角色出现在街上）
+	if GameServices.npc_manager != null:
+		var inst2 := GameServices.scene_manager.get_current_instance()
+		if location_id == "party_house" and inst2 != null:
+			GameServices.npc_manager.spawn_all(inst2)
+		else:
+			GameServices.npc_manager._despawn_all()
 
 
 ## 连接本场景内的所有 AutoPortal。

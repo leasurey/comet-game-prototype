@@ -1,0 +1,303 @@
+## NPCManager — NPC 的生成、导航与状态管理
+##
+## 职责边界：
+##   负责「NPC 群体的生命周期」：加载档案、生成实体、烘焙导航、存档恢复。
+##   单个 NPC 的行为在 NPC 类里；说什么在 DialogueManager 里。
+##
+## 导航职责（这是本类存在的主要理由）：
+##   NavigationRegion3D 必须是场景几何的**祖先**（见 NAVIGATION_FEASIBILITY.md），
+##   所以本类在地点实例之上建 region 并烘焙，而不是让每个 NPC 自己烘。
+##
+## 时序约束（踩过的坑，必须守住）：
+##   烘焙前等 ≥8 物理帧（碰撞体未建立 → 0 多边形）
+##   烘焙后等 ≥12 物理帧才能查询（NavigationServer 未同步 → 查询返回空）
+
+class_name NPCManager
+extends Node
+
+signal navigation_ready
+signal npc_talk_requested(npc_id: String)
+
+## 参数取 cell 网格的整数倍，消除 Recast 的量化告警：
+##   agent_radius 0.30 / cell_size 0.10 = 3 格（精确）
+##   agent_height 1.70 / cell_height 0.10 = 17 格（精确）
+##   agent_max_climb 0.30 / cell_height 0.10 = 3 格（精确）
+## 更细的 cell 也改善了 1.20 m 门洞处的分辨率。
+const AGENT_RADIUS := 0.30
+const CELL_SIZE := 0.10
+const FLOOR_Y := 0.20
+## 导航几何来源分组名。地点实例加入此组后，烘焙会解析它及其全部子节点。
+const NAV_SOURCE_GROUP := "nav_source"
+
+## 烘焙与查询的物理帧等待（依据可行性报告）
+const BAKE_WAIT_FRAMES := 8
+const SYNC_WAIT_FRAMES := 12
+
+var _cognition = null
+var _dialogue = null
+var _characters: Dictionary = {}
+var _rooms: Dictionary = {}
+var _npcs: Dictionary = {}
+var _region: NavigationRegion3D = null
+var _nav_ready := false
+var _bake_phase := 0
+var _pf_mark := 0
+var _pending_container: Node = null
+
+
+func set_cognition(cog) -> void:
+	_cognition = cog
+
+
+func set_dialogue(dlg) -> void:
+	_dialogue = dlg
+
+
+func load_from_data(characters_data: Dictionary, out_error: Array = []) -> bool:
+	_characters.clear()
+	_rooms.clear()
+	var raw_npcs: Variant = characters_data.get("npcs", null)
+	if typeof(raw_npcs) != TYPE_ARRAY:
+		out_error.append("characters.json 缺少 npcs 数组")
+		return false
+	for n in (raw_npcs as Array):
+		var id := str((n as Dictionary).get("id", "")).strip_edges()
+		if id.is_empty():
+			out_error.append("characters.json 有角色缺少 id")
+			return false
+		if _characters.has(id):
+			out_error.append("characters.json 角色 id 重复: %s" % id)
+			return false
+		_characters[id] = (n as Dictionary).duplicate(true)
+
+	var raw_rooms: Variant = characters_data.get("rooms", null)
+	if typeof(raw_rooms) == TYPE_DICTIONARY:
+		for rid in (raw_rooms as Dictionary).keys():
+			_rooms[str(rid)] = ((raw_rooms as Dictionary)[rid] as Dictionary).duplicate(true)
+	return true
+
+
+func get_character_ids() -> Array:
+	return _characters.keys()
+
+
+func get_npc(npc_id: String) -> NPC:
+	return _npcs.get(npc_id, null)
+
+
+func get_all_npcs() -> Array:
+	var out: Array = []
+	for id in _npcs.keys():
+		out.append(_npcs[id])
+	return out
+
+
+func is_nav_ready() -> bool:
+	return _nav_ready
+
+
+## 在给定容器（地点实例）下生成所有 NPC 并烘焙导航。
+## container 必须是场景几何所在的节点，region 会挂在它上面成为几何祖先。
+func spawn_all(container: Node) -> void:
+	_despawn_all()
+	_pending_container = container
+	if container == null:
+		return
+
+	# region 必须是几何的祖先：挂在地点实例上，实例的子树就是几何
+	_region = NavigationRegion3D.new()
+	_region.name = "NPCNavRegion"
+	# 先进树：进树后 region 才会分配到导航地图，
+	# 也才能在下面设置 map 的 cell 参数。
+	container.add_child(_region)
+
+	var mesh := NavigationMesh.new()
+	mesh.cell_size = CELL_SIZE
+	mesh.cell_height = 0.10
+	mesh.agent_radius = AGENT_RADIUS
+	mesh.agent_height = 1.70
+	mesh.agent_max_climb = 0.30
+	mesh.agent_max_slope = 40.0
+	mesh.region_min_size = 2.0
+	mesh.region_merge_size = 10.0
+	mesh.geometry_parsed_geometry_type = NavigationMesh.PARSED_GEOMETRY_STATIC_COLLIDERS
+	mesh.geometry_collision_mask = 1
+	# 用分组解析而不是 ROOT_NODE_CHILDREN。
+	# 原因：NavigationRegion3D 必须是几何的**祖先**才能用 ROOT_NODE_CHILDREN，
+	# 而这里 region 是挂在地点实例之下的（几何是它的兄弟）。
+	# 分组模式按 group 名收集节点及其子树，正好覆盖这种情况。
+	mesh.geometry_source_geometry_mode = NavigationMesh.SOURCE_GEOMETRY_GROUPS_WITH_CHILDREN
+	mesh.geometry_source_group_name = NAV_SOURCE_GROUP
+
+	# 必须在**赋 navigation_mesh 之前**把地图的 cell 参数对齐到 mesh。
+	# 告警是在 set_navigation_mesh 那一刻发出的，之后再改地图已经晚了。
+	var map_rid: RID = _region.get_navigation_map()
+	NavigationServer3D.map_set_cell_size(map_rid, CELL_SIZE)
+	NavigationServer3D.map_set_cell_height(map_rid, 0.10)
+
+	_region.navigation_mesh = mesh
+	container.add_to_group(NAV_SOURCE_GROUP)
+
+
+	for id in _characters.keys():
+		_spawn_one(str(id), container)
+
+	_nav_ready = false
+	_bake_phase = 1
+	_pf_mark = 0
+
+
+func _spawn_one(id: String, container: Node) -> void:
+	var info: Dictionary = _characters[id]
+	var npc := NPC.new()
+	npc.setup(id, str(info.get("name", id)), str(info.get("home", "")))
+	container.add_child(npc)
+
+	# 出生点：优先用角色自带的 spawn（互相错开，避免重叠被物理顶飞），
+	# 没有才回退到房间坐标。Y 一律取 FLOOR_Y（navmesh 的 Y 会浮空 0.2~0.4 m）。
+	var pos := _room_position(str(info.get("home", "hall")))
+	var sp: Variant = info.get("spawn", null)
+	if typeof(sp) == TYPE_ARRAY and (sp as Array).size() >= 3:
+		var arr: Array = sp
+		pos = Vector3(float(arr[0]), FLOOR_Y, float(arr[2]))
+	# 出生点同样要吸附：手写坐标可能落在孤立的 navmesh 岛上，
+	# 导致 NPC 永远走不出来（路径只生成一半就断）。
+	npc.global_position = _snap_to_nav(pos)
+	_npcs[id] = npc
+
+
+func _room_position(room_id: String) -> Vector3:
+	if _rooms.has(room_id):
+		var r: Dictionary = _rooms[room_id]
+		var p: Variant = r.get("position", null)
+		if typeof(p) == TYPE_ARRAY and (p as Array).size() >= 3:
+			var arr: Array = p
+			return Vector3(float(arr[0]), FLOOR_Y, float(arr[2]))
+	# 兜底：玄关
+	return Vector3(0.0, FLOOR_Y, 1.6)
+
+
+func _despawn_all() -> void:
+	for id in _npcs.keys():
+		var n: Node = _npcs[id]
+		if is_instance_valid(n):
+			if n.get_parent() != null:
+				n.get_parent().remove_child(n)
+			n.free()
+	_npcs.clear()
+	if _pending_container != null and is_instance_valid(_pending_container):
+		if _pending_container.is_in_group(NAV_SOURCE_GROUP):
+			_pending_container.remove_from_group(NAV_SOURCE_GROUP)
+	_pending_container = null
+	if _region != null and is_instance_valid(_region):
+		if _region.get_parent() != null:
+			_region.get_parent().remove_child(_region)
+		_region.free()
+	_region = null
+	_nav_ready = false
+	_bake_phase = 0
+
+
+## 每帧驱动：烘焙时序与 NPC 状态推进。
+## 退出时显式拆除，避免「ObjectDB instances leaked at exit」。
+func _exit_tree() -> void:
+	# 退出时显式拆除全部子节点，否则退出日志报
+	# 「ObjectDB instances were leaked at exit」。
+	for id in _npcs.keys():
+		var n: Node = _npcs[id]
+		if is_instance_valid(n):
+			n.queue_free()
+	_npcs.clear()
+	if _region != null and is_instance_valid(_region):
+		_region.queue_free()
+	_region = null
+	_nav_ready = false
+	_bake_phase = 0
+
+
+func tick() -> void:
+	if _bake_phase == 1:
+		# 必须等碰撞体真正建立，否则烘焙出 0 个多边形
+		if Engine.get_physics_frames() - _pf_mark >= BAKE_WAIT_FRAMES:
+			if _region != null:
+				_region.bake_navigation_mesh(false)
+			_bake_phase = 2
+			_pf_mark = Engine.get_physics_frames()
+	elif _bake_phase == 2:
+		# 必须等 NavigationServer 同步，否则查询返回空
+		if Engine.get_physics_frames() - _pf_mark >= SYNC_WAIT_FRAMES:
+			_bake_phase = 0
+			_nav_ready = true
+			navigation_ready.emit()
+
+
+## 让 NPC 走向某个房间。
+## 目标点先吸附到 navmesh——房间坐标是设计值，可能落在家具/墙边的不可走区，
+## 不吸附会导致「路径只生成一半就断」，表现为 NPC 站着不动。
+func send_to_room(npc_id: String, room_id: String) -> bool:
+	if not _nav_ready:
+		return false
+	var npc := get_npc(npc_id)
+	if npc == null:
+		return false
+	npc.move_to(_snap_to_nav(_room_position(room_id)))
+	return true
+
+
+## 让 NPC 走向一个具体点（先吸附到 navmesh）。
+func send_to_point(npc_id: String, point: Vector3) -> bool:
+	if not _nav_ready:
+		return false
+	var npc := get_npc(npc_id)
+	if npc == null:
+		return false
+	npc.move_to(_snap_to_nav(Vector3(point.x, FLOOR_Y, point.z)))
+	return true
+
+
+## 把任意点吸附到 navmesh 上最近的可走点。
+## 不做这一步，落在家具/墙边的目标会让寻路返回**半截路径**，
+## 表现为「NPC 站着不动」——这是本轮实测踩到的。
+func _snap_to_nav(p: Vector3) -> Vector3:
+	# 未同步就查询会报 "map query failed because it was made before first
+	# map synchronization"。出生时烘焙还没跑，必须直接返回原值。
+	if _region == null or not _nav_ready:
+		return p
+	var snapped := NavigationServer3D.map_get_closest_point(
+			_region.get_navigation_map(), p)
+	if snapped == Vector3.ZERO:
+		return p
+	return Vector3(snapped.x, FLOOR_Y, snapped.z)
+
+
+## 找出此刻离给定位置最近、且可交谈的 NPC。
+func find_talkable_near(pos: Vector3, max_dist: float = 2.5) -> NPC:
+	var best: NPC = null
+	var best_d := max_dist
+	for id in _npcs.keys():
+		var n: NPC = _npcs[id]
+		if n.is_talking():
+			continue
+		var d := n.global_position.distance_to(pos)
+		if d < best_d:
+			best_d = d
+			best = n
+	return best
+
+
+# ---------------------------------------------------------------- 存档
+
+func serialize() -> Array:
+	var out: Array = []
+	for id in _npcs.keys():
+		out.append((_npcs[id] as NPC).serialize())
+	return out
+
+
+func restore(list: Array) -> void:
+	for item in list:
+		if typeof(item) != TYPE_DICTIONARY:
+			continue
+		var id := str((item as Dictionary).get("id", ""))
+		if _npcs.has(id):
+			(_npcs[id] as NPC).restore(item as Dictionary)
