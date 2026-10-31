@@ -74,7 +74,7 @@ Godot 会生成 `.godot/` 缓存目录（已在 `.gitignore` 中排除）。
 | **释放后点击画面** | 重新捕获鼠标（这次点击不会触发交互） |
 | **返回按钮** | 沿来路返回上一个地点 |
 | **保存按钮** | 保存当前进度 |
-| **重新开始** | 清除存档并开新局 |
+| **重新开始** | 弹出二次确认，确认后才清除存档并开新局 |
 
 开局地点是**聚会房屋**（玩家身份 Emily 所在的那栋房子）。室外动线为
 **门廊 → 车道 → 街道 → 没有灯的那段路**，一路直走即可抵达黑暗区域。
@@ -146,8 +146,13 @@ comet-game-prototype/
 │   ├── player_movement_test.gd    WASD 移动与碰撞 T01–T16
 │   ├── party_house_test.gd        住宅几何、连通性与灯光
 │   ├── wall_geometry_test.gd      带洞口墙体原语
-│   ├── door_connection_test.gd    门级落点与交互距离
-│   └── dark_traverse_test.gd      黑暗区域穿越与现实切换时机
+│   ├── door_connection_test.gd    门级落点、往返与交互距离
+│   ├── dark_traverse_test.gd      黑暗区域穿越、掉头与现实切换时机
+│   ├── save_isolation_test.gd     测试不触碰玩家正式存档
+│   ├── save_migration_test.gd     原子写入、v1→v2 迁移、位置与返回栈恢复
+│   ├── session_reset_test.gd      重新开始的状态清理与返回栈去重
+│   ├── data_integrity_test.gd     四份 JSON 交叉校验与变体完整性
+│   └── ui_flow_test.gd            二次确认、保存反馈
 │
 ├── docs/
 │   ├── ARCHITECTURE.md            技术架构说明
@@ -206,7 +211,7 @@ comet-game-prototype/
 godot --headless --script res://tests/acceptance_test.gd
 ```
 
-覆盖任务书第十节全部 10 条验收项，共 **52 条断言**。当前状态：**PASS=52 FAIL=0**。
+当前共 **13 个测试、385 条断言**，全部通过（详见 `docs/ACCEPTANCE.md`）。
 完整输出见 `docs/ACCEPTANCE.md`。
 
 ### 重新生成场景（修改场景内容后）
@@ -237,7 +242,7 @@ godot --headless --quit-after 240
 - [x] 世界状态系统（固定事件驱动，一次确定性切换）
 - [x] 地点 × 世界的差异表现（实测 7 处）
 - [x] 存档 / 读档 / 数据校验 / 错误处理
-- [x] headless 验收测试，52 条断言全通过
+- [x] 13 个 headless 测试，385 条断言全通过（含存档隔离/迁移、会话重置、数据校验、UI 流程）
 - [x] 真实渲染路径验证（OpenGL 3.3 Compatibility）
 
 ### 未完成 / 下一阶段建议

@@ -7,9 +7,13 @@
 ## 输入约定（鼠标捕获式第一人称）：
 ##   鼠标移动          → 直接转动视角（捕获状态下，无须按住任何键）
 ##   E 键 / 鼠标左键   → 与屏幕中心所指的热点交互
-##   ESC               → 释放鼠标、显示系统光标（此时可操作 UI）
+##   ESC               → 打开暂停菜单（暂停世界、释放鼠标）；菜单中再按 ESC 返回游戏
 ##   Q 键              → 退出游戏
 ##   鼠标释放后点击画面 → 重新捕获鼠标（这次点击只用于恢复捕获，不触发交互）
+##
+## 启动流程：
+##   真实窗口 → 主菜单（新游戏 / 继续 / 设置 / 退出），由玩家选择后才进入世界
+##   headless → 直接自动开局，保持既有测试的装配路径不变
 ##
 ## 所有输入判定放在 _unhandled_input：
 ##   UI 控件会先消费掉落在自己身上的事件，因此点击 HUD 按钮不会被当成场景交互，
@@ -17,9 +21,13 @@
 
 extends Node3D
 
+## 暂停时必须继续接收输入（否则 ESC 关不掉菜单）。
+## 世界节点仍是默认 PAUSABLE，`get_tree().paused` 会一并挡住移动与交互。
+
 @onready var _location_container: Node3D = $LocationContainer
 @onready var _camera_rig = $CameraRig
 @onready var _ui = $HUD
+@onready var _menu = $HUD/Menu
 
 var _started := false
 
@@ -30,8 +38,15 @@ var _started := false
 var _pending_spawn: Variant = null
 var _pending_yaw_deg: float = 0.0
 
+## 对话会话状态（P7 正式对话 UI）。
+## _dlg_topic_nodes  = 当前话题列表对应的节点；_dlg_replies = 当前台词的回复分支。
+var _dlg_npc: NPC = null
+var _dlg_topic_nodes: Array = []
+var _dlg_replies: Array = []
+
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	randomize()
 
 	if GameServices == null:
@@ -62,8 +77,19 @@ func _bind_services() -> void:
 		GameServices.interaction_manager.hotspot_unfocused.connect(_on_hotspot_unfocused)
 		GameServices.interaction_manager.hotspot_activated.connect(_on_hotspot_activated)
 
-	if GameServices.event_manager != null:
-		GameServices.event_manager.event_triggered.connect(_on_event_triggered)
+	# 事件提示改走**总线**订阅。
+	# 原因：new_game() 会重建 EventManager 实例，而 _bind_services 只在启动时跑一次，
+	# 直接连 event_manager 的信号在"重新开始"之后就成了空连接——
+	# 事件照样触发，但玩家再也看不到任何文字提示。
+	# event_bus 由 GameServices 持有、生命周期与游戏同长，不存在被替换的问题。
+	# 注意：只连总线，不再直连 event_manager，否则 GameServices 的转发会造成重复提示。
+	if GameServices.event_bus != null:
+		if not GameServices.event_bus.event_triggered.is_connected(_on_event_triggered):
+			GameServices.event_bus.event_triggered.connect(_on_event_triggered)
+
+	# 保存结果必须有反馈：此前调用后什么都不显示，玩家无法判断到底存没存上。
+	if not GameServices.save_completed.is_connected(_on_save_completed):
+		GameServices.save_completed.connect(_on_save_completed)
 
 	if _ui != null:
 		_ui.back_requested.connect(_on_back_requested)
@@ -71,6 +97,32 @@ func _bind_services() -> void:
 		_ui.quit_requested.connect(_on_quit_requested)
 		if _ui.has_signal("new_game_requested"):
 			_ui.new_game_requested.connect(_on_new_game_requested)
+		if _ui.has_signal("new_game_confirmed"):
+			_ui.new_game_confirmed.connect(_on_new_game_confirmed)
+		# 对话面板
+		if _ui.has_signal("dialogue_topic_chosen"):
+			_ui.dialogue_topic_chosen.connect(_on_dialogue_topic_chosen)
+		if _ui.has_signal("dialogue_reply_chosen"):
+			_ui.dialogue_reply_chosen.connect(_on_dialogue_reply_chosen)
+		if _ui.has_signal("dialogue_close_requested"):
+			_ui.dialogue_close_requested.connect(_on_dialogue_close_requested)
+
+	# 主菜单 / 暂停 / 设置。
+	# MenuController 不碰全局单例，服务引用在这里注入。
+	if _menu != null:
+		_menu.setup(GameServices.settings, GameServices)
+		_menu.new_game_requested.connect(_on_menu_new_game)
+		_menu.continue_requested.connect(_on_menu_continue)
+		_menu.resume_requested.connect(_on_menu_resume)
+		_menu.main_menu_requested.connect(_on_menu_main)
+		_menu.quit_requested.connect(_on_quit_requested)
+
+	# 玩家偏好（灵敏度/反转）在绑定到玩家的那一刻就生效。
+	if GameServices.settings != null:
+		GameServices.settings.apply(_camera_rig, false)
+
+	# 移动/跳跃/落地音效跟随玩家状态
+	GameServices.wire_player_audio(_camera_rig)
 
 
 func _start_flow() -> void:
@@ -78,6 +130,20 @@ func _start_flow() -> void:
 		return
 	_started = true
 
+	# headless（自动化测试）保持原来的自动开局路径，既有断言的装配时序不变。
+	# 真实窗口走主菜单，由玩家决定新游戏还是继续。
+	if DisplayServer.get_name() == "headless":
+		_auto_start()
+		return
+
+	if _menu != null:
+		_menu.show_main(GameServices.has_save())
+	if _ui != null:
+		_ui.set_message("选择「开始新游戏」或「继续游戏」进入。", 8.0)
+
+
+## 测试与 headless 用的自动开局。
+func _auto_start() -> void:
 	if GameServices.has_save():
 		var ok := GameServices.continue_game()
 		if not ok:
@@ -99,7 +165,76 @@ func _start_flow() -> void:
 	await get_tree().process_frame
 	_capture_mouse()
 	if _ui != null:
-		_ui.set_message("移动鼠标环视 · E 交互 · ESC 释放鼠标 · Q 退出", 7.0)
+		_ui.set_message("移动鼠标环视 · E 交互 · ESC 暂停 · Q 退出", 7.0)
+
+
+# ---------------------------------------------------------------- 主菜单动作
+
+func _on_menu_new_game() -> void:
+	# 有存档时先确认再删，避免「点错一下就没了」。
+	if GameServices.has_save():
+		if _ui != null:
+			_ui.show_confirm("开始新游戏会覆盖当前进度，确定吗？", _on_menu_new_game_confirmed)
+		return
+	_on_menu_new_game_confirmed()
+
+
+func _on_menu_new_game_confirmed() -> void:
+	GameServices.delete_save()
+	GameServices.new_game()
+	_enter_world_from_menu("屋子里很安静。屏幕上映着一小段没有声音的画面。")
+
+
+func _on_menu_continue() -> void:
+	if GameServices.continue_game():
+		_enter_world_from_menu("你回到了上次离开的地方。")
+	else:
+		if _ui != null:
+			_ui.set_message("存档读取失败，已开始新的观察。", 5.0)
+		GameServices.new_game()
+		_enter_world_from_menu("存档已损坏，已开始新的观察。")
+
+
+func _enter_world_from_menu(greeting: String) -> void:
+	if _menu != null:
+		_menu.hide_menu()
+	get_tree().paused = false
+	_refresh_ui_state()
+	if _ui != null:
+		_ui.set_message(greeting, 5.0)
+	await get_tree().process_frame
+	_capture_mouse()
+	if _ui != null:
+		_ui.set_message("移动鼠标环视 · E 交互 · ESC 暂停 · Q 退出", 7.0)
+
+
+func _on_menu_resume() -> void:
+	_close_pause()
+
+
+func _on_menu_main() -> void:
+	# 回主菜单 = 暂停世界但不销毁进度；玩家可继续或开新局。
+	if _menu != null:
+		_menu.show_main(GameServices.has_save())
+	_release_mouse()
+	get_tree().paused = true
+
+
+func _open_pause() -> void:
+	if _menu == null:
+		_release_mouse()
+		return
+	_menu.show_pause()
+	_release_mouse()
+	get_tree().paused = true
+
+
+func _close_pause() -> void:
+	if _menu != null:
+		_menu.hide_menu()
+	get_tree().paused = false
+	await get_tree().process_frame
+	_capture_mouse()
 
 
 func _on_bootstrap_failed(reason: String) -> void:
@@ -117,20 +252,45 @@ func _refresh_ui_state() -> void:
 	_ui.set_clock(GameServices.get_clock_text())
 
 
+func _process(_delta: float) -> void:
+	# P7：驱动 NPC 的导航烘焙时序与状态推进
+	if GameServices.npc_manager != null:
+		GameServices.npc_manager.tick()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	# ---- 键盘 ----
 	if event is InputEventKey:
 		var key := event as InputEventKey
 		if key.pressed and not key.echo:
 			if key.keycode == KEY_ESCAPE:
-				# ESC 专职释放鼠标；退出改由 Q 键负责
-				_release_mouse()
+				# ESC = 对话面板优先：开着对话时先结束对话，
+				# 其次才是暂停菜单开关。
+				if _ui != null and _ui.is_dialogue_open():
+					_close_dialogue()
+					get_viewport().set_input_as_handled()
+					return
+				# ESC = 暂停菜单开关。菜单开着时它是「返回游戏」，
+				# 关着时它是「暂停」。世界被暂停后不再响应移动与交互。
+				if _is_menu_open():
+					_close_pause()
+				else:
+					_open_pause()
 				get_viewport().set_input_as_handled()
 				return
 			if key.keycode == KEY_Q:
 				_on_quit_requested()
 				get_viewport().set_input_as_handled()
 				return
+
+	# 菜单开着时，世界输入全部屏蔽（暂停/主菜单/设置都不该触发交互）。
+	if _is_menu_open():
+		return
+
+	# 对话面板开着时同样屏蔽世界输入：鼠标点击只作用于对话按钮，
+	# E 键与场景交互一律不响应。
+	if _ui != null and _ui.is_dialogue_open():
+		return
 
 	# ---- 交互键 E ----
 	if event.is_action_pressed(GameServices.ACTION_INTERACT):
@@ -154,8 +314,111 @@ func _unhandled_input(event: InputEvent) -> void:
 func _try_interact() -> void:
 	if GameServices.interaction_manager == null:
 		return
-	if not GameServices.interaction_manager.activate_focused():
-		_notify("这里没有什么可以互动的。", 2.0)
+	if GameServices.interaction_manager.activate_focused():
+		return
+	# 没有热点被聚焦时，尝试与附近的 NPC 交谈。
+	# 距离上限与热点交互一致（2.5 m），由 NPCManager 判定。
+	if GameServices.npc_manager != null:
+		var pc = GameServices.player_controller
+		if pc != null:
+			var near: NPC = GameServices.npc_manager.find_talkable_near(pc.global_position, 2.5)
+			if near != null:
+				_start_dialogue(near)
+				return
+	_notify("这里没有什么可以互动的。", 2.0)
+
+
+## 与某个 NPC 开始对话：摆出话题列表（认知闸门过滤后的入口节点）。
+## 之后由对话面板的点击驱动 _show_dialogue_node 的分支推进。
+func _start_dialogue(npc: NPC) -> void:
+	if npc == null or GameServices.dialogue_manager == null or _ui == null:
+		return
+	var entries: Array = GameServices.dialogue_manager.get_entry_nodes_for(npc.character_id)
+	if entries.is_empty():
+		_notify("%s 现在没什么可说的。" % npc.display_name, 3.0)
+		return
+	_dlg_npc = npc
+	_dlg_topic_nodes = entries
+	_dlg_replies = []
+	npc.start_talking(GameServices.player_controller.global_position \
+			if GameServices.player_controller != null else Vector3.ZERO)
+	var labels: Array = []
+	for n in entries:
+		var t := str((n as Dictionary).get("topic", ""))
+		if t.is_empty():
+			# 数据没写 topic 时用台词作兜底文案，保证按钮永远有字
+			t = str((n as Dictionary).get("text", ""))
+		labels.append(t)
+	_release_mouse()
+	_ui.show_dialogue_topics(npc.display_name, labels)
+
+
+## 推进到某个对话节点：听取（授予认知）→ 展示台词与回复分支。
+func _show_dialogue_node(node_id: String) -> void:
+	if GameServices.dialogue_manager == null or _ui == null:
+		return
+	var heard: Dictionary = GameServices.dialogue_manager.hear(
+			node_id,
+			GameServices.world_manager.get_current_world_id(),
+			GameServices.get_tick())
+	if not bool(heard.get("ok", false)):
+		_notify(str(heard.get("error", "对话失败")), 3.0)
+		_close_dialogue()
+		return
+	if _dlg_npc != null and GameServices.player_controller != null:
+		_dlg_npc.start_talking(GameServices.player_controller.global_position)
+	var hint := ""
+	var granted: Array = heard.get("granted", [])
+	if not granted.is_empty():
+		var labels: Array = []
+		for fid in granted:
+			labels.append(GameServices.cognition.get_label(str(fid)))
+		hint = "你了解到：%s" % "、".join(labels)
+	_dlg_replies = (heard.get("replies", []) as Array).duplicate(true)
+	var reply_labels: Array = []
+	for r in _dlg_replies:
+		reply_labels.append(str((r as Dictionary).get("text", "")))
+	_ui.show_dialogue_line(
+			_dlg_npc.display_name if _dlg_npc != null else "",
+			str(heard.get("text", "")),
+			reply_labels,
+			hint)
+
+
+func _on_dialogue_topic_chosen(index: int) -> void:
+	if index < 0 or index >= _dlg_topic_nodes.size():
+		return
+	_show_dialogue_node(str((_dlg_topic_nodes[index] as Dictionary).get("id", "")))
+
+
+func _on_dialogue_reply_chosen(index: int) -> void:
+	if index < 0 or index >= _dlg_replies.size():
+		return
+	var goto_id: Variant = (_dlg_replies[index] as Dictionary).get("goto", null)
+	if goto_id == null:
+		_close_dialogue()
+		return
+	_show_dialogue_node(str(goto_id))
+
+
+func _on_dialogue_close_requested() -> void:
+	_close_dialogue()
+
+
+func _close_dialogue() -> void:
+	if _ui != null:
+		_ui.hide_dialogue()
+	if _dlg_npc != null:
+		_dlg_npc.stop_talking()
+	_dlg_npc = null
+	_dlg_topic_nodes = []
+	_dlg_replies = []
+	_capture_mouse()
+
+
+
+func _is_menu_open() -> bool:
+	return _menu != null and _menu.is_open()
 
 
 func _is_mouse_captured() -> bool:
@@ -206,10 +469,22 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 				GameServices.get_current_location_id(), spot.target_location
 			)
 			_notify(label)
+			if GameServices.audio_manager != null:
+				GameServices.audio_manager.play_door_open()
 			if not GameServices.go_to(spot.target_location):
 				_pending_spawn = null
 				_notify("无法前往那里。")
 		"examine":
+			if GameServices.audio_manager != null:
+				GameServices.audio_manager.play_examine()
+			# P6：亲眼检查过物品，玩家才「知道」它。
+			# 这是认知的 inspect 来源，与世界状态无关。
+			if GameServices.cognition != null and not spot.name.is_empty():
+				var fid := "fact_inspected_%s" % spot.name
+				if GameServices.cognition.learn(fid, "inspect", str(spot.name),
+						GameServices.world_manager.get_current_world_id(),
+						GameServices.get_tick()):
+					_notify("你记下了关于「%s」的情况。" % spot.get_hint_text(), 3.0)
 			var text := spot.examine_text
 			if text.is_empty():
 				text = "你看不出它有什么特别。"
@@ -221,6 +496,10 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 
 
 func _on_location_entered(location_id: String, display_name: String) -> void:
+	# 环境音随地点切换：室内房间底噪，室外风声。
+	if GameServices.audio_manager != null:
+		var indoor: bool = location_id != "house_exterior" and location_id != "dark_road"
+		GameServices.audio_manager.set_ambience(indoor)
 	if _ui != null:
 		_ui.set_location_name(display_name)
 		_ui.set_back_enabled(GameServices.scene_manager.can_go_back())
@@ -246,6 +525,14 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 
 	# 本场景新建的 portal 需要重新连接（旧实例的连接已随实例销毁）
 	_connect_portals(GameServices.scene_manager.get_current_instance())
+
+	# P7：在住宅里生成 NPC 并烘焙导航（其他地点不生成，避免角色出现在街上）
+	if GameServices.npc_manager != null:
+		var inst2 := GameServices.scene_manager.get_current_instance()
+		if location_id == "party_house" and inst2 != null:
+			GameServices.npc_manager.spawn_all(inst2)
+		else:
+			GameServices.npc_manager._despawn_all()
 
 
 ## 连接本场景内的所有 AutoPortal。
@@ -282,8 +569,15 @@ func _on_portal_entered(portal: AutoPortal) -> void:
 		GameServices.event_manager.evaluate(
 			portal.event_kind, portal.event_keys,
 			GameServices.world_manager, errs)
-		for e in errs:
-			push_warning("区域事件求值: %s" % str(e))
+		# 事件求值失败时**不切场景**。
+		# 此前的实现只 push_warning 然后照切：玩家穿过黑暗到了对面，
+		# 现实却没变——环境毫无差异，而叙事已经暗示"你走错了"，
+		# 这是最难排查的静默不一致。宁可停在原地并给出提示。
+		if not errs.is_empty():
+			for e in errs:
+				push_error("区域事件求值失败: %s" % str(e))
+			_notify("有什么东西不对劲，你退了回来。", 5.0)
+			return
 
 	if portal.target_location.is_empty():
 		return
@@ -318,16 +612,50 @@ func _on_save_requested() -> void:
 	GameServices.save_game()
 
 
+## 保存结果反馈。此前调用 save_game() 后什么都不显示，
+## 玩家点完"保存"不知道到底存上了没有。
+func _on_save_completed(ok: bool, message: String) -> void:
+	if ok:
+		_notify("进度已保存。", 3.0)
+	else:
+		_notify("保存失败：%s" % message, 8.0)
+
+
+## 「重新开始」第一步：只问，不动数据。
+## 鼠标必须可见，否则玩家没法点确认按钮。
 func _on_new_game_requested() -> void:
-	if GameServices.delete_save():
-		GameServices.new_game()
-		_refresh_ui_state()
-		_notify("重新开始了。")
+	if _ui != null and _ui.has_method("ask_new_game"):
+		_release_mouse()
+		_ui.ask_new_game()
+	else:
+		_on_new_game_confirmed()
+
+
+## 「重新开始」第二步：确认后才真正删档开新局。
+func _on_new_game_confirmed() -> void:
+	# 兜底关闭确认框：正常路径由"确定"按钮自己关闭，但任何直接调用
+	# （测试、快捷键、未来的键盘确认）都必须让面板收起，否则会挡住画面。
+	if _ui != null and _ui.has_method("hide_confirm"):
+		_ui.hide_confirm()
+	if not GameServices.delete_save():
+		_notify("无法清除旧存档，已取消。", 5.0)
+		return
+	var ok: bool = GameServices.new_game()
+	_refresh_ui_state()
+	if ok:
+		_notify("重新开始了。", 3.0)
+	else:
+		_notify("重新开始失败，请检查数据完整性。", 8.0)
+	_capture_mouse()
 
 
 func _on_quit_requested() -> void:
 	# 退出前必须把鼠标交还系统，否则可能残留捕获状态
 	_release_mouse()
+	# 音频必须在主循环仍运转时停掉：放到退出阶段再释放，
+	# AudioServer 侧的 voice 引用回收不掉，退出日志会报对象泄漏（P3）。
+	if GameServices != null:
+		GameServices.shutdown_audio()
 	get_tree().quit()
 
 
@@ -335,7 +663,14 @@ func _notification(what: int) -> void:
 	# 窗口关闭按钮同样需要释放鼠标
 	if what == NOTIFICATION_WM_CLOSE_REQUEST:
 		_release_mouse()
+		if GameServices != null:
+			GameServices.shutdown_audio()
 		get_tree().quit()
+	# 窗口失焦时必须交出鼠标：否则 Alt+Tab 切走后回来，
+	# 鼠标可能仍处于捕获态，玩家既看不见光标也点不到界面。
+	# 聚焦不自动重新捕获——等玩家自己点击画面，避免视角在手一抖时突然跳转。
+	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_release_mouse()
 
 
 func _notify(text: String, duration: float = 4.0) -> void:

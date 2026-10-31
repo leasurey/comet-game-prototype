@@ -22,7 +22,8 @@
       ],
       "variants": [
         "world_alpha",
-        "world_beta"
+        "world_beta",
+        "world_gamma"
       ]
     },
     {
@@ -46,7 +47,8 @@
       ],
       "variants": [
         "world_alpha",
-        "world_beta"
+        "world_beta",
+        "world_gamma"
       ]
     },
     {
@@ -74,7 +76,8 @@
       ],
       "variants": [
         "world_alpha",
-        "world_beta"
+        "world_beta",
+        "world_gamma"
       ]
     },
     {
@@ -93,7 +96,8 @@
       "exits": [],
       "variants": [
         "world_alpha",
-        "world_beta"
+        "world_beta",
+        "world_gamma"
       ]
     }
   ]

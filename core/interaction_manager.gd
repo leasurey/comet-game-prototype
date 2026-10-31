@@ -145,9 +145,12 @@ func activate_focused() -> bool:
 	return true
 
 
-## 程序化激活入口，供测试与脚本使用，不做距离校验（没有玩家位置的语义）。
-## 玩家永远走不到这里——这条边界必须守住，否则距离限制形同虚设。
-func activate(spot: Hotspot) -> bool:
+## 程序化激活入口，**仅供测试与脚本调试**，不做距离校验。
+##
+## 名字里带 debug 是刻意的：之前它叫 activate()，任何脚本都能调它，
+## 于是"2.5 米内才能交互"这条规则可以被一行代码绕过，而检查代码时看不出来。
+## 玩家路径只能经过 activate_focused()，那条路有三重判据。
+func debug_activate(spot: Hotspot) -> bool:
 	if spot == null or not is_instance_valid(spot):
 		return false
 	if not spot.is_interactable():

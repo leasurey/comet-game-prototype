@@ -4,7 +4,7 @@
     {
       "id": "evt_cross_dark_road",
       "type": "fixed",
-      "once": true,
+      "once": false,
       "trigger": {
         "kind": "area_enter",
         "area_id": "dark_far_end"
@@ -13,7 +13,35 @@
       "to_world": "world_beta",
       "seed": 0,
       "candidate_worlds": [],
-      "log": "\u4f60\u8d70\u51fa\u4e86\u90a3\u6bb5\u6ca1\u6709\u706f\u7684\u8def\u3002\u8eab\u540e\u7684\u98ce\u58f0\u505c\u4e86\uff0c\u524d\u9762\u90a3\u680b\u623f\u5b50\u7684\u7a97\uff0c\u597d\u50cf\u4e00\u76f4\u90fd\u4eae\u7740\u3002"
+      "log": "你走出了那段没有灯的路。身后的风声停了，前面那栋房子的窗，好像一直都亮着。"
+    },
+    {
+      "id": "evt_cross_dark_to_gamma",
+      "type": "fixed",
+      "once": false,
+      "trigger": {
+        "kind": "area_enter",
+        "area_id": "dark_far_end"
+      },
+      "require_from_world": "world_beta",
+      "to_world": "world_gamma",
+      "seed": 0,
+      "candidate_worlds": [],
+      "log": "又穿了一次黑暗。屋子的灯是亮的，可颜色不对。桌上那支蜡烛，本来不该还点着。"
+    },
+    {
+      "id": "evt_cross_dark_full_circle",
+      "type": "fixed",
+      "once": false,
+      "trigger": {
+        "kind": "area_enter",
+        "area_id": "dark_far_end"
+      },
+      "require_from_world": "world_gamma",
+      "to_world": "world_alpha",
+      "seed": 0,
+      "candidate_worlds": [],
+      "log": "第三次穿过那段黑路。一切看起来都回到了原样——但你已经不确定「原样」是哪一样了。"
     }
   ]
 }

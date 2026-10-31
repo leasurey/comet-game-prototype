@@ -203,6 +203,8 @@ func assemble_living_room(root: Node3D) -> void:
 	var vb := _n(env, "Variant_world_beta")
 	var hotspots := _n(root, "Hotspots")
 
+	var vc_lr := _n(env, "Variant_world_gamma")
+
 	var m_wall := _mat("lr_wall", Color(0.70, 0.67, 0.61))
 	var m_floor := _mat("lr_floor", Color(0.40, 0.30, 0.21))
 	var m_ceil := _mat("lr_ceil", Color(0.60, 0.58, 0.55))
@@ -261,6 +263,9 @@ func assemble_living_room(root: Node3D) -> void:
 	# ---- 差异二：电视屏幕。alpha 有微光（还开着），beta 彻底黑掉。
 	_box(va, "TVScreen", Vector3(1.48, 0.84, 0.03), Vector3(0, 1.10, -2.515), m_tv_on)
 	_box(vb, "TVScreen", Vector3(1.48, 0.84, 0.03), Vector3(0, 1.10, -2.515), m_tv_off)
+	# gamma：电视开着，但画面发冷发白，与 alpha 的暖光明显不同
+	var m_tv_cold := _mat("lr_tv_cold", Color(0.62, 0.74, 0.94), 0.4, 0.0, Color(0.58, 0.72, 0.96), 1.1)
+	_box(vc_lr, "TVScreen", Vector3(1.48, 0.84, 0.03), Vector3(0, 1.10, -2.515), m_tv_cold)
 
 	_world_env(root, Color(0.020, 0.020, 0.026), Color(0.17, 0.16, 0.15))
 
@@ -318,6 +323,7 @@ func assemble_house_exterior(root: Node3D) -> void:
 	var shared := _n(env, "Shared")
 	var va := _n(env, "Variant_world_alpha")
 	var vb := _n(env, "Variant_world_beta")
+	var vc := _n(env, "Variant_world_gamma")
 	var hotspots := _n(root, "Hotspots")
 
 	var m_ground := _mat("he_ground", Color(0.23, 0.22, 0.19))
@@ -468,6 +474,21 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_box(va, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, -0.13), m_signboard)
 	_box(vb, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, -0.13), m_signboard, 0.0, deg_to_rad(24.0))
 
+	# ---- gamma：灯亮着但发冷，门牌朝反方向歪，木箱回到右侧但立着。
+	# 三个现实各自有独立的可观察标记，玩家靠这些判断自己落在哪一条线上。
+	var m_porch_bulb_cold := _mat("he_bulb_cold", Color(0.62, 0.76, 1.00), 0.35, 0.0, Color(0.55, 0.72, 1.00), 1.8)
+	var m_win_glow_cold := _mat("he_win_cold", Color(0.55, 0.72, 1.00), 0.30, 0.0, Color(0.50, 0.68, 1.00), 1.1)
+	_box(vc, "PorchBulb", Vector3(0.18, 0.18, 0.18), Vector3(0, 2.52, -0.22), m_porch_bulb_cold)
+	_omni(vc, "PorchLight", Vector3(0.0, 2.45, -0.55), Color(0.66, 0.80, 1.00), 4.2, 15.0)
+	_box(vc, "WindowPaneL", Vector3(1.28, 1.04, 0.04), Vector3(-3.50, 1.85, -0.04), m_win_glow_cold)
+	_box(vc, "WindowPaneR", Vector3(1.28, 1.04, 0.04), Vector3(3.50, 1.85, -0.04), m_win_glow_cold)
+	_omni(vc, "WindowSpill", Vector3(-3.50, 1.80, -0.40), Color(0.58, 0.74, 1.00), 1.1, 7.0)
+	_box(vc, "HouseNumber", Vector3(0.34, 0.22, 0.03), Vector3(0.86, 1.92, -0.13), m_signboard, 0.0, deg_to_rad(-31.0))
+
+	var crate_c := _n(vc, "Crate")
+	_solid(crate_c, "CrateBody", Vector3(0.78, 0.58, 0.62), Vector3(1.75, 0.29, -1.35), m_crate, deg_to_rad(6.0))
+	_solid(crate_c, "CrateLid", Vector3(0.82, 0.06, 0.66), Vector3(1.75, 0.58, -1.35), m_crate, deg_to_rad(6.0))
+
 	_world_env(root, Color(0.016, 0.018, 0.028), Color(0.13, 0.14, 0.19))
 
 	# ---- 热点
@@ -489,6 +510,41 @@ func assemble_house_exterior(root: Node3D) -> void:
 	_box(door, "DoorPanel", Vector3(1.10, 2.15, 0.12), Vector3.ZERO, m_metal_dark)
 	_col(door, Vector3(1.6, 2.4, 0.5))
 	hotspots.add_child(door)
+
+	# ---- 侧门回程
+	# 此前侧门是单向的：出去之后只能绕到正面门廊才能回屋，
+	# 玩家会以为"这扇门只能用一次"。落点与 party_house 侧门（东墙 x=6.55, z=2.0）对齐，
+	# 进门后站在厨房南段并面朝 -X（屋内），yaw=90°。
+	var side_return := Area3D.new()
+	side_return.name = "SideReturn"
+	side_return.set_script(load(S_HOTSPOT))
+	side_return.position = Vector3(7.35, 1.15, 2.00)
+	side_return.display_name = "侧门"
+	side_return.action_kind = "exit"
+	side_return.target_location = "party_house"
+	side_return.use_target_spawn = true
+	side_return.target_spawn = Vector3(5.80, 0.25, 2.25)
+	side_return.target_yaw_deg = 90.0
+	_box(side_return, "SideDoorPanel", Vector3(0.10, 2.10, 0.95), Vector3.ZERO, m_metal_dark)
+	_col(side_return, Vector3(0.9, 2.3, 1.2))
+	hotspots.add_child(side_return)
+
+	# ---- 露台门回程
+	# 同理，露台门外原本没有回屋入口。落点与 party_house 露台门（x=-4.0, z=9.25）对齐，
+	# 进门后站在客厅北侧、面朝 -Z（屋内），yaw=0°。
+	var patio_return := Area3D.new()
+	patio_return.name = "PatioReturn"
+	patio_return.set_script(load(S_HOTSPOT))
+	patio_return.position = Vector3(-4.00, 1.15, 9.90)
+	patio_return.display_name = "通往后院的推拉门"
+	patio_return.action_kind = "exit"
+	patio_return.target_location = "party_house"
+	patio_return.use_target_spawn = true
+	patio_return.target_spawn = Vector3(-4.00, 0.25, 8.60)
+	patio_return.target_yaw_deg = 0.0
+	_box(patio_return, "PatioPanel", Vector3(1.20, 2.10, 0.08), Vector3.ZERO, m_car_glass)
+	_col(patio_return, Vector3(1.4, 2.3, 0.9))
+	hotspots.add_child(patio_return)
 
 	# 黑暗区域入口：改为区域触发（AutoPortal），走进去即进入，不再需要按 E。
 	# 位置仍是街道西端 z=-19.20，动线「门廊 → 车道 → 横穿街道 → 走进黑暗」不变。
@@ -596,6 +652,8 @@ func assemble_dark_road(root: Node3D) -> void:
 	var vb := _n(env, "Variant_world_beta")
 	var hotspots := _n(root, "Hotspots")
 
+	var vc_dr := _n(env, "Variant_world_gamma")
+
 	var m_ground := _mat("dr_ground", Color(0.115, 0.115, 0.108))
 	var m_road := _mat("dr_road", Color(0.235, 0.228, 0.212))
 	var m_tree := _mat("dr_tree", Color(0.045, 0.062, 0.052))
@@ -646,6 +704,10 @@ func assemble_dark_road(root: Node3D) -> void:
 	_box(vb, "Puddle2", Vector3(1.10, 0.02, 1.60), Vector3(0.55, 0.07, -6.40), m_puddle, deg_to_rad(-14.0))
 	_box(vb, "Puddle3", Vector3(0.90, 0.02, 1.30), Vector3(-0.70, 0.07, -9.10), m_puddle, deg_to_rad(22.0))
 
+	# gamma：路面既没有 alpha 那样干燥，也没有 beta 那么多积水——
+	# 只剩一滩，位置还和 beta 的都不一样，让人说不清刚才到底走过了什么。
+	_box(vc_dr, "Puddle1", Vector3(1.30, 0.02, 1.90), Vector3(0.30, 0.07, -5.10), m_puddle, deg_to_rad(-30.0))
+
 	_world_env(root, Color(0.008, 0.010, 0.016), Color(0.07, 0.08, 0.12), true,
 			Color(0.020, 0.024, 0.034), 0.055)
 
@@ -667,6 +729,23 @@ func assemble_dark_road(root: Node3D) -> void:
 	dark_exit.event_keys = {"area_id": "dark_far_end"}
 	_col(dark_exit, Vector3(3.4, 2.6, 2.0))
 	shared.add_child(dark_exit)
+
+	# ---- 入口侧回程
+	# 此前黑暗路段只有"走到尽头"一条出路：玩家一旦掉头往回走，
+	# 会走进一片没有边界的黑暗（地面一直铺到 z=+15），既没有反馈也没有出口。
+	# 这里在出生点后方补一个不携带事件的出口区域：
+	# 掉头返回 = 原路离开，**不改变现实**（现实变化只由尽头的 dark_far_end 触发）。
+	var dark_back := Area3D.new()
+	dark_back.name = "DarkBack"
+	dark_back.set_script(load("res://core/auto_portal.gd"))
+	dark_back.position = Vector3(0, 1.10, 6.60)
+	dark_back.portal_id = "dark_entrance_back"
+	dark_back.target_location = "house_exterior"
+	dark_back.use_target_spawn = true
+	dark_back.target_spawn = Vector3(0.0, 0.05, -18.00)
+	dark_back.target_yaw_deg = 180.0
+	_col(dark_back, Vector3(3.4, 2.6, 1.6))
+	shared.add_child(dark_back)
 
 	var sign := Area3D.new()
 	sign.name = "RoadSign"

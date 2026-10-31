@@ -37,9 +37,22 @@ const DEFAULT_SENSITIVITY_X := 0.0035
 const DEFAULT_SENSITIVITY_Y := 0.0035
 
 ## 移动参数默认值。
+## 一个步距的水平距离。行走 2.6 m/s 时约每 0.5 秒一步，符合真实步频。
+const STRIDE_DISTANCE := 1.30
 const DEFAULT_MOVE_SPEED := 2.6
+const DEFAULT_RUN_SPEED := 4.2
 const DEFAULT_GRAVITY := 18.0
+## 跳跃初速度 4.8：最大高度约 0.64m，能过门槛，不能跳上厨房高台。
+const DEFAULT_JUMP_VELOCITY := 4.8
 const MAX_FALL_SPEED := 20.0
+const JUMP_BUFFER_SECONDS := 0.12
+
+signal jumped
+signal landed(impact_speed: float)
+signal movement_state_changed(state: String)
+## 每走完一个步距发出一次。音频层据此播脚步，频率天然与移动速度一致，
+## 停下即停——不使用定时循环，避免角色静止后脚声还在响。
+signal footstep
 
 @export_group("鼠标灵敏度")
 @export_range(0.0002, 0.02, 0.0001) var sensitivity_x: float = DEFAULT_SENSITIVITY_X
@@ -49,7 +62,10 @@ const MAX_FALL_SPEED := 20.0
 @export_group("移动")
 ## 水平移动速度，单位：米 / 秒。
 @export_range(0.2, 12.0, 0.1) var move_speed: float = DEFAULT_MOVE_SPEED
+@export_range(0.2, 16.0, 0.1) var run_speed: float = DEFAULT_RUN_SPEED
 @export_range(0.0, 60.0, 0.5) var gravity: float = DEFAULT_GRAVITY
+@export_range(0.5, 12.0, 0.1) var jump_velocity: float = DEFAULT_JUMP_VELOCITY
+@export_range(0.0, 1.0, 0.05) var air_control: float = 0.85
 
 @export_group("视角")
 ## Camera3D 相对玩家脚底的高度。
@@ -58,6 +74,15 @@ const MAX_FALL_SPEED := 20.0
 var input_enabled: bool = true
 var yaw: float = 0.0
 var pitch: float = 0.0
+
+## 已走过的水平距离残量，用于触发 footstep。
+var _stride_accum: float = 0.0
+## 对外只读的移动状态：idle/walking/running/jumping/falling/landing。
+var movement_state: String = "idle"
+var _jump_buffer: float = 0.0
+var _landing_timer: float = 0.0
+var _was_on_floor: bool = false
+var _running: bool = false
 
 ## 逻辑捕获状态。单独维护而不只读 Input.mouse_mode，
 ## 是为了在 headless（无真实窗口）下也能被测试可靠断言；运行时两者同步。
@@ -155,9 +180,73 @@ func get_camera() -> Camera3D:
 func _physics_process(delta: float) -> void:
 	if not input_enabled:
 		return
+	_jump_buffer = maxf(0.0, _jump_buffer - delta)
+	_landing_timer = maxf(0.0, _landing_timer - delta)
+	if Input.is_action_just_pressed("jump"):
+		request_jump()
+	_running = Input.is_action_pressed("run")
 	_apply_gravity(delta)
+	_try_jump()
 	_apply_horizontal_velocity()
+	var fall_speed: float = -velocity.y
+	var pos_before := global_position
 	move_and_slide()
+	_update_movement_state(delta, fall_speed)
+	_update_footsteps(pos_before)
+
+
+## 按实际位移触发脚步，而非定时循环。
+## 停下即停、快走更密——频率天然与移动速度一致。
+func _update_footsteps(pos_before: Vector3) -> void:
+	if not is_on_floor():
+		_stride_accum = 0.0
+		return
+	var moved := Vector2(global_position.x - pos_before.x, global_position.z - pos_before.z).length()
+	if moved <= 0.0001:
+		return
+	_stride_accum += moved
+	while _stride_accum >= STRIDE_DISTANCE:
+		_stride_accum -= STRIDE_DISTANCE
+		footstep.emit()
+
+
+## 键盘与测试共用的跳跃入口。只设置短输入缓冲，不直接改坐标。
+func request_jump() -> void:
+	_jump_buffer = JUMP_BUFFER_SECONDS
+
+
+## 只有地面状态才消耗跳跃缓冲；空中按键不会累积成无限推进。
+func _try_jump() -> void:
+	if _jump_buffer <= 0.0 or not is_on_floor():
+		return
+	_jump_buffer = 0.0
+	_landing_timer = 0.0
+	velocity.y = jump_velocity
+	_set_movement_state("jumping")
+	jumped.emit()
+
+
+func _update_movement_state(_delta: float, fall_speed: float) -> void:
+	if is_on_floor():
+		if not _was_on_floor:
+			_landing_timer = 0.12
+			landed.emit(maxf(0.0, fall_speed))
+		if _landing_timer > 0.0:
+			_set_movement_state("landing")
+		elif Vector2(velocity.x, velocity.z).length() > 0.1:
+			_set_movement_state("running" if _running else "walking")
+		else:
+			_set_movement_state("idle")
+	else:
+		_set_movement_state("jumping" if velocity.y > 0.0 else "falling")
+	_was_on_floor = is_on_floor()
+
+
+func _set_movement_state(next: String) -> void:
+	if movement_state == next:
+		return
+	movement_state = next
+	movement_state_changed.emit(next)
 
 
 func _apply_gravity(delta: float) -> void:
@@ -187,8 +276,11 @@ func _apply_direction(input_dir: Vector2) -> void:
 	var direction := Basis(Vector3.UP, yaw) * Vector3(input_dir.x, 0.0, input_dir.y)
 	if direction.length_squared() > 0.000001:
 		direction = direction.normalized()
-	velocity.x = direction.x * move_speed
-	velocity.z = direction.z * move_speed
+	var speed: float = run_speed if _running else move_speed
+	if not is_on_floor():
+		speed *= air_control
+	velocity.x = direction.x * speed
+	velocity.z = direction.z * speed
 
 
 ## 供测试直接注入移动输入，绕开真实键盘，但不改变物理流程。
@@ -199,6 +291,11 @@ func apply_move_input(input_dir: Vector2) -> void:
 ## 切换地点后把玩家放回该地点出生点，避免沿用上一个地点的坐标导致嵌墙。
 func reset_to_spawn(spawn: Vector3) -> void:
 	velocity = Vector3.ZERO
+	_jump_buffer = 0.0
+	_landing_timer = 0.0
+	_was_on_floor = false
+	_running = false
+	_set_movement_state("idle")
 	global_position = spawn
 
 

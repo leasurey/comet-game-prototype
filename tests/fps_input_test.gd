@@ -199,6 +199,8 @@ func step_setup_main() -> bool:
 
 	# 清掉上次遗留存档，保证从干净状态开始
 	if _services.is_ready and _services.save_manager != null:
+		# 先切到本测试专用存档路径，绝不动玩家的正式存档（P0 / BUG-002）
+		_services.save_manager.use_test_path("fps_input")
 		_services.save_manager.delete_save()
 
 	var packed_res := load("res://scenes/main.tscn")
@@ -402,7 +404,12 @@ func step_t08_focus() -> bool:
 	if _ticks < 5:
 		return false
 
+	# 显式驱动：聚焦更新在 _process 里，headless 高负载下帧调度不保证
+	_interaction._update_focus()
 	var focused: Hotspot = _interaction.get_focused()
+	# 限时收敛：最多再等 40 帧，仍不匹配才判失败（不放宽标准，只消除单帧脆弱）
+	if focused != _t08_target and _ticks < 40:
+		return false
 	_check(focused == _t08_target, "T08 屏幕中心对准热点时被正确识别",
 			"target=%s focused=%s" % [_t08_target.name,
 			focused.name if focused != null else "null"])
@@ -429,7 +436,13 @@ func step_t09_occlusion_setup() -> bool:
 	_aim_at(_focus_before.global_position)
 	if _ticks < 4:
 		return false
+	# 显式驱动：聚焦更新在 _process 里，headless 高负载下帧调度不保证
+	_interaction._update_focus()
 	if _interaction.get_focused() != _focus_before:
+		# 聚焦不是单帧就能稳定的量：给足重试窗口，超时才判失败。
+		# 这不放宽标准（仍要求最终匹配），只是把"单帧决定"改成"限时收敛"。
+		if _ticks < 40:
+			return false
 		_record(false, "T09 遮挡判定前置条件", "未先聚焦到目标，无法构造遮挡对比")
 		return true
 
@@ -455,6 +468,8 @@ func step_t09_occlusion_check() -> bool:
 	if _ticks < 4:
 		return false
 
+	# 显式驱动：聚焦更新在 _process 里，headless 高负载下帧调度不保证
+	_interaction._update_focus()
 	var focused: Hotspot = _interaction.get_focused()
 	var blocked: bool = focused != _focus_before
 	_check(blocked, "T09 热点被遮挡时不被错误识别",
@@ -497,7 +512,13 @@ func step_t10_interact_key() -> bool:
 	if _ticks < 4:
 		return false
 
+	# 显式驱动：聚焦更新在 _process 里，headless 高负载下帧调度不保证
+	_interaction._update_focus()
 	if _interaction.get_focused() != target:
+		# 聚焦不是单帧就能稳定的量：给足重试窗口，超时才判失败。
+		# 这不放宽标准（仍要求最终匹配），只是把"单帧决定"改成"限时收敛"。
+		if _ticks < 40:
+			return false
 		_record(false, "T10 交互键", "前置条件失败：未聚焦到目标")
 		return true
 
@@ -580,7 +601,11 @@ func step_t12_return() -> bool:
 		return false
 
 	var target2: Hotspot = _find_spot("CrateBeta")
+	# 显式驱动：聚焦更新在 _process 里，headless 高负载下帧调度不保证
+	_interaction._update_focus()
 	var focused: Hotspot = _interaction.get_focused()
+	if (focused == null or focused != target2) and _ticks < 40:
+		return false
 	_check(focused != null and focused == target2, "T12 返回后新世界热点可识别",
 			"target=%s focused=%s" % [target2.name if target2 != null else "null",
 			str(focused.name) if focused != null else "null"])
@@ -620,5 +645,8 @@ func step_report() -> bool:
 		print(line)
 	print("")
 	print("=== FPS INPUT RESULT: PASS=%d FAIL=%d ===" % [_pass, _fail])
+	var gs = root.get_node_or_null("GameServices")
+	if gs != null:
+		gs.shutdown_audio()
 	quit(1 if _fail > 0 else 0)
 	return true

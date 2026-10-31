@@ -28,6 +28,8 @@ const PATH_WORLDS := "res://data/worlds.json"
 const PATH_TRANSITIONS := "res://data/world_transitions.json"
 const PATH_EVENTS := "res://data/events.json"
 const PATH_LOCATIONS := "res://data/locations.json"
+const PATH_CHARACTERS := "res://data/characters.json"
+const PATH_DIALOGUE := "res://data/dialogue.json"
 
 # 输入动作名。集中定义在此，避免各脚本各自硬编码字符串。
 const ACTION_INTERACT := "interact"
@@ -42,6 +44,18 @@ var save_manager: SaveManager = null
 var scene_manager: SceneManager = null
 var interaction_manager: InteractionManager = null
 
+# 玩家设置（灵敏度/音量/分辨率）。与游戏存档分离：删档不会重置玩家偏好。
+var settings: SettingsManager = null
+
+# P6 玩家认知：玩家亲证过什么（与客观世界状态严格分离）
+var cognition: CognitionManager = null
+# P7 对话与 NPC
+var dialogue_manager: DialogueManager = null
+var npc_manager: NPCManager = null
+
+# 音频播放与分类音量。
+var audio_manager: AudioManager = null
+
 # L0 核心服务：时钟、随机、信号总线。三者都不含业务规则，可被任意层使用。
 var time_service: TimeService = null
 var rng_service: RngService = null
@@ -52,6 +66,9 @@ var ui = null
 
 var is_ready: bool = false
 var bootstrap_error: String = ""
+
+## 统一数据校验的错误清单。启动失败时可直接读它定位到「文件 + 对象 + 字段 + 原因」。
+var data_errors: Array = []
 
 
 func _ready() -> void:
@@ -72,11 +89,27 @@ func _bootstrap() -> void:
 	var errors: Array = []
 	_ensure_input_actions()
 
+	# 设置先于一切加载：玩家的灵敏度/帧率偏好应在第一帧就生效。
+	settings = SettingsManager.new()
+	settings.load_settings()
+
+	audio_manager = AudioManager.new()
+	audio_manager.name = "AudioManager"
+	add_child(audio_manager)
+	audio_manager.bind_settings(settings)
+
 	time_service = TimeService.new()
 	time_service.configure(DEFAULT_MINUTES_PER_TICK, START_CLOCK_MINUTES)
 	rng_service = RngService.new()
 	rng_service.set_seed(DEFAULT_MASTER_SEED)
 	event_bus = EventBus.new()
+
+	cognition = CognitionManager.new()
+	dialogue_manager = DialogueManager.new()
+	dialogue_manager.set_cognition(cognition)
+	npc_manager = NPCManager.new()
+	npc_manager.set_cognition(cognition)
+	npc_manager.set_dialogue(dialogue_manager)
 
 	world_manager = WorldManager.new()
 	event_manager = EventManager.new()
@@ -88,6 +121,12 @@ func _bootstrap() -> void:
 	interaction_manager.name = "InteractionManager"
 	add_child(scene_manager)
 	add_child(interaction_manager)
+	# NPCManager 是 Node，必须入树。
+	# 此前它只被成员变量引用、从未 add_child——Node 不会被引用计数释放，
+	# 退出时就成了孤儿实例（「9 ObjectDB instances were leaked」的主源），
+	# 并连带拖住它引用的 cognition/dialogue 两个 RefCounted。
+	add_child(npc_manager)
+	npc_manager.name = "NPCManager"
 
 	scene_manager.world_manager = world_manager
 	scene_manager.event_manager = event_manager
@@ -96,14 +135,16 @@ func _bootstrap() -> void:
 	_inject_services()
 	_wire_signals()
 
+	# 四份数据先全部读出来，再**统一交叉校验**，最后才交给各 Manager。
+	#
+	# 顺序很重要：各 Manager 的 load_from_data 只校验自己那份数据内部是否自洽，
+	# 跨文件引用（variants 指向不存在的现实、transitions 的 to_world 拼错、
+	# area_enter 忘写 area_id）它看不见。先validate再load，错误能在启动时就暴露，
+	# 而不是等到玩家穿过黑暗发现现实没变。
 	var worlds_result := DataLoader.load_dictionary(PATH_WORLDS)
 	if not bool(worlds_result.get("ok", false)):
 		_fail(str(worlds_result.get("error", "未知错误")))
 		return
-	if not world_manager.load_from_data(worlds_result.get("data", {}), errors):
-		_fail(errors[0] if errors.size() > 0 else "世界数据载入失败")
-		return
-
 	var events_result := DataLoader.load_dictionary(PATH_EVENTS)
 	if not bool(events_result.get("ok", false)):
 		_fail(str(events_result.get("error", "未知错误")))
@@ -112,18 +153,59 @@ func _bootstrap() -> void:
 	if not bool(transitions_result.get("ok", false)):
 		_fail(str(transitions_result.get("error", "未知错误")))
 		return
+	var locations_result := DataLoader.load_dictionary(PATH_LOCATIONS)
+	if not bool(locations_result.get("ok", false)):
+		_fail(str(locations_result.get("error", "未知错误")))
+		return
+
+	var report: Dictionary = DataValidator.validate(
+		worlds_result.get("data", {}),
+		events_result.get("data", {}),
+		transitions_result.get("data", {}),
+		locations_result.get("data", {})
+	)
+	data_errors = report.get("errors", [])
+	if not bool(report.get("ok", false)):
+		var first := str((data_errors as Array)[0]) if not (data_errors as Array).is_empty() else "数据校验失败"
+		_fail("数据校验未通过（共 %d 项）: %s" % [(data_errors as Array).size(), first])
+		return
+
+	errors.clear()
+	if not world_manager.load_from_data(worlds_result.get("data", {}), errors):
+		_fail(errors[0] if errors.size() > 0 else "世界数据载入失败")
+		return
+
 	errors.clear()
 	if not event_manager.load_from_data(events_result.get("data", {}), transitions_result.get("data", {}), errors):
 		_fail(errors[0] if errors.size() > 0 else "事件数据载入失败")
 		return
 
-	var locations_result := DataLoader.load_dictionary(PATH_LOCATIONS)
-	if not bool(locations_result.get("ok", false)):
-		_fail(str(locations_result.get("error", "未知错误")))
-		return
 	errors.clear()
 	if not scene_manager.load_from_data(locations_result.get("data", {}), errors):
 		_fail(errors[0] if errors.size() > 0 else "地点数据载入失败")
+		return
+
+	# P6/P7：角色档案与对话树（纯数据，不参与世界状态）
+	var chars_result := DataLoader.load_dictionary(PATH_CHARACTERS)
+	if not bool(chars_result.get("ok", false)):
+		_fail("角色数据载入失败: %s" % str(chars_result.get("error", "")))
+		return
+	errors.clear()
+	if not npc_manager.load_from_data(chars_result.get("data", {}), errors):
+		_fail(errors[0] if errors.size() > 0 else "角色数据解析失败")
+		return
+
+	var dlg_result := DataLoader.load_dictionary(PATH_DIALOGUE)
+	if not bool(dlg_result.get("ok", false)):
+		_fail("对话数据载入失败: %s" % str(dlg_result.get("error", "")))
+		return
+	errors.clear()
+	if not dialogue_manager.load_from_data(dlg_result.get("data", {}), errors):
+		_fail(errors[0] if errors.size() > 0 else "对话数据解析失败")
+		return
+	errors.clear()
+	if not cognition.load_from_data(dlg_result.get("data", {}), errors):
+		_fail(errors[0] if errors.size() > 0 else "认知目录解析失败")
 		return
 
 	is_ready = true
@@ -143,6 +225,9 @@ func _ensure_input_actions() -> void:
 	_register_key_action(ACTION_MOVE_BACK, KEY_S)
 	_register_key_action(ACTION_MOVE_LEFT, KEY_A)
 	_register_key_action(ACTION_MOVE_RIGHT, KEY_D)
+	_register_key_action("jump", KEY_SPACE)
+	_register_key_action("run", KEY_SHIFT)
+	_register_key_action("phone", KEY_TAB)
 
 
 ## 幂等注册「一个动作 + 一个物理按键」。
@@ -190,9 +275,41 @@ func _wire_signals() -> void:
 			scene_manager.location_failed.connect(_on_location_failed)
 
 
+## 玩家控制器绑定后接上音频（脚部/跳跃/落地）。
+## 由 main._bind_services 在拿到 player_controller 时调用。
+func wire_player_audio(player) -> void:
+	if audio_manager == null or player == null:
+		return
+	if not player.jumped.is_connected(_on_player_jumped):
+		player.jumped.connect(_on_player_jumped)
+	if not player.landed.is_connected(_on_player_landed):
+		player.landed.connect(_on_player_landed)
+	if not player.footstep.is_connected(_on_player_footstep):
+		player.footstep.connect(_on_player_footstep)
+
+
+func _on_player_jumped() -> void:
+	if audio_manager != null:
+		audio_manager.play_jump()
+
+
+func _on_player_landed(_impact: float) -> void:
+	if audio_manager != null:
+		audio_manager.play_land()
+
+
+## 脚步由 PlayerController 按实际位移触发（步距 STRIDE_DISTANCE），
+## 因此频率与移动速度一致，停下立即停止，不依赖任何定时循环。
+func _on_player_footstep() -> void:
+	if audio_manager != null:
+		audio_manager.play_footstep("wood")
+
+
 func _on_world_changed(from_id: String, to_id: String, reason_id: String) -> void:
 	if event_bus != null:
 		event_bus.world_changed.emit(from_id, to_id, reason_id)
+	if audio_manager != null:
+		audio_manager.play_reality_shift()
 
 
 func _on_event_triggered(event_id: String, from_id: String, to_id: String, log_text: String) -> void:
@@ -235,10 +352,22 @@ func new_game(seed_value: int = -1) -> bool:
 		time_service.reset()
 	if rng_service != null:
 		rng_service.set_seed(seed_value if seed_value >= 0 else DEFAULT_MASTER_SEED)
+	# P6/P7：新局的认知与 NPC 必须归零，否则「重新开始」会继承上一局的已知信息
+	if cognition != null:
+		cognition.reset()
+	if npc_manager != null:
+		npc_manager._despawn_all()
 
 	# world_manager / event_manager 被重建，注入与连线必须重做
 	_inject_services()
 	_wire_signals()
+
+	# 会话状态必须归零，否则「重新开始」会继承上一局：
+	# 返回栈留着→一按返回就退回上局地点；访问记录留着→依赖 visited 的事件条件被污染；
+	# 朝向留着→新局面朝上局最后看的方向。
+	scene_manager.reset_session()
+	if player_controller != null and player_controller.has_method("reset_view"):
+		player_controller.reset_view()
 
 	return scene_manager.enter_location(scene_manager.get_start_location_id(), false)
 
@@ -250,6 +379,10 @@ func continue_game() -> bool:
 
 	var result := save_manager.load_state(scene_manager.get_location_ids(), world_manager.get_world_ids())
 	if not bool(result.get("ok", false)):
+		# 隔离损坏存档：否则每次启动都会失败一次再回退新局，玩家永远看不到真正的"新开始"
+		var moved := save_manager.quarantine_corrupt()
+		if not moved.is_empty():
+			push_warning("COMET: 损坏存档已隔离到 %s" % moved)
 		load_completed.emit(false, str(result.get("error", "读档失败")))
 		return false
 
@@ -304,15 +437,60 @@ func continue_game() -> bool:
 		}, rng_err)
 
 	var target := str(data.get("location_id", scene_manager.get_start_location_id()))
+	# P6 玩家认知：读档后恢复「玩家知道什么」，与世界状态分开恢复
+	if cognition != null:
+		var cog_data: Variant = data.get("cognition", null)
+		if typeof(cog_data) == TYPE_DICTIONARY:
+			var cog_err: Array = []
+			cognition.restore(cog_data as Dictionary, cog_err)
+			for e in cog_err:
+				push_warning("认知恢复: %s" % str(e))
+
 	if not scene_manager.enter_location(target, false):
 		load_completed.emit(false, "恢复地点失败: %s" % target)
 		return false
 
+	# 位置：存档里有就恢复到存档位置，没有才沿用地点 spawn（v1 存档就走这条路）。
+	# 恢复前做一次胶囊重叠检测：若存档位置落在墙体/家具内部（改了布局后的旧档），
+	# 宁可退回 spawn 也不要让玩家卡在几何里。
+	var restored_pos := false
+	var raw_pos: Variant = data.get("player_position", [])
+	if typeof(raw_pos) == TYPE_ARRAY and (raw_pos as Array).size() == 3:
+		var pos := Vector3(float((raw_pos as Array)[0]),
+			float((raw_pos as Array)[1]), float((raw_pos as Array)[2]))
+		if _is_position_free(pos):
+			player_controller.reset_to_spawn(pos)
+			restored_pos = true
+		else:
+			push_warning("COMET: 存档位置 %s 被占用，回退到地点出生点" % str(pos))
+
 	if player_controller != null and player_controller.has_method("restore_view"):
 		player_controller.restore_view(data.get("player_view", {}))
 
-	load_completed.emit(true, "已恢复到 %s" % scene_manager.get_location_name(target))
+	load_completed.emit(true, "已恢复到 %s%s" % [
+		scene_manager.get_location_name(target), "" if restored_pos else "（位置已回退）"])
 	return true
+
+
+## 判断某个脚底位置是否可站立：胶囊与 layer 1（环境）不重叠即可。
+func _is_position_free(pos: Vector3) -> bool:
+	if player_controller == null or not is_instance_valid(player_controller):
+		return true
+	var world: World3D = player_controller.get_world_3d()
+	if world == null:
+		return true
+	var space: PhysicsDirectSpaceState3D = world.direct_space_state
+	if space == null:
+		return true
+	var shape := CapsuleShape3D.new()
+	shape.radius = 0.30
+	shape.height = 1.66
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = shape
+	q.transform = Transform3D(Basis.IDENTITY, pos + Vector3(0, 0.86, 0))
+	q.collision_mask = 1
+	q.exclude = [player_controller.get_rid()]
+	return space.intersect_shape(q, 1).is_empty()
 
 
 func save_game() -> bool:
@@ -328,6 +506,11 @@ func save_game() -> bool:
 		"triggered_events": event_manager.get_sequence(),
 		"event_history": event_manager.get_history(),
 		"event_sequence": event_manager.get_sequence(),
+		# P6 玩家认知：知道什么、怎么知道的
+		"known_facts": cognition.get_known_facts() if cognition != null else [],
+		"cognition": cognition.serialize() if cognition != null else {},
+		# P7 NPC 状态
+		"npc_states": npc_manager.serialize() if npc_manager != null else [],
 		"game_clock_ticks": get_tick(),
 		"game_clock_minutes": get_clock_minutes(),
 		"rng_master_seed": rng_service.master_seed if rng_service != null else 0,
@@ -335,6 +518,12 @@ func save_game() -> bool:
 		"event_flags": (event_manager.serialize().get("flags", {}) if event_manager != null else {}),
 		"phase_id": (event_manager.get_phase() if event_manager != null else ""),
 		"player_view": player_controller.serialize_view() if player_controller != null and player_controller.has_method("serialize_view") else {},
+		# 位置必须单独存：serialize_view 只含朝向。
+		# 缺失时读档会把玩家送回地点出生点，玩家会以为"进度丢了"。
+		"player_position": _serialize_player_position(),
+		# 返回栈此前只写不读：payload 里根本没有这个键，而 continue_game 在读它，
+		# 导致读档后"返回"按钮永远置灰。
+		"visit_stack": (scene_manager.serialize().get("visit_stack", []) if scene_manager != null else []),
 	}
 
 	var result := save_manager.save(payload)
@@ -349,7 +538,26 @@ func delete_save() -> bool:
 	return bool(save_manager.delete_save().get("ok", false))
 
 
+func _serialize_player_position() -> Array:
+	if player_controller == null or not is_instance_valid(player_controller):
+		return []
+	var p: Vector3 = player_controller.global_position
+	return [p.x, p.y, p.z]
+
+
 # ---------------------------------------------------------------- 导航 API
+
+## 退出前的统一清理入口。必须在主循环仍运转时调用（quit 之前）。
+##
+## stop 之后必须给音频混音线程留一个真实时间窗口：voice 的回收是异步的，
+## 抢在回收之前退出会把 AudioStreamPlaybackWAV + AudioStreamWAV 留在
+## ObjectDB 清点里（实测同帧 stop 后立刻退出仍有约 40% 概率泄漏）。
+## 150ms 对退出体感无影响，换来退出日志确定性干净。
+func shutdown_audio() -> void:
+	if audio_manager != null:
+		audio_manager.shutdown()
+	OS.delay_msec(150)
+
 
 func has_save() -> bool:
 	if not is_ready:

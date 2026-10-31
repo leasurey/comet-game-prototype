@@ -37,7 +37,11 @@ signal player_entered(portal: AutoPortal)
 var _cooling: bool = false
 
 
+## 碰撞层：玩家在 layer 2，环境在 layer 1，NPC 在 layer 4。
+## Area3D 要靠 body_entered 检测玩家，mask 必须包含 layer 2。
 func _ready() -> void:
+	collision_layer = 0
+	collision_mask = 2
 	# 关键：先关闭检测，等两帧再开。
 	#
 	# 原因（实测踩到）：enter_location 把新场景加入树的那一刻，玩家还停在

@@ -4,6 +4,70 @@
 > 日常维护文档（架构、验收、已知问题、版本记录、会话日志、第三方许可）仍在 `docs/` 根目录。
 > 文内引用路径已同步更新，源码注释中的路径同样已改。
 
+## v0.6.0 — 系统性重整：存档安全、状态生命周期、连接完整性与交互加固
+
+依据《全项目重整计划》的 P0 审计（`docs/MASTER_BUG_REGISTER.md`，28 条）逐项修复。
+本轮完成 WP-01 ~ WP-11、WP-14（材质部分）、WP-17；WP-12/13/15/16 未做，原因见
+`docs/MASTER_RECOVERY_REPORT.md` 第十一节。
+
+### 存档安全（三条 P0 全部修复）
+
+- **原子写入**：写 `.tmp` → 校验 → 备份 `.bak` → 替换 → 再校验。任一步失败不再产生半截正式档。
+- **测试隔离**：5 个测试原本对默认路径 `delete_save()`，跑一次测试就删掉玩家真实进度。
+  新增 `SaveManager.use_test_path()`，测试全部改用独立路径，并新增 `save_isolation_test`
+  以 SHA-256 证明正式存档零变化。
+- **位置与返回栈入档**：`player_position`、`visit_stack` 写入并恢复。读档位置若被几何占用
+  （改过布局的旧档）则回退地点 spawn 并告警。
+
+### 存档版本 1 → 2
+
+- `_migrate()` 为 v1 补齐 6 个字段，记录 `migrated_from`，**原有进度不丢**。
+- 损坏存档会被隔离为 `.corrupt`，不再每次启动重复失败。
+
+### 状态生命周期
+
+- `SceneManager.reset_session()`：`new_game` 不再继承上一局的返回栈、访问记录与朝向。
+- 返回栈去重 + 上限 16：`A→B→C→B→C` 不再堆层。
+
+### 场景连接
+
+- 侧门、露台门补回程入口（原本只能绕回前门）。
+- 黑暗区域入口侧补 `DarkBack`：掉头可原路离开，**且不改变现实**。
+
+### 现实与事件
+
+- 新增 `DataValidator`：启动时交叉校验四份 JSON，覆盖 `variants` 指向未知现实、
+  `to_world` 拼错、`area_enter` 漏写 `area_id`、出口指向未知地点等 6 类错误。
+- `GameLocation.apply_world()` 改为返回 `bool`，缺变体时 `push_warning`，不再静默回退。
+- 事件提示改走 `event_bus`：`new_game` 替换 `EventManager` 后提示不再失效。
+- 区域事件求值失败时**不切场景**，避免"跨过黑暗但现实没变"的静默不一致。
+
+### 交互与 UI
+
+- 「重新开始」增加二次确认：未确认时存档**不被删除**；确认后才删档开新局。
+- 保存成功/失败均有文字反馈（此前点完毫无反应）。
+- 窗口失焦自动释放鼠标；聚焦不自动捕获，避免视角跳变。
+- 热点聚焦改为逐实例复制材质：凝视图元不再点亮全场景同材质物体。
+- `activate()` 更名 `debug_activate()`，玩家路径只能走含距离与遮挡判据的 `activate_focused()`。
+
+### 工程配置
+
+- `gdscript/warnings/enable` 由 `false` 改为 `true`（开启后立刻暴露 1 处 Variant 推断问题，已修）。
+- `config/version` 由 `0.1.0-prototype` 更新为 `0.6.0`。
+- 补 `window/stretch`：小窗口下 HUD 等比缩放，避免固定 offset 控件重叠。
+
+### 测试
+
+13 个测试、**385 条断言**全部通过，主场景 headless 零报错。
+新增 `save_isolation_test`(10)、`session_reset_test`(17)、`data_integrity_test`(22)、
+`save_migration_test`(27)、`ui_flow_test`(12)；
+`door_connection_test` 37→53、`dark_traverse_test` 25→31、`acceptance_test` 57→59。
+
+### 未完成（如实列出）
+
+首轮启动标题页、`living_room` 退役、第三现实 `world_gamma`、玩家认知系统、NPC 与导航、
+音频系统、Windows 导出验证、三档分辨率人工验收 —— 均未实施，见重整报告的最终状态表。
+
 ## v0.5.0 — 黑暗区域区域触发穿越与现实切换时机
 
 第二轮系统整合的 A、B 两项。C（缺失变体警告）、D（玩家认知）、E（旧地点整合）、F（存档一致性）未做，
