@@ -233,216 +233,216 @@ fog_enabled = true
 fog_light_color = Color(0.02, 0.024, 0.034, 1)
 fog_density = 0.055
 
-[node name="dark_road" type="Node3D" unique_id=1500881892]
+[node name="dark_road" type="Node3D" unique_id=1271405873]
 script = ExtResource("1_dtnbv")
 
-[node name="Environment" type="Node3D" parent="." unique_id=756997054]
+[node name="Environment" type="Node3D" parent="." unique_id=2027389865]
 
-[node name="Shared" type="Node3D" parent="Environment" unique_id=1208539912]
+[node name="Shared" type="Node3D" parent="Environment" unique_id=2011212268]
 
-[node name="Ground" type="StaticBody3D" parent="Environment/Shared" unique_id=1199733144]
+[node name="Ground" type="StaticBody3D" parent="Environment/Shared" unique_id=2036725114]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, -20)
 collision_mask = 0
 
-[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/Ground" unique_id=1156951301]
+[node name="Mesh" type="MeshInstance3D" parent="Environment/Shared/Ground" unique_id=481205124]
 material_override = SubResource("StandardMaterial3D_yawq3")
 mesh = SubResource("BoxMesh_jmo0i")
 
-[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/Ground" unique_id=1400471338]
+[node name="Shape" type="CollisionShape3D" parent="Environment/Shared/Ground" unique_id=1661844429]
 shape = SubResource("BoxShape3D_eff2a")
 
-[node name="Road" type="MeshInstance3D" parent="Environment/Shared" unique_id=518540474]
+[node name="Road" type="MeshInstance3D" parent="Environment/Shared" unique_id=255335088]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, -18)
 material_override = SubResource("StandardMaterial3D_udte6")
 mesh = SubResource("BoxMesh_lyqtp")
 
-[node name="RoadEdgeL" type="MeshInstance3D" parent="Environment/Shared" unique_id=1320314227]
+[node name="RoadEdgeL" type="MeshInstance3D" parent="Environment/Shared" unique_id=1831904407]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.85, 0.04, -18)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_udsly")
 
-[node name="RoadEdgeR" type="MeshInstance3D" parent="Environment/Shared" unique_id=3591576]
+[node name="RoadEdgeR" type="MeshInstance3D" parent="Environment/Shared" unique_id=1235378845]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.85, 0.04, -18)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_ki056")
 
-[node name="TrunkL0" type="MeshInstance3D" parent="Environment/Shared" unique_id=999537709]
+[node name="TrunkL0" type="MeshInstance3D" parent="Environment/Shared" unique_id=35981684]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6, 3, -2)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_i1wcv")
 
-[node name="CrownL0" type="MeshInstance3D" parent="Environment/Shared" unique_id=1559009095]
+[node name="CrownL0" type="MeshInstance3D" parent="Environment/Shared" unique_id=1084585576]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6, 7, -2)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_pqug8")
 
-[node name="TrunkL1" type="MeshInstance3D" parent="Environment/Shared" unique_id=773662996]
+[node name="TrunkL1" type="MeshInstance3D" parent="Environment/Shared" unique_id=930984483]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.7, 3.35, -6.5)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_0anjq")
 
-[node name="CrownL1" type="MeshInstance3D" parent="Environment/Shared" unique_id=169325567]
+[node name="CrownL1" type="MeshInstance3D" parent="Environment/Shared" unique_id=1754428962]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.7, 7.7, -6.5)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_ulhhc")
 
-[node name="TrunkL2" type="MeshInstance3D" parent="Environment/Shared" unique_id=110905401]
+[node name="TrunkL2" type="MeshInstance3D" parent="Environment/Shared" unique_id=486656181]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.8, 3.7, -11)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_lc0qj")
 
-[node name="CrownL2" type="MeshInstance3D" parent="Environment/Shared" unique_id=1007212222]
+[node name="CrownL2" type="MeshInstance3D" parent="Environment/Shared" unique_id=687737652]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.8, 8.4, -11)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_alhbv")
 
-[node name="TrunkL3" type="MeshInstance3D" parent="Environment/Shared" unique_id=330779556]
+[node name="TrunkL3" type="MeshInstance3D" parent="Environment/Shared" unique_id=1704895411]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6, 4.05, -16.5)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_jpb3u")
 
-[node name="CrownL3" type="MeshInstance3D" parent="Environment/Shared" unique_id=1144822597]
+[node name="CrownL3" type="MeshInstance3D" parent="Environment/Shared" unique_id=252455209]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.6, 9.1, -16.5)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_6y7ov")
 
-[node name="TrunkL4" type="MeshInstance3D" parent="Environment/Shared" unique_id=72256441]
+[node name="TrunkL4" type="MeshInstance3D" parent="Environment/Shared" unique_id=148276304]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.7, 3, -22)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_1jjke")
 
-[node name="CrownL4" type="MeshInstance3D" parent="Environment/Shared" unique_id=554915408]
+[node name="CrownL4" type="MeshInstance3D" parent="Environment/Shared" unique_id=548516452]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.7, 7, -22)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_teptj")
 
-[node name="TrunkL5" type="MeshInstance3D" parent="Environment/Shared" unique_id=2099810674]
+[node name="TrunkL5" type="MeshInstance3D" parent="Environment/Shared" unique_id=316230796]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.8, 3.35, -28)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_i4imu")
 
-[node name="CrownL5" type="MeshInstance3D" parent="Environment/Shared" unique_id=1712874472]
+[node name="CrownL5" type="MeshInstance3D" parent="Environment/Shared" unique_id=1305455388]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.8, 7.7, -28)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_o4cnt")
 
-[node name="TrunkR0" type="MeshInstance3D" parent="Environment/Shared" unique_id=917393249]
+[node name="TrunkR0" type="MeshInstance3D" parent="Environment/Shared" unique_id=1147970759]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 3.1, -3.5)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_cbc2i")
 
-[node name="CrownR0" type="MeshInstance3D" parent="Environment/Shared" unique_id=193207430]
+[node name="CrownR0" type="MeshInstance3D" parent="Environment/Shared" unique_id=1056118728]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 7.2, -3.5)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_3k7a8")
 
-[node name="TrunkR1" type="MeshInstance3D" parent="Environment/Shared" unique_id=1482089988]
+[node name="TrunkR1" type="MeshInstance3D" parent="Environment/Shared" unique_id=1838994292]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.7, 3.45, -8)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_0tjvy")
 
-[node name="CrownR1" type="MeshInstance3D" parent="Environment/Shared" unique_id=221977313]
+[node name="CrownR1" type="MeshInstance3D" parent="Environment/Shared" unique_id=1612596740]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.7, 7.9, -8)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_wx48o")
 
-[node name="TrunkR2" type="MeshInstance3D" parent="Environment/Shared" unique_id=2008000317]
+[node name="TrunkR2" type="MeshInstance3D" parent="Environment/Shared" unique_id=45675410]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.8, 3.8, -13.5)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_3cmgh")
 
-[node name="CrownR2" type="MeshInstance3D" parent="Environment/Shared" unique_id=184849825]
+[node name="CrownR2" type="MeshInstance3D" parent="Environment/Shared" unique_id=1210020573]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.8, 8.6, -13.5)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_705kw")
 
-[node name="TrunkR3" type="MeshInstance3D" parent="Environment/Shared" unique_id=1597866976]
+[node name="TrunkR3" type="MeshInstance3D" parent="Environment/Shared" unique_id=1490531630]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 4.15, -19)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_0m3s4")
 
-[node name="CrownR3" type="MeshInstance3D" parent="Environment/Shared" unique_id=1466270809]
+[node name="CrownR3" type="MeshInstance3D" parent="Environment/Shared" unique_id=80187284]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.6, 9.3, -19)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_v0acw")
 
-[node name="TrunkR4" type="MeshInstance3D" parent="Environment/Shared" unique_id=609453116]
+[node name="TrunkR4" type="MeshInstance3D" parent="Environment/Shared" unique_id=1693975426]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.7, 3.1, -25)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_pvitk")
 
-[node name="CrownR4" type="MeshInstance3D" parent="Environment/Shared" unique_id=31479742]
+[node name="CrownR4" type="MeshInstance3D" parent="Environment/Shared" unique_id=243466125]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.7, 7.2, -25)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_4lw7f")
 
-[node name="TrunkR5" type="MeshInstance3D" parent="Environment/Shared" unique_id=590455294]
+[node name="TrunkR5" type="MeshInstance3D" parent="Environment/Shared" unique_id=1620661195]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.8, 3.45, -31)
 material_override = SubResource("StandardMaterial3D_tfeis")
 mesh = SubResource("CylinderMesh_i1x6u")
 
-[node name="CrownR5" type="MeshInstance3D" parent="Environment/Shared" unique_id=1708830752]
+[node name="CrownR5" type="MeshInstance3D" parent="Environment/Shared" unique_id=917806178]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.8, 7.9, -31)
 material_override = SubResource("StandardMaterial3D_ujpx0")
 mesh = SubResource("BoxMesh_lqu5w")
 
-[node name="Pole0" type="MeshInstance3D" parent="Environment/Shared" unique_id=1923286259]
+[node name="Pole0" type="MeshInstance3D" parent="Environment/Shared" unique_id=1038538461]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 3.5, -4)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("CylinderMesh_bcpgp")
 
-[node name="Crossarm0" type="MeshInstance3D" parent="Environment/Shared" unique_id=554991510]
+[node name="Crossarm0" type="MeshInstance3D" parent="Environment/Shared" unique_id=1387534683]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 6.7, -4)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("BoxMesh_xgpm0")
 
-[node name="Pole1" type="MeshInstance3D" parent="Environment/Shared" unique_id=1007580193]
+[node name="Pole1" type="MeshInstance3D" parent="Environment/Shared" unique_id=800660835]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 3.5, -12)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("CylinderMesh_p3glq")
 
-[node name="Crossarm1" type="MeshInstance3D" parent="Environment/Shared" unique_id=30813298]
+[node name="Crossarm1" type="MeshInstance3D" parent="Environment/Shared" unique_id=1800722221]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 6.7, -12)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("BoxMesh_7xtqs")
 
-[node name="Pole2" type="MeshInstance3D" parent="Environment/Shared" unique_id=1081523121]
+[node name="Pole2" type="MeshInstance3D" parent="Environment/Shared" unique_id=1906764236]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 3.5, -20)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("CylinderMesh_e7n2f")
 
-[node name="Crossarm2" type="MeshInstance3D" parent="Environment/Shared" unique_id=799722757]
+[node name="Crossarm2" type="MeshInstance3D" parent="Environment/Shared" unique_id=2048207929]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 6.7, -20)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("BoxMesh_oaka4")
 
-[node name="Pole3" type="MeshInstance3D" parent="Environment/Shared" unique_id=936470480]
+[node name="Pole3" type="MeshInstance3D" parent="Environment/Shared" unique_id=1481833062]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 3.5, -28)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("CylinderMesh_a8qps")
 
-[node name="Crossarm3" type="MeshInstance3D" parent="Environment/Shared" unique_id=1257899898]
+[node name="Crossarm3" type="MeshInstance3D" parent="Environment/Shared" unique_id=1491979677]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.6, 6.7, -28)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("BoxMesh_5bhn5")
 
-[node name="Moonlight" type="DirectionalLight3D" parent="Environment/Shared" unique_id=227361522]
+[node name="Moonlight" type="DirectionalLight3D" parent="Environment/Shared" unique_id=2046191765]
 transform = Transform3D(0.90630776, 0.2601898, -0.33302775, 0, 0.7880108, 0.6156615, 0.42261827, -0.5579788, 0.7141803, 0, 0, 0)
 light_color = Color(0.5, 0.6, 0.9, 1)
 light_energy = 0.42
 
-[node name="PlayerPool" type="OmniLight3D" parent="Environment/Shared" unique_id=854135722]
+[node name="PlayerPool" type="OmniLight3D" parent="Environment/Shared" unique_id=973333879]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0.5)
 light_color = Color(0.55, 0.62, 0.8, 1)
 light_energy = 0.55
 omni_range = 9.0
 
-[node name="FarGlow" type="MeshInstance3D" parent="Environment/Shared" unique_id=1593177503]
+[node name="FarGlow" type="MeshInstance3D" parent="Environment/Shared" unique_id=809185060]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, -36)
 material_override = SubResource("StandardMaterial3D_2s2vk")
 mesh = SubResource("BoxMesh_lwxlx")
 
-[node name="DarkExit" type="Area3D" parent="Environment/Shared" unique_id=13388245]
+[node name="DarkExit" type="Area3D" parent="Environment/Shared" unique_id=665043776]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, -20)
 script = ExtResource("2_f11ne")
 portal_id = "dark_far_end"
@@ -454,10 +454,10 @@ event_keys = {
 "area_id": "dark_far_end"
 }
 
-[node name="HitShape" type="CollisionShape3D" parent="Environment/Shared/DarkExit" unique_id=1301855649]
+[node name="HitShape" type="CollisionShape3D" parent="Environment/Shared/DarkExit" unique_id=569713001]
 shape = SubResource("BoxShape3D_f7gbn")
 
-[node name="DarkBack" type="Area3D" parent="Environment/Shared" unique_id=122594418]
+[node name="DarkBack" type="Area3D" parent="Environment/Shared" unique_id=1119434750]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 6.6)
 script = ExtResource("2_f11ne")
 portal_id = "dark_entrance_back"
@@ -466,73 +466,73 @@ use_target_spawn = true
 target_spawn = Vector3(0, 0.05, -18)
 target_yaw_deg = 180.0
 
-[node name="HitShape" type="CollisionShape3D" parent="Environment/Shared/DarkBack" unique_id=191922209]
+[node name="HitShape" type="CollisionShape3D" parent="Environment/Shared/DarkBack" unique_id=1638205213]
 shape = SubResource("BoxShape3D_vcpcq")
 
-[node name="Variant_world_alpha" type="Node3D" parent="Environment" unique_id=1997427878]
+[node name="Variant_world_alpha" type="Node3D" parent="Environment" unique_id=1594441693]
 
-[node name="Variant_world_beta" type="Node3D" parent="Environment" unique_id=712715159]
+[node name="Variant_world_beta" type="Node3D" parent="Environment" unique_id=825076140]
 
-[node name="Puddle1" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=280280987]
+[node name="Puddle1" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=1576491860]
 transform = Transform3D(0.99026805, 0, 0.1391731, 0, 1, 0, -0.1391731, 0, 0.99026805, -0.35, 0.07, -3.2)
 material_override = SubResource("StandardMaterial3D_7w4mx")
 mesh = SubResource("BoxMesh_u8tyo")
 
-[node name="Puddle2" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=1214239746]
+[node name="Puddle2" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=117909139]
 transform = Transform3D(0.9702957, 0, -0.2419219, 0, 1, 0, 0.2419219, 0, 0.9702957, 0.55, 0.07, -6.4)
 material_override = SubResource("StandardMaterial3D_7w4mx")
 mesh = SubResource("BoxMesh_jvj3y")
 
-[node name="Puddle3" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=784389235]
+[node name="Puddle3" type="MeshInstance3D" parent="Environment/Variant_world_beta" unique_id=899007858]
 transform = Transform3D(0.92718387, 0, 0.37460658, 0, 1, 0, -0.37460658, 0, 0.92718387, -0.7, 0.07, -9.1)
 material_override = SubResource("StandardMaterial3D_7w4mx")
 mesh = SubResource("BoxMesh_agw4k")
 
-[node name="Variant_world_gamma" type="Node3D" parent="Environment" unique_id=728672904]
+[node name="Variant_world_gamma" type="Node3D" parent="Environment" unique_id=1214863084]
 
-[node name="Puddle1" type="MeshInstance3D" parent="Environment/Variant_world_gamma" unique_id=475067021]
+[node name="Puddle1" type="MeshInstance3D" parent="Environment/Variant_world_gamma" unique_id=1101481676]
 transform = Transform3D(0.8660254, 0, -0.5, 0, 1, 0, 0.5, 0, 0.8660254, 0.3, 0.07, -5.1)
 material_override = SubResource("StandardMaterial3D_7w4mx")
 mesh = SubResource("BoxMesh_wvwhs")
 
-[node name="Hotspots" type="Node3D" parent="." unique_id=1211367969]
+[node name="Hotspots" type="Node3D" parent="." unique_id=1939377839]
 
-[node name="RoadSign" type="Area3D" parent="Hotspots" unique_id=1702751293]
+[node name="RoadSign" type="Area3D" parent="Hotspots" unique_id=1805161355]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.95, 1.45, -2.6)
 script = ExtResource("3_rqjwm")
 display_name = "一块路牌"
 examine_text = "牌面上的字被磨掉了，只剩下几道浅浅的划痕。"
 
-[node name="SignPost" type="MeshInstance3D" parent="Hotspots/RoadSign" unique_id=980128673]
+[node name="SignPost" type="MeshInstance3D" parent="Hotspots/RoadSign" unique_id=1536354767]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.75, 0)
 material_override = SubResource("StandardMaterial3D_hr85g")
 mesh = SubResource("BoxMesh_c45hf")
 
-[node name="SignBoard" type="MeshInstance3D" parent="Hotspots/RoadSign" unique_id=862962041]
+[node name="SignBoard" type="MeshInstance3D" parent="Hotspots/RoadSign" unique_id=568375481]
 material_override = SubResource("StandardMaterial3D_dxv4c")
 mesh = SubResource("BoxMesh_01gvv")
 
-[node name="HitShape" type="CollisionShape3D" parent="Hotspots/RoadSign" unique_id=126281699]
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/RoadSign" unique_id=2047844627]
 shape = SubResource("BoxShape3D_0h5a5")
 
-[node name="DeeperIntoDark" type="Area3D" parent="Hotspots" unique_id=764252094]
+[node name="DeeperIntoDark" type="Area3D" parent="Hotspots" unique_id=692775877]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, -11)
 script = ExtResource("3_rqjwm")
 display_name = "更深的黑暗"
 examine_text = "再往前就什么都看不见了。今晚不该走那么远。"
 
-[node name="HitShape" type="CollisionShape3D" parent="Hotspots/DeeperIntoDark" unique_id=1874844750]
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/DeeperIntoDark" unique_id=1054381307]
 shape = SubResource("BoxShape3D_63ev7")
 
-[node name="PuddleSpot" type="Area3D" parent="Hotspots" unique_id=1763319885]
+[node name="PuddleSpot" type="Area3D" parent="Hotspots" unique_id=1135122861]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.35, 0.2, -3.2)
 script = ExtResource("3_rqjwm")
 display_name = "积水"
 examine_text = "路面洼处积着水，映着天光。来的时候这里是干的。"
 visible_only_in_worlds = ["world_beta"]
 
-[node name="HitShape" type="CollisionShape3D" parent="Hotspots/PuddleSpot" unique_id=667237513]
+[node name="HitShape" type="CollisionShape3D" parent="Hotspots/PuddleSpot" unique_id=2145990362]
 shape = SubResource("BoxShape3D_lpbau")
 
-[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=706116041]
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=1326436445]
 environment = SubResource("Environment_i7nlc")

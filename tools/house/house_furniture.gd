@@ -47,6 +47,8 @@ func populate(parent: Node) -> void:
 	_kitchen(parent, m_cab, m_stone, m_metal)
 	_study(parent, m_wood, m_metal)
 	_foyer(parent, m_cab)
+	_small_props(parent)
+	_lighting(parent)
 
 
 # ------------------------------------------------------------------ 客厅
@@ -156,3 +158,96 @@ func _foyer(parent: Node, mat: Material) -> void:
 			Vector3(0.50, 0.85, 1.00), 0.0, mat)
 	props.cabinet(h, "Toilet", Vector3(-2.62, FLOOR, 3.20),
 			Vector3(0.48, 0.42, 0.60), 0.0, mat)
+
+# ------------------------------------------------------------------ 生活小道具
+
+## 杯子、盘子、书籍、装饰物等桌面杂物。
+## 让灰盒场景有生活痕迹——不是随机堆放，而是按住宅逻辑摆放。
+func _small_props(parent: Node) -> void:
+	var h := geom.node(parent, "SmallProps")
+
+	# 材质
+	var m_cup := geom.mat("cup", Color(0.92, 0.90, 0.85), 0.4)
+	var m_plate := geom.mat("plate", Color(0.88, 0.86, 0.82), 0.3)
+	var m_book := geom.mat("book", Color(0.55, 0.30, 0.20), 0.7)
+	var m_book2 := geom.mat("book2", Color(0.25, 0.35, 0.55), 0.7)
+	var m_glass := geom.mat("glass", Color(0.75, 0.85, 0.90), 0.1, 0.3)
+	var m_candle := geom.mat("candle", Color(0.95, 0.88, 0.70), 0.6)
+	var m_flower := geom.mat("flower", Color(0.85, 0.45, 0.55), 0.6)
+	var m_vase := geom.mat("vase", Color(0.55, 0.65, 0.60), 0.3)
+
+	# ---- 餐厅桌面（table_cx=1.325, table_cz=6.48, 桌面 y≈0.95）
+	var tbl_y := FLOOR + 0.77  # 桌面顶
+	# 三个杯子（不同位置）
+	geom.box(h, "Cup1", Vector3(0.08, 0.10, 0.08), Vector3(1.1, tbl_y + 0.05, 6.2), m_cup)
+	geom.box(h, "Cup2", Vector3(0.08, 0.10, 0.08), Vector3(1.6, tbl_y + 0.05, 6.7), m_cup)
+	geom.box(h, "Cup3", Vector3(0.08, 0.10, 0.08), Vector3(1.4, tbl_y + 0.05, 6.4), m_cup)
+	# 两个盘子
+	geom.box(h, "Plate1", Vector3(0.22, 0.02, 0.22), Vector3(1.0, tbl_y + 0.01, 6.5), m_plate)
+	geom.box(h, "Plate2", Vector3(0.22, 0.02, 0.22), Vector3(1.7, tbl_y + 0.01, 6.3), m_plate)
+	# 玻璃杯
+	geom.box(h, "Glass1", Vector3(0.06, 0.12, 0.06), Vector3(1.5, tbl_y + 0.06, 6.1), m_glass)
+
+	# ---- 客厅茶几（x≈-4.70, z≈6.55, 顶面 y≈FLOOR+0.38）
+	var ct_y := FLOOR + 0.40
+	geom.box(h, "Book1", Vector3(0.16, 0.03, 0.22), Vector3(-4.90, ct_y + 0.015, 6.45), m_book, 0.3)
+	geom.box(h, "Book2", Vector3(0.15, 0.025, 0.20), Vector3(-4.88, ct_y + 0.042, 6.47), m_book2, 0.15)
+	geom.box(h, "Candle", Vector3(0.06, 0.10, 0.06), Vector3(-4.55, ct_y + 0.05, 6.65), m_candle)
+
+	# ---- 厨房台面（CounterNorth y≈FLOOR+0.90）
+	var kn_y := FLOOR + 0.91
+	geom.box(h, "KitchenGlass1", Vector3(0.07, 0.12, 0.07), Vector3(5.1, kn_y + 0.06, 8.7), m_glass)
+	geom.box(h, "KitchenPlate1", Vector3(0.24, 0.02, 0.24), Vector3(5.5, kn_y + 0.01, 8.9), m_plate)
+	geom.box(h, "KitchenBowl", Vector3(0.14, 0.06, 0.14), Vector3(5.8, kn_y + 0.03, 8.8), m_cup)
+
+	# ---- 书房桌面（Desk y≈FLOOR+0.75）
+	var dt_y := FLOOR + 0.77
+	geom.box(h, "DeskBook1", Vector3(0.14, 0.03, 0.20), Vector3(-5.80, dt_y + 0.015, 1.05), m_book, 0.2)
+	geom.box(h, "DeskPen", Vector3(0.015, 0.015, 0.14), Vector3(-5.35, dt_y + 0.008, 1.30), m_cup, 0.5)
+
+	# ---- 花瓶（餐桌上，聚会感）
+	geom.box(h, "Vase", Vector3(0.10, 0.16, 0.10), Vector3(1.325, tbl_y + 0.08, 6.48), m_vase)
+	geom.box(h, "Flower", Vector3(0.14, 0.10, 0.14), Vector3(1.325, tbl_y + 0.21, 6.48), m_flower)
+
+	# ---- 门旁小物件（玄关）
+	geom.box(h, "UmbrellaStand", Vector3(0.12, 0.40, 0.12), Vector3(0.60, FLOOR + 0.20, 0.80), m_vase)
+
+
+# ------------------------------------------------------------------ 灯光
+
+## 室内暖光照明（P6 灯光）。
+## 每个房间 1-2 个 OmniLight3D，色温偏暖（烛光色系），
+## 性能友好：无阴影（Radeon 530 低配），range 合理控制。
+func _lighting(parent: Node) -> void:
+	var lights := geom.node(parent, "Lighting")
+
+	# 客厅主灯
+	_omni(lights, "LivingLight", Vector3(-4.5, 2.3, 6.5),
+			Color(1.0, 0.88, 0.72), 4.5, 8.0)
+	# 餐厅吊灯
+	_omni(lights, "DiningLight", Vector3(1.3, 2.3, 6.5),
+			Color(1.0, 0.85, 0.65), 4.0, 7.0)
+	# 厨房灯
+	_omni(lights, "KitchenLight", Vector3(5.5, 2.3, 5.0),
+			Color(1.0, 0.92, 0.80), 3.5, 6.0)
+	# 书房灯
+	_omni(lights, "StudyLight", Vector3(-5.0, 2.3, 1.5),
+			Color(1.0, 0.88, 0.75), 3.0, 5.5)
+	# 玄关灯（较暗）
+	_omni(lights, "FoyerLight", Vector3(-1.0, 2.3, 1.5),
+			Color(1.0, 0.85, 0.70), 2.5, 4.5)
+	# 壁炉暖光（模拟火焰）
+	_omni(lights, "FireplaceGlow", Vector3(-6.2, 0.8, 7.2),
+			Color(1.0, 0.65, 0.35), 2.0, 3.5)
+
+
+func _omni(parent: Node3D, light_name: String, pos: Vector3,
+		color: Color, energy: float, range_val: float) -> void:
+	var l := OmniLight3D.new()
+	l.name = light_name
+	l.position = pos
+	l.light_color = color
+	l.light_energy = energy
+	l.omni_range = range_val
+	l.shadow_enabled = false  # 低配性能：关闭阴影
+	parent.add_child(l)
