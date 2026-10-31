@@ -326,6 +326,14 @@ func _build_hotspots(parent: Node) -> void:
 	_add_examine(parent, "StudyDesk", Vector3(-4.6, FLOOR_Y + 0.75, 1.2),
 			"书桌", "桌上摊着一台开着的笔记本电脑，屏幕的光映在墙上。")
 
+	# 门上的便签（CT-019 的钥匙之一）：对话闸门 fact_sticky_note 必须
+	# 由亲眼检查授予，否则「问门上的便签」话题在真实游玩中永远锁死。
+	# 位置在前门内侧，距玄关出生点 (0, 0.25, 1.6) 约 1.4 m，交互距离内。
+	_add_examine(parent, "StickyNote", Vector3(0.55, FLOOR_Y + 0.95, 0.55),
+			"门上的便签",
+			"一张便签贴在门上，上面手写着一个数字：4。你不记得自己贴过它，也不认得这个笔迹。",
+			"fact_sticky_note")
+
 
 func _add_exit(parent: Node, node_name: String, pos: Vector3,
 		display_name: String, target: String,
@@ -345,7 +353,7 @@ func _add_exit(parent: Node, node_name: String, pos: Vector3,
 
 
 func _add_examine(parent: Node, node_name: String, pos: Vector3,
-		display_name: String, text: String) -> void:
+		display_name: String, text: String, grants: String = "") -> void:
 	var spot := Area3D.new()
 	spot.name = node_name
 	spot.set_script(load("res://core/hotspot.gd"))
@@ -353,6 +361,7 @@ func _add_examine(parent: Node, node_name: String, pos: Vector3,
 	spot.display_name = display_name
 	spot.action_kind = "examine"
 	spot.examine_text = text
+	spot.grants_fact = grants
 	_col(spot, Vector3(1.4, 1.6, 1.4))
 	parent.add_child(spot)
 

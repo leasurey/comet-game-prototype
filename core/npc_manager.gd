@@ -45,6 +45,15 @@ var _nav_ready := false
 var _bake_phase := 0
 var _bake_retries := 0
 var _pf_mark := 0
+
+## 会话级状态快照（CT-003/004 的修复核心）。
+##
+## 角色在离场时实体照常 free，但状态留在这里；重入时按快照恢复，
+## 「出门再回来 NPC 回到出生点」的断裂就此消除。存档读写同样走这张表：
+## restore() 先写入本表，spawn_all() 消费本表——因此 restore 在
+## spawn 之前或之后调用都正确（旧设计 restore 只写活实体，先于 spawn 调用会被覆盖）。
+## 字典结构与 serialize() 条目一致：{id, position, rotation_y, state, target}。
+var _session_states: Dictionary = {}
 var _pending_container: Node = null
 
 
@@ -145,6 +154,11 @@ func spawn_all(container: Node) -> void:
 	for id in _characters.keys():
 		_spawn_one(str(id), container)
 
+	# 会话快照优先于配置出生点（CT-004）：离场前的位置/行为/目标继续。
+	for id in _npcs.keys():
+		if _session_states.has(id):
+			(_npcs[id] as NPC).restore(_session_states[id] as Dictionary)
+
 	_nav_ready = false
 	_bake_phase = 1
 	# 必须记「此刻」的物理帧号。此前误写 0，等于「引擎启动满 8 帧」——
@@ -185,8 +199,12 @@ func _room_position(room_id: String) -> Vector3:
 
 
 func _despawn_all() -> void:
+	# 离场快照（CT-004）：实体销毁前把状态留进 _session_states，
+	# 同 id 再次 spawn_all 时自动续上（位置/朝向/行为/行走目标）。
 	for id in _npcs.keys():
 		var n: Node = _npcs[id]
+		if is_instance_valid(n) and n is NPC:
+			_session_states[id] = (n as NPC).serialize()
 		if is_instance_valid(n):
 			if n.get_parent() != null:
 				n.get_parent().remove_child(n)
@@ -203,6 +221,11 @@ func _despawn_all() -> void:
 	_region = null
 	_nav_ready = false
 	_bake_phase = 0
+
+
+## 会话级清空（新局用）：丢弃快照，下一局全员回配置出生点。
+func reset_session() -> void:
+	_session_states.clear()
 
 
 ## 每帧驱动：烘焙时序与 NPC 状态推进。
@@ -238,6 +261,12 @@ func tick() -> void:
 				return
 			_bake_phase = 0
 			_nav_ready = true
+			# 恢复快照带来的行走目标是在烘焙完成前设给 agent 的，
+			# 那时查不到路径；就绪后统一重发，让被恢复的 NPC 继续走。
+			for id in _npcs.keys():
+				var n: NPC = _npcs[id]
+				if n != null and n.state == NPC.STATE_WALKING and n.has_goal():
+					n.move_to(n.get_goal())
 			navigation_ready.emit()
 
 
@@ -304,17 +333,34 @@ func find_talkable_near(pos: Vector3, max_dist: float = 2.5) -> NPC:
 
 # ---------------------------------------------------------------- 存档
 
+## 序列化全部 NPC 状态。离场快照也一并输出（CT-003）：
+## 玩家在住宅外保存时 npc_states 不再是空表，读档回来进屋即恢复。
 func serialize() -> Array:
 	var out: Array = []
+	var seen := {}
 	for id in _npcs.keys():
-		out.append((_npcs[id] as NPC).serialize())
+		if is_instance_valid(_npcs[id]) and _npcs[id] is NPC:
+			out.append((_npcs[id] as NPC).serialize())
+			seen[id] = true
+	for id in _session_states.keys():
+		if not seen.has(id):
+			out.append((_session_states[id] as Dictionary).duplicate(true))
 	return out
 
 
+## 恢复 NPC 状态（CT-003）。
+##
+## 双写设计：先落 _session_states（spawn_all 消费），再覆盖活实体（若已在场）。
+## 因此 restore 可以在场景生成之前或之后调用，结果一致——
+## 旧实现只写活实体，先于 spawn 调用会被无条件重建覆盖。
 func restore(list: Array) -> void:
 	for item in list:
 		if typeof(item) != TYPE_DICTIONARY:
 			continue
-		var id := str((item as Dictionary).get("id", ""))
-		if _npcs.has(id):
-			(_npcs[id] as NPC).restore(item as Dictionary)
+		var rec := (item as Dictionary).duplicate(true)
+		var id := str(rec.get("id", ""))
+		if id.is_empty():
+			continue
+		_session_states[id] = rec
+		if _npcs.has(id) and is_instance_valid(_npcs[id]) and _npcs[id] is NPC:
+			(_npcs[id] as NPC).restore(rec)

@@ -134,6 +134,15 @@ func stop_moving() -> void:
 		_set_state(STATE_IDLE)
 
 
+## 当前行走目标（供 NPCManager 在导航就绪后重发）。
+func has_goal() -> bool:
+	return _has_target
+
+
+func get_goal() -> Vector3:
+	return _target
+
+
 ## 进入交谈状态（面向说话对象）。
 func start_talking(towards: Vector3 = Vector3.ZERO) -> void:
 	_look_at = towards
@@ -228,13 +237,34 @@ func _separation_push() -> Vector3:
 
 # ---------------------------------------------------------------- 存档
 
+## 世界坐标。离树后（SceneManager 摘下旧实例后才轮到 NPCManager 快照）
+## global_* 会报 "!is_inside_tree()" 并返回零向量——快照会被写成 (0,0,0)。
+## 手动累乘父链变换，保证离树也能取到正确位置。
+func _world_position() -> Vector3:
+	if is_inside_tree():
+		return global_position
+	var t := transform
+	var p := get_parent()
+	while p is Node3D:
+		t = (p as Node3D).transform * t
+		p = p.get_parent()
+	return t.origin
+
+
 func serialize() -> Dictionary:
-	return {
+	var wp := _world_position()
+	var rec := {
 		"id": character_id,
-		"position": [global_position.x, global_position.y, global_position.z],
+		"position": [wp.x, wp.y, wp.z],
 		"rotation_y": rotation.y,
 		"state": state,
+		# 行走目标一并入档（CT-004）：否则「带着目标离场/存档」的 NPC
+		# 恢复后会站在原地丢掉正在执行的行为。
+		"target": null,
 	}
+	if _has_target:
+		rec["target"] = [_target.x, _target.y, _target.z]
+	return rec
 
 
 func restore(data: Dictionary) -> void:
@@ -243,5 +273,15 @@ func restore(data: Dictionary) -> void:
 		global_position = Vector3(float((pos as Array)[0]), float((pos as Array)[1]),
 				float((pos as Array)[2]))
 	rotation.y = float(data.get("rotation_y", 0.0))
-	_set_state(str(data.get("state", STATE_IDLE)))
-	_has_target = false
+	var tg: Variant = data.get("target", null)
+	if typeof(tg) == TYPE_ARRAY and (tg as Array).size() >= 3:
+		# 续接行走目标。map 未同步时 agent 查不到路径是暂时的，
+		# NPCManager 在导航就绪后会重发目标（tick 的 nav_ready 分支）。
+		move_to(Vector3(float((tg as Array)[0]), float((tg as Array)[1]),
+				float((tg as Array)[2])))
+	else:
+		_has_target = false
+		_set_state(str(data.get("state", STATE_IDLE)))
+		if state == STATE_WALKING:
+			# 有状态无目标是坏快照（旧档无 target 字段时可能出现），归一为 idle
+			_set_state(STATE_IDLE)

@@ -66,6 +66,16 @@ func _bind_services() -> void:
 	GameServices.player_controller = _camera_rig
 	GameServices.ui = _ui
 
+	# 输入锁的权威机制（CT-001/002）：世界子树显式 PAUSABLE。
+	# Main 自身必须 ALWAYS（ESC 要在暂停时可达），子节点默认 INHERIT 会
+	# 一路继承成 ALWAYS——实测暂停菜单打开时按 W 玩家仍移动、NPC 仍走动。
+	# 显式把玩家与地点容器降为 PAUSABLE 后，get_tree().paused 就是唯一开关：
+	# 暂停菜单与对话面板共用它，不再各自维护输入判断。
+	if _camera_rig != null:
+		_camera_rig.process_mode = Node.PROCESS_MODE_PAUSABLE
+	if _location_container != null:
+		_location_container.process_mode = Node.PROCESS_MODE_PAUSABLE
+
 	if GameServices.scene_manager != null:
 		GameServices.scene_manager.set_container(_location_container)
 		GameServices.scene_manager.location_entered.connect(_on_location_entered)
@@ -350,6 +360,9 @@ func _start_dialogue(npc: NPC) -> void:
 			t = str((n as Dictionary).get("text", ""))
 		labels.append(t)
 	_release_mouse()
+	# 对话期间世界冻结（CT-002）：与暂停菜单共用树暂停。
+	# 玩家不能边说话边走开，其他 NPC/物理也停在原地。
+	get_tree().paused = true
 	_ui.show_dialogue_topics(npc.display_name, labels)
 
 
@@ -413,6 +426,9 @@ func _close_dialogue() -> void:
 	_dlg_npc = null
 	_dlg_topic_nodes = []
 	_dlg_replies = []
+	# 解冻世界（暂停菜单若同时开着则保持暂停）
+	if not _is_menu_open():
+		get_tree().paused = false
 	_capture_mouse()
 
 
@@ -485,6 +501,14 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 						GameServices.world_manager.get_current_world_id(),
 						GameServices.get_tick()):
 					_notify("你记下了关于「%s」的情况。" % spot.get_hint_text(), 3.0)
+				# 语义事实（CT-019）：对话闸门用语义 id，必须由亲眼检查接通，
+				# 否则「门上的便签」等话题在真实游玩中永远无法解锁。
+				if not spot.grants_fact.is_empty():
+					if GameServices.cognition.learn(spot.grants_fact, "inspect",
+							str(spot.name),
+							GameServices.world_manager.get_current_world_id(),
+							GameServices.get_tick()):
+						_notify("你了解到：%s。" % GameServices.cognition.get_label(spot.grants_fact), 4.0)
 			var text := spot.examine_text
 			if text.is_empty():
 				text = "你看不出它有什么特别。"
@@ -566,7 +590,7 @@ func _on_portal_entered(portal: AutoPortal) -> void:
 
 	if not portal.event_kind.is_empty() and GameServices.event_manager != null:
 		var errs: Array = []
-		GameServices.event_manager.evaluate(
+		var fired: Array = GameServices.event_manager.evaluate(
 			portal.event_kind, portal.event_keys,
 			GameServices.world_manager, errs)
 		# 事件求值失败时**不切场景**。
@@ -578,6 +602,16 @@ func _on_portal_entered(portal: AutoPortal) -> void:
 				push_error("区域事件求值失败: %s" % str(e))
 			_notify("有什么东西不对劲，你退了回来。", 5.0)
 			return
+		# 走完那段黑路本身就是一次亲眼观察（CT-019）：
+		# 事件成立 = 穿越完成且现实随之而变，玩家因此「知道」黑路存在。
+		# 没有这条授予，fact_dark_road 无人提供，mike/lee/laurie 的
+		# 黑路话题在真实游玩中永远锁死。
+		if not fired.is_empty() and GameServices.cognition != null:
+			if GameServices.cognition.learn("fact_dark_road", "observe",
+					str(portal.event_keys.get("area_id", "dark_road")),
+					GameServices.world_manager.get_current_world_id(),
+					GameServices.get_tick()):
+				_notify("你走完了那段没有灯的路。这段经历你记下了。", 5.0)
 
 	if portal.target_location.is_empty():
 		return

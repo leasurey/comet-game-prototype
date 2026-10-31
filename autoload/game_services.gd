@@ -357,6 +357,8 @@ func new_game(seed_value: int = -1) -> bool:
 		cognition.reset()
 	if npc_manager != null:
 		npc_manager._despawn_all()
+		# 快照也要清：否则新局 spawn_all 会续上上一局 NPC 的位置与行为
+		npc_manager.reset_session()
 
 	# world_manager / event_manager 被重建，注入与连线必须重做
 	_inject_services()
@@ -445,6 +447,12 @@ func continue_game() -> bool:
 			cognition.restore(cog_data as Dictionary, cog_err)
 			for e in cog_err:
 				push_warning("认知恢复: %s" % str(e))
+
+	# P7 NPC 状态（CT-003 修复）：此前写档不读档，NPC 全员回出生点。
+	# restore 双写「会话快照+活实体」，因此在 enter_location（内部 spawn_all
+	# 消费快照）之前调用即有效；旧档 npc_states 为空时自然回退配置出生点。
+	if npc_manager != null:
+		npc_manager.restore((data.get("npc_states", []) as Array).duplicate(true))
 
 	if not scene_manager.enter_location(target, false):
 		load_completed.emit(false, "恢复地点失败: %s" % target)

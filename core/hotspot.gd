@@ -19,6 +19,15 @@ signal focus_changed(hotspot: Hotspot, focused: bool)
 @export var examine_text: String = ""
 @export var visible_only_in_worlds: Array = []
 
+## 亲自检查本物品时额外授予的语义事实 id（CT-019）。
+##
+## inspect 默认只写 fact_inspected_<热点名>（如 fact_inspected_StudyDesk），
+## 而对话闸门使用语义 id（如 fact_sticky_note）——两者不同名导致
+## 「门上的便签」这类话题在真实游玩中永远无法解锁。
+## 非空时，examine 会同时写入本字段指定的事实，把「亲眼看到」与
+## 「对话可引用」接通。留空则行为与旧版完全一致。
+@export var grants_fact: String = ""
+
 ## exit 热点的门级落点。
 ##
 ## 地点级 spawn 只能回答「这个场景从哪儿开始」，回答不了「玩家是从哪扇门进来的」。

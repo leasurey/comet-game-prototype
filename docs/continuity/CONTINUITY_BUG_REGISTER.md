@@ -16,7 +16,7 @@
 - **依赖模块**：PlayerController、main.gd、（未来）手机/对话覆盖层。
 - **修复方案**：引入**输入锁的单一权威**（如 GameServices 持有 `input_lock` 引用计数，暂停/对话/手机各 +1/-1），PlayerController 以锁为准跳过移动与视角；或将世界子树显式设为 PAUSABLE 仅保留菜单链路 ALWAYS。禁止在多个脚本各自加 if（任务要求的根本原因修复）。
 - **测试方法**：headless 探针（Input.action_press 模拟）+ tests/continuity 用例：开暂停→按前进 30 帧→坐标不变；关暂停→可动。
-- **修复前**：paused=true 时 moved=true（本轮探针实测 [T]）。**修复后**：（待填）
+- **修复前**：paused=true 时 moved=true（本轮探针实测 [T]）。**修复后**：世界子树（PlayerController/LocationContainer）显式 PAUSABLE，get_tree().paused 成为唯一开关；input_lock_test 13 断言：暂停时位移 0.000 m、恢复后 0.347 m、can_process 同步翻转 [T]
 
 ## CT-002（P1）对话面板期间玩家可自由走动
 
@@ -26,7 +26,7 @@
 - **依赖模块**：main.gd、PlayerController、DialogueManager。
 - **修复方案**：并入 CT-001 的输入锁方案，对话开/关即加/解锁。
 - **测试方法**：tests/continuity 用例：开对话→按前进→坐标不变→关对话→可动。
-- **修复前**：可移动 [S+T]。**修复后**：（待填）
+- **修复前**：可移动 [S+T]。**修复后**：对话与暂停菜单共用树暂停机制；input_lock_test L3/L4 断言对话时玩家与 NPC 物理均冻结、关闭后恢复 [T]
 
 ## CT-003（P1）读档不恢复 NPC 状态（存档契约破坏）
 
@@ -36,7 +36,7 @@
 - **依赖模块**：game_services.continue_game、npc_manager。
 - **修复方案**：continue_game 在 enter_location（会 spawn_all）之后调用 `npc_manager.restore(data.npc_states)`，并定义 spawn_all→restore 的覆盖顺序；同时把「写档字段必须有读档消费」做成数据完整性测试。
 - **测试方法**：tests/continuity/：移动 kevin→存档→新会话读档→断言 kevin 位置与状态一致。
-- **修复前**：restore 无调用点 [S]。**修复后**：（待填）
+- **修复前**：restore 无调用点 [S]。**修复后**：continue_game 在 enter_location 前调用 restore，restore 双写「会话快照+活实体」使先后顺序皆可；npc_lifecycle_test N2 断言读档位置误差 0.00 m [T]
 
 ## CT-004（P1）离开场景即重置 NPC 行为（无暂停/恢复语义）
 
@@ -46,7 +46,7 @@
 - **依赖模块**：npc_manager、main.gd。
 - **修复方案**：NPCManager 提供 `suspend()/resume(container)`：离场时把状态快照留在 Manager 内（实体可 free），入场时先按快照恢复再模拟；与 CT-003 共用同一套状态快照结构。
 - **测试方法**：tests/continuity/ 测试 B：让 NPC 行走到中途→离开场景→重入→断言位置/行为连续。
-- **修复前**：重置到出生点 [S]。**修复后**：（待填）
+- **修复前**：重置到出生点 [S]。**修复后**：_despawn_all 先快照后销毁，spawn_all 消费快照（位置/朝向/行为/行走目标全续接）；npc_lifecycle_test N1 断言回场位置连续（相距 0.05 m）且目标/行为不断 [T]
 
 ## CT-005（P2）事件系统的两处死接线
 
@@ -56,7 +56,7 @@
 - **依赖模块**：EventManager、main._on_hotspot_activated、data/events.json。
 - **修复方案**：在 hotspot_activated 后按 `evaluate("interact", {hotspot_id/location_id})` 求值（与 area_enter 同规）；evt_return_to_house 要么配 transition 要么移入「未启用」注释区（不删，任务规则 6）。
 - **测试方法**：data_integrity 拒绝「无 transition 的事件定义」或标记为 explicitly_disabled；新增 interact 触发用例。
-- **修复前**：无调用点 [S/grep]。**修复后**：（待填）
+- **修复前**：无调用点 [S/grep]。**修复后**：hotspot 新增 grants_fact 字段（便签热点授予 fact_sticky_note）；黑路穿越事件成立时授予 fact_dark_road（observe）。cognition_key_test 15 断言走真实 examine/portal 链路验证钥匙获取→话题解锁 [T]
 
 ## CT-006（P2）存档字段冗余与预留（写读不对称 ×3）
 
@@ -186,3 +186,5 @@
 | P3 | 5 | CT-014…018 |
 
 共同依赖的根：**输入锁缺失**（CT-001/002）、**NPC 状态生命周期缺失**（CT-003/004/013）、**事件输出单线**（CT-005/016）。修复顺序见恢复计划。
+
+**批次 1（2026-10-31）已完成**：CT-001/002/003/004/019 五项 P1 修复并经 tests/continuity/ 三个集成测试（13+16+15 断言）验证；全量 25 测试 / 632 断言回归通过，退出零泄漏。真实窗口复验待做（CT-018）。
