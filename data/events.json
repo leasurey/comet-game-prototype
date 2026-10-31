@@ -1,18 +1,33 @@
 {
-  "events": [
-    {
-      "id": "evt_cross_dark_road",
-      "label": "穿越黑暗道路",
-      "kind": "fixed",
-      "repeatable": false,
-      "narrative_hint": "这条路比你记忆里的更长。"
-    },
-    {
-      "id": "evt_return_to_house",
-      "label": "返回房屋外部",
-      "kind": "conditional",
-      "repeatable": true,
-      "narrative_hint": ""
-    }
-  ]
+ "events": [
+  {
+   "id": "evt_cross_dark_road",
+   "label": "穿越黑暗道路",
+   "kind": "fixed",
+   "repeatable": false,
+   "narrative_hint": "这条路比你记忆里的更长。"
+  },
+  {
+   "id": "evt_return_to_house",
+   "label": "返回房屋外部",
+   "kind": "conditional",
+   "repeatable": true,
+   "narrative_hint": ""
+  },
+  {
+   "id": "evt_sticky_discussed",
+   "label": "与 Kevin 谈起便签",
+   "kind": "fixed",
+   "repeatable": false,
+   "narrative_hint": ""
+  },
+  {
+   "id": "evt_kevin_arrived_test",
+   "label": "（系统）Kevin 到达目标",
+   "kind": "fixed",
+   "repeatable": false,
+   "narrative_hint": "",
+   "explicitly_disabled": false
+  }
+ ]
 }

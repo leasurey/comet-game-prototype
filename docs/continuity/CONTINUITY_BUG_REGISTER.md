@@ -56,7 +56,8 @@
 - **依赖模块**：EventManager、main._on_hotspot_activated、data/events.json。
 - **修复方案**：在 hotspot_activated 后按 `evaluate("interact", {hotspot_id/location_id})` 求值（与 area_enter 同规）；evt_return_to_house 要么配 transition 要么移入「未启用」注释区（不删，任务规则 6）。
 - **测试方法**：data_integrity 拒绝「无 transition 的事件定义」或标记为 explicitly_disabled；新增 interact 触发用例。
-- **修复前**：无调用点 [S/grep]。**修复后**：hotspot 新增 grants_fact 字段（便签热点授予 fact_sticky_note）；黑路穿越事件成立时授予 fact_dark_road（observe）。cognition_key_test 15 断言走真实 examine/portal 链路验证钥匙获取→话题解锁 [T]
+- **修复前**：无调用点 [S/grep]。**修复后**：hotspot_activated 后 evaluate("interact", ...) 已接线（CT-005 第①半）；evt_return_to_house 配上 interact transition（DoorToInterior → set_flag + log，纯效果事件）不再死数据（第②半）。
+  effects 系统同步建成：transition 声明 effects[]（set_flag/grant_fact/npc_state/audio/log），事务式应用失败回滚；黑路穿越的 fact_dark_road 授予迁入 effects。event_effects_test 99 断言覆盖全链 [T]
 
 ## CT-006（P2）存档字段冗余与预留（写读不对称 ×3）
 
@@ -188,3 +189,5 @@
 共同依赖的根：**输入锁缺失**（CT-001/002）、**NPC 状态生命周期缺失**（CT-003/004/013）、**事件输出单线**（CT-005/016）。修复顺序见恢复计划。
 
 **批次 1（2026-10-31）已完成**：CT-001/002/003/004/019 五项 P1 修复并经 tests/continuity/ 三个集成测试（13+16+15 断言）验证；全量 25 测试 / 632 断言回归通过，退出零泄漏。真实窗口复验待做（CT-018）。
+
+**批次 2（2026-10-31）已完成**：事件 effects 系统建成（CT-005 全修复 + CT-021 接线），交互/对话/NPC 行为三条触发线打通。新增 event_effects_test 99 断言；全量 26 测试 / 732 断言回归通过。

@@ -93,13 +93,14 @@ func get_node(node_id: String) -> Dictionary:
 
 
 ## 玩家"听到"某段对话：登记认知并返回这段的内容。
-## 返回值含 grants 实际生效了哪些（已知的不重复授予）。
+## 返回值含 grants 实际生效了哪些（已知的不重复授予），
+## 以及 fires 列出的待触发事件 id（由调用方转给 EventManager）。
 func hear(node_id: String, world_id: String = "", tick: int = -1) -> Dictionary:
 	if not _nodes.has(node_id):
-		return {"ok": false, "error": "对话节点不存在: %s" % node_id, "granted": []}
+		return {"ok": false, "error": "对话节点不存在: %s" % node_id, "granted": [], "fired": []}
 	var n: Dictionary = _nodes[node_id]
 	if not _requirements_met(n.get("requires", [])):
-		return {"ok": false, "error": "前置认知未满足", "granted": []}
+		return {"ok": false, "error": "前置认知未满足", "granted": [], "fired": []}
 
 	var granted: Array = []
 	var speaker := str(n.get("speaker", ""))
@@ -107,6 +108,10 @@ func hear(node_id: String, world_id: String = "", tick: int = -1) -> Dictionary:
 		if _cognition != null:
 			if _cognition.learn(str(fid), "dialogue", speaker, world_id, tick):
 				granted.append(str(fid))
+	# fires：这段对话点火的事件 id 列表（调用方负责向 EventManager 求值）
+	var fired: Array = []
+	for eid in (n.get("fires", []) as Array):
+		fired.append(str(eid))
 	return {
 		"ok": true,
 		"error": "",
@@ -115,6 +120,7 @@ func hear(node_id: String, world_id: String = "", tick: int = -1) -> Dictionary:
 		"text": str(n.get("text", "")),
 		"replies": (n.get("replies", []) as Array).duplicate(true),
 		"granted": granted,
+		"fired": fired,
 	}
 
 

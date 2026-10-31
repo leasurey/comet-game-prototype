@@ -209,6 +209,13 @@ func _load_data() -> void:
 	var errs: Array = []
 	_world_mgr.load_from_data(worlds.get("data", {}), errs)
 	_event_mgr.load_from_data(events.get("data", {}), transitions.get("data", {}), errs)
+	# effects 需要服务提供者（批次 2）。独立管理器也要注入，
+	# 否则 grant_fact 等 effect 因缺少 cognition_service 而事务回滚。
+	var gs = root.get_node_or_null("GameServices")
+	if gs != null:
+		_event_mgr.cognition_service = gs.cognition
+		_event_mgr.npc_service = gs.npc_manager
+		_event_mgr.audio_service = gs.audio_manager
 	_scene_mgr.load_from_data(locations.get("data", {}), errs)
 
 

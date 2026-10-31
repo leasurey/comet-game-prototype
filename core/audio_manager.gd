@@ -231,6 +231,24 @@ func play_reality_shift() -> void:
 	play_one("anomaly/reality_shift.wav", "anomaly", -2.0)
 
 
+## 通用音效入口：按名称分派到具体播放方法（事件 effects 的 audio cue 用）。
+## 未知 cue 静默忽略（音频是表现层，不值得让事件回滚）。
+func play_cue(cue_name: String) -> void:
+	match cue_name:
+		"footstep": play_footstep()
+		"jump": play_jump()
+		"land": play_land()
+		"door_open": play_door_open()
+		"door_close": play_door_close()
+		"examine": play_examine()
+		"ui_click": play_ui_click()
+		"ui_confirm": play_ui_confirm()
+		"ui_cancel": play_ui_cancel()
+		"reality_shift": play_reality_shift()
+		_:
+			push_warning("未知音效 cue: %s" % cue_name)
+
+
 func set_ambience(indoor: bool) -> void:
 	if indoor:
 		play_loop("ambience/room_tone.wav", "ambience")

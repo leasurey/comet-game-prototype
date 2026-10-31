@@ -1,47 +1,144 @@
 {
-  "initial_world": "world_alpha",
-  "transitions": [
+ "initial_world": "world_alpha",
+ "transitions": [
+  {
+   "id": "evt_cross_dark_road",
+   "type": "fixed",
+   "once": false,
+   "trigger": {
+    "kind": "area_enter",
+    "area_id": "dark_far_end"
+   },
+   "require_from_world": "world_alpha",
+   "to_world": "world_beta",
+   "seed": 0,
+   "candidate_worlds": [],
+   "log": "你走出了那段没有灯的路。身后的风声停了，前面那栋房子的窗，好像一直都亮着。",
+   "effects": [
     {
-      "id": "evt_cross_dark_road",
-      "type": "fixed",
-      "once": false,
-      "trigger": {
-        "kind": "area_enter",
-        "area_id": "dark_far_end"
-      },
-      "require_from_world": "world_alpha",
-      "to_world": "world_beta",
-      "seed": 0,
-      "candidate_worlds": [],
-      "log": "你走出了那段没有灯的路。身后的风声停了，前面那栋房子的窗，好像一直都亮着。"
-    },
-    {
-      "id": "evt_cross_dark_to_gamma",
-      "type": "fixed",
-      "once": false,
-      "trigger": {
-        "kind": "area_enter",
-        "area_id": "dark_far_end"
-      },
-      "require_from_world": "world_beta",
-      "to_world": "world_gamma",
-      "seed": 0,
-      "candidate_worlds": [],
-      "log": "又穿了一次黑暗。屋子的灯是亮的，可颜色不对。桌上那支蜡烛，本来不该还点着。"
-    },
-    {
-      "id": "evt_cross_dark_full_circle",
-      "type": "fixed",
-      "once": false,
-      "trigger": {
-        "kind": "area_enter",
-        "area_id": "dark_far_end"
-      },
-      "require_from_world": "world_gamma",
-      "to_world": "world_alpha",
-      "seed": 0,
-      "candidate_worlds": [],
-      "log": "第三次穿过那段黑路。一切看起来都回到了原样——但你已经不确定「原样」是哪一样了。"
+     "kind": "grant_fact",
+     "fact": "fact_dark_road",
+     "source": "observe",
+     "source_id": "dark_far_end"
     }
-  ]
+   ]
+  },
+  {
+   "id": "evt_cross_dark_to_gamma",
+   "type": "fixed",
+   "once": false,
+   "trigger": {
+    "kind": "area_enter",
+    "area_id": "dark_far_end"
+   },
+   "require_from_world": "world_beta",
+   "to_world": "world_gamma",
+   "seed": 0,
+   "candidate_worlds": [],
+   "log": "又穿了一次黑暗。屋子的灯是亮的，可颜色不对。桌上那支蜡烛，本来不该还点着。",
+   "effects": [
+    {
+     "kind": "grant_fact",
+     "fact": "fact_dark_road",
+     "source": "observe",
+     "source_id": "dark_far_end"
+    }
+   ]
+  },
+  {
+   "id": "evt_cross_dark_full_circle",
+   "type": "fixed",
+   "once": false,
+   "trigger": {
+    "kind": "area_enter",
+    "area_id": "dark_far_end"
+   },
+   "require_from_world": "world_gamma",
+   "to_world": "world_alpha",
+   "seed": 0,
+   "candidate_worlds": [],
+   "log": "第三次穿过那段黑路。一切看起来都回到了原样——但你已经不确定「原样」是哪一样了。",
+   "effects": [
+    {
+     "kind": "grant_fact",
+     "fact": "fact_dark_road",
+     "source": "observe",
+     "source_id": "dark_far_end"
+    }
+   ]
+  },
+  {
+   "id": "evt_return_to_house",
+   "type": "fixed",
+   "once": false,
+   "trigger": {
+    "kind": "interact",
+    "hotspot_id": "DoorToInterior",
+    "location_id": "house_exterior"
+   },
+   "to_world": "",
+   "effects": [
+    {
+     "kind": "set_flag",
+     "name": "returned_house_exterior",
+     "value": true
+    },
+    {
+     "kind": "log",
+     "text": "你推开门，回到了屋子外面。夜风比记忆里更凉。"
+    }
+   ],
+   "log": ""
+  },
+  {
+   "id": "evt_sticky_discussed",
+   "type": "fixed",
+   "once": true,
+   "trigger": {
+    "kind": "dialogue",
+    "node_id": "kevin_sticky"
+   },
+   "to_world": "",
+   "effects": [
+    {
+     "kind": "set_flag",
+     "name": "sticky_discussed",
+     "value": true
+    },
+    {
+     "kind": "grant_fact",
+     "fact": "fact_kevin_knows_sticky",
+     "source": "dialogue",
+     "source_id": "kevin"
+    },
+    {
+     "kind": "log",
+     "text": "你和 Kevin 说起了门上的那张便签。"
+    }
+   ],
+   "log": ""
+  },
+  {
+   "id": "evt_kevin_arrived_test",
+   "type": "fixed",
+   "once": true,
+   "trigger": {
+    "kind": "npc_arrived",
+    "npc": "kevin"
+   },
+   "to_world": "",
+   "effects": [
+    {
+     "kind": "set_flag",
+     "name": "kevin_reached_target_test",
+     "value": true
+    },
+    {
+     "kind": "log",
+     "text": "（系统事件）Kevin 到达了目标位置。"
+    }
+   ],
+   "log": ""
+  }
+ ]
 }

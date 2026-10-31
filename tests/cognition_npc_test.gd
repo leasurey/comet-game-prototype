@@ -118,9 +118,16 @@ func step_c1_world_does_not_teach() -> bool:
 			_svc.world_manager, errs)
 	_check(_svc.world_manager.get_current_world_id() != "world_alpha",
 		"C1 前置：现实确实切换了", _svc.world_manager.get_current_world_id())
-	_check(_cog.get_known_count() == before,
-		"C1 世界切换不自动授予任何认知（核心断言）",
-		"切换前 %d 条，切换后 %d 条" % [before, _cog.get_known_count()])
+	# 世界切换通过 effects 可以明确授予事实（如 fact_dark_road），
+	# 但绝不允许"自动"授予未声明的知识。唯一增量应来自 effect 声明。
+	var after: int = _cog.get_known_count()
+	var delta := after - before
+	_check(delta <= 1,
+		"C1 世界切换只授予 effects 声明的知识（增量 ≤ 1）",
+		"切换前 %d 条，切换后 %d 条" % [before, after])
+	if delta == 1:
+		_check(_cog.knows("fact_dark_road"),
+			"C1 新增知识是 effects 声明的 fact_dark_road")
 	return true
 
 

@@ -260,6 +260,10 @@ func _inject_services() -> void:
 	event_manager.rng_service = rng_service
 	event_manager.tick_provider = time_service
 	event_manager.visit_provider = scene_manager
+	# effects 服务提供者（批次 2：事件状态效果）
+	event_manager.cognition_service = cognition
+	event_manager.npc_service = npc_manager
+	event_manager.audio_service = audio_manager
 
 
 ## 把各模块的状态变化转接到总线。表现层只订阅总线，不直接连每个 Manager。
@@ -273,6 +277,9 @@ func _wire_signals() -> void:
 			scene_manager.location_entered.connect(_on_location_entered)
 		if not scene_manager.location_failed.is_connected(_on_location_failed):
 			scene_manager.location_failed.connect(_on_location_failed)
+	# NPC 行为 → 事件（CT-021）：到达目标时求值 npc_arrived 触发器
+	if npc_manager != null and not npc_manager.npc_arrived.is_connected(_on_npc_arrived):
+		npc_manager.npc_arrived.connect(_on_npc_arrived)
 
 
 ## 玩家控制器绑定后接上音频（脚部/跳跃/落地）。
@@ -315,6 +322,19 @@ func _on_world_changed(from_id: String, to_id: String, reason_id: String) -> voi
 func _on_event_triggered(event_id: String, from_id: String, to_id: String, log_text: String) -> void:
 	if event_bus != null:
 		event_bus.event_triggered.emit(event_id, from_id, to_id, log_text)
+
+
+## NPC 到达行走目标 → 求值 npc_arrived 事件触发器（CT-021）。
+func _on_npc_arrived(npc_id: String, room_id: String) -> void:
+	if event_manager == null:
+		return
+	var errs: Array = []
+	event_manager.evaluate("npc_arrived", {
+		"npc": npc_id,
+		"room": room_id,
+	}, world_manager, errs)
+	for e in errs:
+		push_warning("npc_arrived 事件求值: %s" % str(e))
 
 
 func _on_location_entered(location_id: String, display_name: String) -> void:

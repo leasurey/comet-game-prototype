@@ -387,6 +387,17 @@ func _show_dialogue_node(node_id: String) -> void:
 		for fid in granted:
 			labels.append(GameServices.cognition.get_label(str(fid)))
 		hint = "你了解到：%s" % "、".join(labels)
+	# fires：对话点火事件（批次 2）——听懂了这段话 → 世界状态因此改变
+	var fired_ids: Array = heard.get("fired", [])
+	if not fired_ids.is_empty() and GameServices.event_manager != null:
+		for eid in fired_ids:
+			var errs: Array = []
+			GameServices.event_manager.fire_event(str(eid), {
+				"node_id": node_id,
+				"speaker": str(heard.get("speaker", "")),
+			}, GameServices.world_manager, errs)
+			for e in errs:
+				push_warning("对话事件 %s: %s" % [str(eid), str(e)])
 	_dlg_replies = (heard.get("replies", []) as Array).duplicate(true)
 	var reply_labels: Array = []
 	for r in _dlg_replies:
@@ -518,6 +529,17 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 		_:
 			_notify("什么也没有发生。")
 
+	# interact 事件求值（CT-005）：激活热点后让事件系统有机会改变世界状态。
+	# 求值失败不阻断交互反馈，但要留痕。
+	if GameServices.event_manager != null:
+		var errs: Array = []
+		GameServices.event_manager.evaluate("interact", {
+			"hotspot_id": spot.name,
+			"location_id": GameServices.get_current_location_id(),
+		}, GameServices.world_manager, errs)
+		for e in errs:
+			push_warning("interact 事件求值: %s" % str(e))
+
 
 func _on_location_entered(location_id: String, display_name: String) -> void:
 	# 环境音随地点切换：室内房间底噪，室外风声。
@@ -602,16 +624,8 @@ func _on_portal_entered(portal: AutoPortal) -> void:
 				push_error("区域事件求值失败: %s" % str(e))
 			_notify("有什么东西不对劲，你退了回来。", 5.0)
 			return
-		# 走完那段黑路本身就是一次亲眼观察（CT-019）：
-		# 事件成立 = 穿越完成且现实随之而变，玩家因此「知道」黑路存在。
-		# 没有这条授予，fact_dark_road 无人提供，mike/lee/laurie 的
-		# 黑路话题在真实游玩中永远锁死。
-		if not fired.is_empty() and GameServices.cognition != null:
-			if GameServices.cognition.learn("fact_dark_road", "observe",
-					str(portal.event_keys.get("area_id", "dark_road")),
-					GameServices.world_manager.get_current_world_id(),
-					GameServices.get_tick()):
-				_notify("你走完了那段没有灯的路。这段经历你记下了。", 5.0)
+		# fact_dark_road 由 transition 的 grant_fact effect 授予（批次 2），
+		# 不再在此处硬编码。穿越完成的叙述反馈由事件 log 文本承担。
 
 	if portal.target_location.is_empty():
 		return

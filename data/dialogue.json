@@ -1,323 +1,602 @@
 {
-  "nodes": [
+ "nodes": [
+  {
+   "id": "kevin_greet",
+   "topic": "打个招呼",
+   "speaker": "kevin",
+   "requires": [],
+   "grants": [],
+   "text": "你醒了？停电把保险烧了，别担心。桌上还有吃的。",
+   "replies": [
     {
-      "id": "kevin_greet",
-      "topic": "打个招呼",
-      "speaker": "kevin",
-      "requires": [],
-      "grants": [],
-      "text": "你醒了？停电把保险烧了，别担心。桌上还有吃的。",
-      "replies": [
-        {"text": "外面那栋房子怎么亮着灯？", "goto": "kevin_far_house"},
-        {"text": "没事，我随便看看。", "goto": null}
-      ]
+     "text": "外面那栋房子怎么亮着灯？",
+     "goto": "kevin_far_house"
     },
     {
-      "id": "kevin_far_house",
-      "speaker": "kevin",
-      "requires": [],
-      "grants": ["fact_far_house"],
-      "text": "那栋？大概是发电机吧。街上就我们两家，别多想。",
-      "replies": [
-        {"text": "「就两家」……你确定吗？", "goto": "kevin_two_houses"},
-        {"text": "好。", "goto": null}
-      ]
-    },
-    {
-      "id": "kevin_two_houses",
-      "speaker": "kevin",
-      "requires": ["fact_far_house"],
-      "grants": ["fact_two_houses"],
-      "text": "当然。左边我们家，右边Hugh和Laurie上个月买的。怎么了？",
-      "replies": [{"text": "没什么。", "goto": null}]
-    },
-    {
-      "id": "kevin_sticky",
-      "topic": "问门上的便签",
-      "speaker": "kevin",
-      "requires": ["fact_sticky_note"],
-      "grants": ["fact_kevin_denies_sticky"],
-      "text": "便签？什么便签？我没在门上贴过东西。",
-      "replies": [
-        {"text": "上面写着一个数字。", "goto": "kevin_number"},
-        {"text": "那可能我记错了。", "goto": null}
-      ]
-    },
-    {
-      "id": "kevin_number",
-      "speaker": "kevin",
-      "requires": ["fact_sticky_note"],
-      "grants": ["fact_number_matters"],
-      "text": "……等一下。我这里也有一张。我写的是 1，你那张是几？",
-      "replies": [{"text": "我得再去看一眼。", "goto": null}]
-    },
-
-    {
-      "id": "mike_greet",
-      "topic": "打个招呼",
-      "speaker": "mike",
-      "requires": [],
-      "grants": [],
-      "text": "嘿，过来坐。彗星今晚会很近，可能一辈子就这一次。",
-      "replies": [
-        {"text": "你注意到街对面那栋房子了吗？", "goto": "mike_far_house"},
-        {"text": "我先转转。", "goto": null}
-      ]
-    },
-    {
-      "id": "mike_far_house",
-      "speaker": "mike",
-      "requires": [],
-      "grants": ["fact_far_house"],
-      "text": "注意到了。奇怪的是——我数了数，那栋房子的窗户亮着，可我们这边全黑了。",
-      "replies": [
-        {"text": "你觉得那可能是我们自己的房子吗？", "goto": "mike_mirror"},
-        {"text": "只是灯没坏而已。", "goto": null}
-      ]
-    },
-    {
-      "id": "mike_mirror",
-      "speaker": "mike",
-      "requires": ["fact_far_house"],
-      "grants": ["fact_identity_doubt"],
-      "text": "你别吓我。你是说……那栋房子长得跟我们一模一样？",
-      "replies": [{"text": "我出去看看。", "goto": null}]
-    },
-    {
-      "id": "mike_dark",
-      "topic": "问那段黑路",
-      "speaker": "mike",
-      "requires": ["fact_dark_road"],
-      "grants": ["fact_mike_warns_dark"],
-      "text": "你走过那段黑路了？别再走了。你回来的时候……有点不对劲。",
-      "replies": [
-        {"text": "什么不对劲？", "goto": "mike_wrong"},
-        {"text": "你想多了。", "goto": null}
-      ]
-    },
-    {
-      "id": "mike_wrong",
-      "speaker": "mike",
-      "requires": ["fact_dark_road"],
-      "grants": ["fact_mike_notices_change"],
-      "text": "Beth 说她十分钟前刚擦过那张桌子。可那杯子是干的。",
-      "replies": [{"text": "……我去问她。", "goto": null}]
-    },
-
-    {
-      "id": "lee_greet",
-      "topic": "问屋子的异样",
-      "speaker": "lee",
-      "requires": [],
-      "grants": [],
-      "text": "……你有没有觉得，屋子有点不对？",
-      "replies": [
-        {"text": "你也注意到了？", "goto": "lee_agree"},
-        {"text": "哪里不对？", "goto": "lee_detail"}
-      ]
-    },
-    {
-      "id": "lee_agree",
-      "speaker": "lee",
-      "requires": [],
-      "grants": ["fact_lee_agrees"],
-      "text": "东西的位置在变。我不说，是怕大家慌。但你注意到了就好。",
-      "replies": [{"text": "我会留意。", "goto": null}]
-    },
-    {
-      "id": "lee_detail",
-      "speaker": "lee",
-      "requires": [],
-      "grants": ["fact_object_moved"],
-      "text": "那把椅子。刚才还在窗边。现在在桌旁。没人动过它。",
-      "replies": [{"text": "我记下了。", "goto": null}]
-    },
-    {
-      "id": "lee_dark",
-      "topic": "说说黑路之后的发现",
-      "speaker": "lee",
-      "requires": ["fact_dark_road", "fact_identity_doubt"],
-      "grants": ["fact_lee_deep"],
-      "text": "你穿过黑路以后，我数了数。我们还是八个人。可我记得你刚才不在屋里。",
-      "replies": [
-        {"text": "你的意思是……", "goto": "lee_conclusion"},
-        {"text": "别说了。", "goto": null}
-      ]
-    },
-    {
-      "id": "lee_conclusion",
-      "speaker": "lee",
-      "requires": ["fact_lee_deep"],
-      "grants": ["fact_second_emily"],
-      "text": "我的意思是：现在屋里的那个「你」，可能不是跟我一起进屋的那个。",
-      "replies": [{"text": "……我需要一个人静静。", "goto": null}]
-    },
-
-    {
-      "id": "beth_greet",
-      "topic": "打个招呼",
-      "speaker": "beth",
-      "requires": [],
-      "grants": [],
-      "text": "要吃点什么吗？厨房还有沙拉。别管那些男人，他们说来说去都是那点事。",
-      "replies": [
-        {"text": "这桌子你刚擦过？", "goto": "beth_table"},
-        {"text": "不用了，谢谢。", "goto": null}
-      ]
-    },
-    {
-      "id": "beth_table",
-      "speaker": "beth",
-      "requires": [],
-      "grants": ["fact_beth_cleaned"],
-      "text": "擦过，十分钟前。怎么了？……杯子为什么是干的？我倒过水了。",
-      "replies": [
-        {"text": "这说明杯子被换过。", "goto": "beth_implies"},
-        {"text": "可能干了。", "goto": null}
-      ]
-    },
-    {
-      "id": "beth_implies",
-      "speaker": "beth",
-      "requires": ["fact_beth_cleaned"],
-      "grants": ["fact_object_replaced"],
-      "text": "……你是说，这里的东西被换成了别的？别吓我。",
-      "replies": [{"text": "先别声张。", "goto": null}]
-    },
-
-    {
-      "id": "hugh_greet",
-      "topic": "聊彗星",
-      "speaker": "hugh",
-      "requires": [],
-      "grants": [],
-      "text": "你知道彗星过境时理论上会发生什么吗？量子退相干的宏观表现——",
-      "replies": [
-        {"text": "说人话。", "goto": "hugh_plain"},
-        {"text": "没兴趣。", "goto": null}
-      ]
-    },
-    {
-      "id": "hugh_plain",
-      "speaker": "hugh",
-      "requires": [],
-      "grants": ["fact_parallel_theory"],
-      "text": "如果真发生那种事，你会同时处在多个版本的现实里。而每一个「你」，都以为自己是唯一的。",
-      "replies": [
-        {"text": "如果真发生了，怎么分辨？", "goto": "hugh_how"},
-        {"text": "这只是理论。", "goto": null}
-      ]
-    },
-    {
-      "id": "hugh_how",
-      "speaker": "hugh",
-      "requires": ["fact_parallel_theory"],
-      "grants": ["fact_how_to_check"],
-      "text": "找一个只有你自己知道的东西。留下记号。如果记号变了——或者你不记得自己留过——那就出问题了。",
-      "replies": [{"text": "我去试试。", "goto": null}]
-    },
-    {
-      "id": "hugh_sticky",
-      "topic": "问门上的数字",
-      "speaker": "hugh",
-      "requires": ["fact_sticky_note", "fact_parallel_theory"],
-      "grants": ["fact_hugh_explains_note"],
-      "text": "门上的数字……那不是我们写的。那是用来分辨的。每个房子一个号。你的是几？",
-      "replies": [{"text": "我得去确认。", "goto": null}]
-    },
-
-    {
-      "id": "amir_greet",
-      "topic": "打个招呼",
-      "speaker": "amir",
-      "requires": [],
-      "grants": [],
-      "text": "别听他们的。现在最重要的是大家都待在一起，别走散。",
-      "replies": [
-        {"text": "你怕什么？", "goto": "amir_fear"},
-        {"text": "我有分寸。", "goto": null}
-      ]
-    },
-    {
-      "id": "amir_fear",
-      "speaker": "amir",
-      "requires": [],
-      "grants": ["fact_group_anxiety"],
-      "text": "我怕的不是外面。是大家开始互相不信任。那才是真的会散。",
-      "replies": [{"text": "你说得对。", "goto": null}]
-    },
-
-    {
-      "id": "laurie_greet",
-      "topic": "问问外面的路",
-      "speaker": "laurie",
-      "requires": [],
-      "grants": [],
-      "text": "别出去。那段路……我没看清楚，但我不想去第二次。",
-      "replies": [
-        {"text": "为什么？", "goto": "laurie_why"},
-        {"text": "我会小心。", "goto": null}
-      ]
-    },
-    {
-      "id": "laurie_why",
-      "speaker": "laurie",
-      "requires": [],
-      "grants": ["fact_dark_fear"],
-      "text": "我走过去的时候，脚步声一直跟着。可我停下来，它也停了。我确定只有我一个人。",
-      "replies": [
-        {"text": "那声音是什么？", "goto": "laurie_sound"},
-        {"text": "可能是回声。", "goto": null}
-      ]
-    },
-    {
-      "id": "laurie_sound",
-      "speaker": "laurie",
-      "requires": ["fact_dark_fear"],
-      "grants": ["fact_dark_follows"],
-      "text": "不是回声。回声不会先你一步。",
-      "replies": [{"text": "……我知道了。", "goto": null}]
-    },
-    {
-      "id": "laurie_after",
-      "topic": "问回来之后的事",
-      "speaker": "laurie",
-      "requires": ["fact_dark_road"],
-      "grants": ["fact_laurie_saw_you"],
-      "text": "你从那段路回来以后……我看到你了。但你当时在屋里，还坐在沙发上。",
-      "replies": [{"text": "两个我？", "goto": "laurie_two"}, {"text": "你看错了。", "goto": null}]
-    },
-    {
-      "id": "laurie_two",
-      "speaker": "laurie",
-      "requires": ["fact_laurie_saw_you"],
-      "grants": ["fact_second_emily"],
-      "text": "我看得很清楚。所以现在这个，是哪一个？",
-      "replies": [{"text": "……", "goto": null}]
+     "text": "没事，我随便看看。",
+     "goto": null
     }
-  ],
-  "facts": {
-    "fact_far_house": {"label": "街对面那栋房子亮着灯"},
-    "fact_two_houses": {"label": "这条街上只有两栋房子"},
-    "fact_sticky_note": {"label": "门上贴着写有数字的便签"},
-    "fact_kevin_denies_sticky": {"label": "Kevin 否认贴过便签"},
-    "fact_number_matters": {"label": "数字可能用来分辨房子"},
-    "fact_identity_doubt": {"label": "那栋房子和这里一模一样"},
-    "fact_dark_road": {"label": "我走过了那段没有灯的路"},
-    "fact_mike_warns_dark": {"label": "Mike 警告我别再走那条路"},
-    "fact_mike_notices_change": {"label": "有人注意到杯子不对"},
-    "fact_object_moved": {"label": "椅子自己换了位置"},
-    "fact_beth_cleaned": {"label": "Beth 十分钟前擦过桌子"},
-    "fact_object_replaced": {"label": "屋里的东西可能被换过"},
-    "fact_parallel_theory": {"label": "Hugh 提出平行现实的可能"},
-    "fact_how_to_check": {"label": "Hugh 说可以用记号验证"},
-    "fact_hugh_explains_note": {"label": "Hugh 解释了便签的用途"},
-    "fact_group_anxiety": {"label": "大家开始互相不信任"},
-    "fact_dark_fear": {"label": "Laurie 在黑暗中听到跟随的脚步"},
-    "fact_dark_follows": {"label": "黑暗里的东西会先你一步"},
-    "fact_lee_agrees": {"label": "Lee 也察觉到屋子不对"},
-    "fact_lee_deep": {"label": "Lee 数过人数"},
-    "fact_second_emily": {"label": "可能存在另一个我"},
-    "fact_laurie_saw_you": {"label": "Laurie 同时看到了两个我"}
+   ]
+  },
+  {
+   "id": "kevin_far_house",
+   "speaker": "kevin",
+   "requires": [],
+   "grants": [
+    "fact_far_house"
+   ],
+   "text": "那栋？大概是发电机吧。街上就我们两家，别多想。",
+   "replies": [
+    {
+     "text": "「就两家」……你确定吗？",
+     "goto": "kevin_two_houses"
+    },
+    {
+     "text": "好。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "kevin_two_houses",
+   "speaker": "kevin",
+   "requires": [
+    "fact_far_house"
+   ],
+   "grants": [
+    "fact_two_houses"
+   ],
+   "text": "当然。左边我们家，右边Hugh和Laurie上个月买的。怎么了？",
+   "replies": [
+    {
+     "text": "没什么。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "kevin_sticky",
+   "topic": "问门上的便签",
+   "speaker": "kevin",
+   "requires": [
+    "fact_sticky_note"
+   ],
+   "grants": [
+    "fact_kevin_denies_sticky"
+   ],
+   "text": "便签？什么便签？我没在门上贴过东西。",
+   "replies": [
+    {
+     "text": "上面写着一个数字。",
+     "goto": "kevin_number"
+    },
+    {
+     "text": "那可能我记错了。",
+     "goto": null
+    }
+   ],
+   "fires": [
+    "evt_sticky_discussed"
+   ]
+  },
+  {
+   "id": "kevin_number",
+   "speaker": "kevin",
+   "requires": [
+    "fact_sticky_note"
+   ],
+   "grants": [
+    "fact_number_matters"
+   ],
+   "text": "……等一下。我这里也有一张。我写的是 1，你那张是几？",
+   "replies": [
+    {
+     "text": "我得再去看一眼。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "mike_greet",
+   "topic": "打个招呼",
+   "speaker": "mike",
+   "requires": [],
+   "grants": [],
+   "text": "嘿，过来坐。彗星今晚会很近，可能一辈子就这一次。",
+   "replies": [
+    {
+     "text": "你注意到街对面那栋房子了吗？",
+     "goto": "mike_far_house"
+    },
+    {
+     "text": "我先转转。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "mike_far_house",
+   "speaker": "mike",
+   "requires": [],
+   "grants": [
+    "fact_far_house"
+   ],
+   "text": "注意到了。奇怪的是——我数了数，那栋房子的窗户亮着，可我们这边全黑了。",
+   "replies": [
+    {
+     "text": "你觉得那可能是我们自己的房子吗？",
+     "goto": "mike_mirror"
+    },
+    {
+     "text": "只是灯没坏而已。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "mike_mirror",
+   "speaker": "mike",
+   "requires": [
+    "fact_far_house"
+   ],
+   "grants": [
+    "fact_identity_doubt"
+   ],
+   "text": "你别吓我。你是说……那栋房子长得跟我们一模一样？",
+   "replies": [
+    {
+     "text": "我出去看看。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "mike_dark",
+   "topic": "问那段黑路",
+   "speaker": "mike",
+   "requires": [
+    "fact_dark_road"
+   ],
+   "grants": [
+    "fact_mike_warns_dark"
+   ],
+   "text": "你走过那段黑路了？别再走了。你回来的时候……有点不对劲。",
+   "replies": [
+    {
+     "text": "什么不对劲？",
+     "goto": "mike_wrong"
+    },
+    {
+     "text": "你想多了。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "mike_wrong",
+   "speaker": "mike",
+   "requires": [
+    "fact_dark_road"
+   ],
+   "grants": [
+    "fact_mike_notices_change"
+   ],
+   "text": "Beth 说她十分钟前刚擦过那张桌子。可那杯子是干的。",
+   "replies": [
+    {
+     "text": "……我去问她。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "lee_greet",
+   "topic": "问屋子的异样",
+   "speaker": "lee",
+   "requires": [],
+   "grants": [],
+   "text": "……你有没有觉得，屋子有点不对？",
+   "replies": [
+    {
+     "text": "你也注意到了？",
+     "goto": "lee_agree"
+    },
+    {
+     "text": "哪里不对？",
+     "goto": "lee_detail"
+    }
+   ]
+  },
+  {
+   "id": "lee_agree",
+   "speaker": "lee",
+   "requires": [],
+   "grants": [
+    "fact_lee_agrees"
+   ],
+   "text": "东西的位置在变。我不说，是怕大家慌。但你注意到了就好。",
+   "replies": [
+    {
+     "text": "我会留意。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "lee_detail",
+   "speaker": "lee",
+   "requires": [],
+   "grants": [
+    "fact_object_moved"
+   ],
+   "text": "那把椅子。刚才还在窗边。现在在桌旁。没人动过它。",
+   "replies": [
+    {
+     "text": "我记下了。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "lee_dark",
+   "topic": "说说黑路之后的发现",
+   "speaker": "lee",
+   "requires": [
+    "fact_dark_road",
+    "fact_identity_doubt"
+   ],
+   "grants": [
+    "fact_lee_deep"
+   ],
+   "text": "你穿过黑路以后，我数了数。我们还是八个人。可我记得你刚才不在屋里。",
+   "replies": [
+    {
+     "text": "你的意思是……",
+     "goto": "lee_conclusion"
+    },
+    {
+     "text": "别说了。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "lee_conclusion",
+   "speaker": "lee",
+   "requires": [
+    "fact_lee_deep"
+   ],
+   "grants": [
+    "fact_second_emily"
+   ],
+   "text": "我的意思是：现在屋里的那个「你」，可能不是跟我一起进屋的那个。",
+   "replies": [
+    {
+     "text": "……我需要一个人静静。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "beth_greet",
+   "topic": "打个招呼",
+   "speaker": "beth",
+   "requires": [],
+   "grants": [],
+   "text": "要吃点什么吗？厨房还有沙拉。别管那些男人，他们说来说去都是那点事。",
+   "replies": [
+    {
+     "text": "这桌子你刚擦过？",
+     "goto": "beth_table"
+    },
+    {
+     "text": "不用了，谢谢。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "beth_table",
+   "speaker": "beth",
+   "requires": [],
+   "grants": [
+    "fact_beth_cleaned"
+   ],
+   "text": "擦过，十分钟前。怎么了？……杯子为什么是干的？我倒过水了。",
+   "replies": [
+    {
+     "text": "这说明杯子被换过。",
+     "goto": "beth_implies"
+    },
+    {
+     "text": "可能干了。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "beth_implies",
+   "speaker": "beth",
+   "requires": [
+    "fact_beth_cleaned"
+   ],
+   "grants": [
+    "fact_object_replaced"
+   ],
+   "text": "……你是说，这里的东西被换成了别的？别吓我。",
+   "replies": [
+    {
+     "text": "先别声张。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "hugh_greet",
+   "topic": "聊彗星",
+   "speaker": "hugh",
+   "requires": [],
+   "grants": [],
+   "text": "你知道彗星过境时理论上会发生什么吗？量子退相干的宏观表现——",
+   "replies": [
+    {
+     "text": "说人话。",
+     "goto": "hugh_plain"
+    },
+    {
+     "text": "没兴趣。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "hugh_plain",
+   "speaker": "hugh",
+   "requires": [],
+   "grants": [
+    "fact_parallel_theory"
+   ],
+   "text": "如果真发生那种事，你会同时处在多个版本的现实里。而每一个「你」，都以为自己是唯一的。",
+   "replies": [
+    {
+     "text": "如果真发生了，怎么分辨？",
+     "goto": "hugh_how"
+    },
+    {
+     "text": "这只是理论。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "hugh_how",
+   "speaker": "hugh",
+   "requires": [
+    "fact_parallel_theory"
+   ],
+   "grants": [
+    "fact_how_to_check"
+   ],
+   "text": "找一个只有你自己知道的东西。留下记号。如果记号变了——或者你不记得自己留过——那就出问题了。",
+   "replies": [
+    {
+     "text": "我去试试。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "hugh_sticky",
+   "topic": "问门上的数字",
+   "speaker": "hugh",
+   "requires": [
+    "fact_sticky_note",
+    "fact_parallel_theory"
+   ],
+   "grants": [
+    "fact_hugh_explains_note"
+   ],
+   "text": "门上的数字……那不是我们写的。那是用来分辨的。每个房子一个号。你的是几？",
+   "replies": [
+    {
+     "text": "我得去确认。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "amir_greet",
+   "topic": "打个招呼",
+   "speaker": "amir",
+   "requires": [],
+   "grants": [],
+   "text": "别听他们的。现在最重要的是大家都待在一起，别走散。",
+   "replies": [
+    {
+     "text": "你怕什么？",
+     "goto": "amir_fear"
+    },
+    {
+     "text": "我有分寸。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "amir_fear",
+   "speaker": "amir",
+   "requires": [],
+   "grants": [
+    "fact_group_anxiety"
+   ],
+   "text": "我怕的不是外面。是大家开始互相不信任。那才是真的会散。",
+   "replies": [
+    {
+     "text": "你说得对。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "laurie_greet",
+   "topic": "问问外面的路",
+   "speaker": "laurie",
+   "requires": [],
+   "grants": [],
+   "text": "别出去。那段路……我没看清楚，但我不想去第二次。",
+   "replies": [
+    {
+     "text": "为什么？",
+     "goto": "laurie_why"
+    },
+    {
+     "text": "我会小心。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "laurie_why",
+   "speaker": "laurie",
+   "requires": [],
+   "grants": [
+    "fact_dark_fear"
+   ],
+   "text": "我走过去的时候，脚步声一直跟着。可我停下来，它也停了。我确定只有我一个人。",
+   "replies": [
+    {
+     "text": "那声音是什么？",
+     "goto": "laurie_sound"
+    },
+    {
+     "text": "可能是回声。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "laurie_sound",
+   "speaker": "laurie",
+   "requires": [
+    "fact_dark_fear"
+   ],
+   "grants": [
+    "fact_dark_follows"
+   ],
+   "text": "不是回声。回声不会先你一步。",
+   "replies": [
+    {
+     "text": "……我知道了。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "laurie_after",
+   "topic": "问回来之后的事",
+   "speaker": "laurie",
+   "requires": [
+    "fact_dark_road"
+   ],
+   "grants": [
+    "fact_laurie_saw_you"
+   ],
+   "text": "你从那段路回来以后……我看到你了。但你当时在屋里，还坐在沙发上。",
+   "replies": [
+    {
+     "text": "两个我？",
+     "goto": "laurie_two"
+    },
+    {
+     "text": "你看错了。",
+     "goto": null
+    }
+   ]
+  },
+  {
+   "id": "laurie_two",
+   "speaker": "laurie",
+   "requires": [
+    "fact_laurie_saw_you"
+   ],
+   "grants": [
+    "fact_second_emily"
+   ],
+   "text": "我看得很清楚。所以现在这个，是哪一个？",
+   "replies": [
+    {
+     "text": "……",
+     "goto": null
+    }
+   ]
   }
+ ],
+ "facts": {
+  "fact_far_house": {
+   "label": "街对面那栋房子亮着灯"
+  },
+  "fact_two_houses": {
+   "label": "这条街上只有两栋房子"
+  },
+  "fact_sticky_note": {
+   "label": "门上贴着写有数字的便签"
+  },
+  "fact_kevin_denies_sticky": {
+   "label": "Kevin 否认贴过便签"
+  },
+  "fact_number_matters": {
+   "label": "数字可能用来分辨房子"
+  },
+  "fact_identity_doubt": {
+   "label": "那栋房子和这里一模一样"
+  },
+  "fact_dark_road": {
+   "label": "我走过了那段没有灯的路"
+  },
+  "fact_mike_warns_dark": {
+   "label": "Mike 警告我别再走那条路"
+  },
+  "fact_mike_notices_change": {
+   "label": "有人注意到杯子不对"
+  },
+  "fact_object_moved": {
+   "label": "椅子自己换了位置"
+  },
+  "fact_beth_cleaned": {
+   "label": "Beth 十分钟前擦过桌子"
+  },
+  "fact_object_replaced": {
+   "label": "屋里的东西可能被换过"
+  },
+  "fact_parallel_theory": {
+   "label": "Hugh 提出平行现实的可能"
+  },
+  "fact_how_to_check": {
+   "label": "Hugh 说可以用记号验证"
+  },
+  "fact_hugh_explains_note": {
+   "label": "Hugh 解释了便签的用途"
+  },
+  "fact_group_anxiety": {
+   "label": "大家开始互相不信任"
+  },
+  "fact_dark_fear": {
+   "label": "Laurie 在黑暗中听到跟随的脚步"
+  },
+  "fact_dark_follows": {
+   "label": "黑暗里的东西会先你一步"
+  },
+  "fact_lee_agrees": {
+   "label": "Lee 也察觉到屋子不对"
+  },
+  "fact_lee_deep": {
+   "label": "Lee 数过人数"
+  },
+  "fact_second_emily": {
+   "label": "可能存在另一个我"
+  },
+  "fact_laurie_saw_you": {
+   "label": "Laurie 同时看到了两个我"
+  }
+ }
 }

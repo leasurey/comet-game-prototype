@@ -19,8 +19,9 @@
 class_name DataValidator
 extends RefCounted
 
-const TRIGGER_KINDS := ["enter_location", "interact", "area_enter"]
+const TRIGGER_KINDS := ["enter_location", "interact", "area_enter", "dialogue", "npc_arrived"]
 const TRANSITION_TYPES := ["fixed", "conditional", "pseudo_random"]
+const EFFECT_KINDS := ["set_flag", "grant_fact", "npc_state", "audio", "log"]
 
 
 ## 返回 {"ok": bool, "errors": Array[String]}。
@@ -148,9 +149,16 @@ static func _validate_transitions(transitions: Dictionary, world_ids: Array,
 		if not TRANSITION_TYPES.has(ttype):
 			errors.append("world_transitions.json: %s.type 非法: %s" % [tid, ttype])
 
+		# effects 校验（新增）：白名单、必填字段、至少一个状态类效果
+		_validate_effects(t.get("effects", null), tid, errors)
+
 		var to_world := str(t.get("to_world", "")).strip_edges()
+		var raw_fx: Variant = t.get("effects", null)
+		var has_effects := typeof(raw_fx) == TYPE_ARRAY and not (raw_fx as Array).is_empty()
 		if to_world.is_empty():
-			errors.append("world_transitions.json: %s 缺少 to_world" % tid)
+			# 无 to_world 时必须有 effects，否则这条规则永远不会生效
+			if not has_effects and ttype != "pseudo_random":
+				errors.append("world_transitions.json: %s 缺少 to_world 且无 effects" % tid)
 		elif not world_ids.has(to_world):
 			errors.append("world_transitions.json: %s.to_world 未定义: %s" % [tid, to_world])
 
@@ -165,6 +173,48 @@ static func _validate_transitions(transitions: Dictionary, world_ids: Array,
 					errors.append("world_transitions.json: %s.candidate_worlds 含未定义世界: %s" % [tid, str(c)])
 		if ttype == "pseudo_random" and (typeof(cands) != TYPE_ARRAY or (cands as Array).is_empty()):
 			errors.append("world_transitions.json: %s 是 pseudo_random 但 candidate_worlds 为空" % tid)
+
+
+# ------------------------------------------------------------------ effects
+
+static func _validate_effects(effects_raw: Variant, tid: String, errors: Array) -> void:
+	if effects_raw == null:
+		return
+	if typeof(effects_raw) != TYPE_ARRAY:
+		errors.append("world_transitions.json: %s.effects 必须是数组" % tid)
+		return
+	var effects: Array = effects_raw
+	if effects.is_empty():
+		return
+	var stateful_count := 0
+	for i in range(effects.size()):
+		var eff: Variant = effects[i]
+		if typeof(eff) != TYPE_DICTIONARY:
+			errors.append("world_transitions.json: %s.effects[%d] 必须是对象" % [tid, i])
+			continue
+		var e: Dictionary = eff
+		var ek := str(e.get("kind", "")).strip_edges()
+		if not EFFECT_KINDS.has(ek):
+			errors.append("world_transitions.json: %s.effects[%d].kind 非法: %s" % [tid, i, ek])
+			continue
+		if ek != "log" and ek != "audio":
+			stateful_count += 1
+		if ek == "set_flag" and str(e.get("name", "")).strip_edges().is_empty():
+			errors.append("world_transitions.json: %s.effects[%d].set_flag 缺少 name" % [tid, i])
+		if ek == "grant_fact" and str(e.get("fact", "")).strip_edges().is_empty():
+			errors.append("world_transitions.json: %s.effects[%d].grant_fact 缺少 fact" % [tid, i])
+		if ek == "npc_state":
+			if str(e.get("npc", "")).strip_edges().is_empty():
+				errors.append("world_transitions.json: %s.effects[%d].npc_state 缺少 npc" % [tid, i])
+			var set_raw: Variant = e.get("set", null)
+			if typeof(set_raw) != TYPE_DICTIONARY or (set_raw as Dictionary).is_empty():
+				errors.append("world_transitions.json: %s.effects[%d].npc_state 缺少 set" % [tid, i])
+		if ek == "audio" and str(e.get("cue", "")).strip_edges().is_empty():
+			errors.append("world_transitions.json: %s.effects[%d].audio 缺少 cue" % [tid, i])
+		if ek == "log" and str(e.get("text", "")).strip_edges().is_empty():
+			errors.append("world_transitions.json: %s.effects[%d].log 缺少 text" % [tid, i])
+	if stateful_count == 0:
+		errors.append("world_transitions.json: %s.effects 缺少状态类 effect（set_flag/grant_fact/npc_state）" % tid)
 
 
 # ------------------------------------------------------------------ locations

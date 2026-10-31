@@ -17,6 +17,8 @@ extends Node
 
 signal navigation_ready
 signal npc_talk_requested(npc_id: String)
+## NPC 到达行走目标（CT-021 接线：NPC 行为 → 事件系统）。
+signal npc_arrived(npc_id: String, room_id: String)
 
 ## 参数取 cell 网格的整数倍，消除 Recast 的量化告警：
 ##   agent_radius 0.30 / cell_size 0.10 = 3 格（精确）
@@ -55,6 +57,31 @@ var _pf_mark := 0
 ## 字典结构与 serialize() 条目一致：{id, position, rotation_y, state, target}。
 var _session_states: Dictionary = {}
 var _pending_container: Node = null
+
+## NPC 逻辑属性（事件 effects 的 npc_state 写入此处）。
+## 与实体分离：实体销毁后属性仍在（会话快照机制），入档一并保存。
+## 键为 NPC id，值为任意字典（behavior/room/mood 等）。
+var _npc_attrs: Dictionary = {}
+## 每个 NPC 当前被派往的房间 id（npc_arrived 事件上下文用）。
+var _npc_target_room: Dictionary = {}
+
+
+## 写入 NPC 逻辑属性（合并语义：只覆盖给定键，不删除未提及键）。
+func set_npc_attrs(npc_id: String, attrs: Dictionary) -> void:
+	if npc_id.is_empty() or attrs.is_empty():
+		return
+	if not _npc_attrs.has(npc_id):
+		_npc_attrs[npc_id] = {}
+	var cur: Dictionary = _npc_attrs[npc_id]
+	for k in attrs.keys():
+		cur[str(k)] = attrs[k]
+
+
+## 读取 NPC 逻辑属性（返回副本）。
+func get_npc_attrs(npc_id: String) -> Dictionary:
+	if not _npc_attrs.has(npc_id):
+		return {}
+	return (_npc_attrs[npc_id] as Dictionary).duplicate(true)
 
 
 func set_cognition(cog) -> void:
@@ -172,6 +199,8 @@ func _spawn_one(id: String, container: Node) -> void:
 	var info: Dictionary = _characters[id]
 	var npc := NPC.new()
 	npc.setup(id, str(info.get("name", id)), str(info.get("home", "")))
+	# 行为 → 事件（CT-021）：NPC 到达目标时交给上层求值 npc_arrived 事件
+	npc.arrived.connect(_on_npc_arrived.bind(id))
 	container.add_child(npc)
 
 	# 出生点：优先用角色自带的 spawn（互相错开，避免重叠被物理顶飞），
@@ -226,6 +255,8 @@ func _despawn_all() -> void:
 ## 会话级清空（新局用）：丢弃快照，下一局全员回配置出生点。
 func reset_session() -> void:
 	_session_states.clear()
+	_npc_attrs.clear()
+	_npc_target_room.clear()
 
 
 ## 每帧驱动：烘焙时序与 NPC 状态推进。
@@ -286,6 +317,7 @@ func send_to_room(npc_id: String, room_id: String) -> bool:
 	var npc := get_npc(npc_id)
 	if npc == null:
 		return false
+	_npc_target_room[npc_id] = room_id
 	npc.move_to(_snap_to_nav(_room_position(room_id)))
 	return true
 
@@ -297,8 +329,16 @@ func send_to_point(npc_id: String, point: Vector3) -> bool:
 	var npc := get_npc(npc_id)
 	if npc == null:
 		return false
+	_npc_target_room.erase(npc_id)  # 无房间语义
 	npc.move_to(_snap_to_nav(Vector3(point.x, FLOOR_Y, point.z)))
 	return true
+
+
+## NPC 到达行走目标 → 转发为 npc_arrived 信号（供事件系统求值）。
+func _on_npc_arrived(npc_id: String) -> void:
+	var room := str(_npc_target_room.get(npc_id, ""))
+	_npc_target_room.erase(npc_id)
+	npc_arrived.emit(npc_id, room)
 
 
 ## 把任意点吸附到 navmesh 上最近的可走点。
@@ -335,16 +375,30 @@ func find_talkable_near(pos: Vector3, max_dist: float = 2.5) -> NPC:
 
 ## 序列化全部 NPC 状态。离场快照也一并输出（CT-003）：
 ## 玩家在住宅外保存时 npc_states 不再是空表，读档回来进屋即恢复。
+## 逻辑属性（_npc_attrs，事件 npc_state 效果写入）随记录一并入档。
 func serialize() -> Array:
 	var out: Array = []
 	var seen := {}
 	for id in _npcs.keys():
 		if is_instance_valid(_npcs[id]) and _npcs[id] is NPC:
-			out.append((_npcs[id] as NPC).serialize())
+			var rec := (_npcs[id] as NPC).serialize()
+			if _npc_attrs.has(id):
+				rec["attrs"] = (_npc_attrs[id] as Dictionary).duplicate(true)
+			out.append(rec)
 			seen[id] = true
 	for id in _session_states.keys():
 		if not seen.has(id):
-			out.append((_session_states[id] as Dictionary).duplicate(true))
+			var rec2 := (_session_states[id] as Dictionary).duplicate(true)
+			if _npc_attrs.has(id):
+				rec2["attrs"] = (_npc_attrs[id] as Dictionary).duplicate(true)
+			out.append(rec2)
+			seen[id] = true
+	# 纯属性记录（NPC 无状态快照但有逻辑属性）也要保存
+	for id in _npc_attrs.keys():
+		if not seen.has(id):
+			out.append({"id": id, "position": null, "rotation_y": 0.0,
+				"state": "idle", "target": null,
+				"attrs": (_npc_attrs[id] as Dictionary).duplicate(true)})
 	return out
 
 
@@ -353,6 +407,7 @@ func serialize() -> Array:
 ## 双写设计：先落 _session_states（spawn_all 消费），再覆盖活实体（若已在场）。
 ## 因此 restore 可以在场景生成之前或之后调用，结果一致——
 ## 旧实现只写活实体，先于 spawn 调用会被无条件重建覆盖。
+## 逻辑属性（attrs 字段）写入 _npc_attrs。
 func restore(list: Array) -> void:
 	for item in list:
 		if typeof(item) != TYPE_DICTIONARY:
@@ -361,6 +416,12 @@ func restore(list: Array) -> void:
 		var id := str(rec.get("id", ""))
 		if id.is_empty():
 			continue
+		# 逻辑属性独立恢复
+		if rec.has("attrs"):
+			var attrs_raw: Variant = rec.get("attrs")
+			if typeof(attrs_raw) == TYPE_DICTIONARY:
+				_npc_attrs[id] = (attrs_raw as Dictionary).duplicate(true)
+			rec.erase("attrs")
 		_session_states[id] = rec
 		if _npcs.has(id) and is_instance_valid(_npcs[id]) and _npcs[id] is NPC:
 			(_npcs[id] as NPC).restore(rec)
