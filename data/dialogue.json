@@ -693,23 +693,23 @@
    "replies": [
     {
      "text": "没什么，就是有点走神。今晚的彗星你看了吗？",
-     "next": "kevin_vs_comet",
-     "effects": []
+     "effects": [],
+     "goto": "kevin_vs_comet"
     },
     {
      "text": "Kevin……你有没有觉得今晚有点不对劲？",
-     "next": "kevin_vs_uneasy",
      "effects": [
       {
        "kind": "set_flag",
        "name": "asked_kevin_uneasy"
       }
-     ]
+     ],
+     "goto": "kevin_vs_uneasy"
     },
     {
      "text": "嗯，没事。就是有点累。",
-     "next": "kevin_vs_tired",
-     "effects": []
+     "effects": [],
+     "goto": "kevin_vs_tired"
     }
    ],
    "requires": [
@@ -724,18 +724,18 @@
    "replies": [
     {
      "text": "一百年一次……那我们还挺幸运的。",
-     "next": "kevin_vs_end",
-     "effects": []
+     "effects": [],
+     "goto": "kevin_vs_end"
     },
     {
      "text": "希望只是普通的彗星。",
-     "next": "kevin_vs_end",
      "effects": [
       {
        "kind": "grant_fact",
        "fact_id": "obs_comet_discussion"
       }
-     ]
+     ],
+     "goto": "kevin_vs_end"
     }
    ],
    "requires": [
@@ -750,18 +750,18 @@
    "replies": [
     {
      "text": "不全是 Laurie。我说不上来……就是一种感觉。",
-     "next": "kevin_vs_end",
      "effects": [
       {
        "kind": "grant_fact",
        "fact_id": "obs_kevin_notices_tension"
       }
-     ]
+     ],
+     "goto": "kevin_vs_end"
     },
     {
      "text": "也许是我多心了。别管它。",
-     "next": "kevin_vs_end",
-     "effects": []
+     "effects": [],
+     "goto": "kevin_vs_end"
     }
    ],
    "requires": [
@@ -776,18 +776,18 @@
    "replies": [
     {
      "text": "还没想好。也许吧。",
-     "next": "kevin_vs_end",
      "effects": [
       {
        "kind": "grant_fact",
        "fact_id": "obs_kevin_knows_dance"
       }
-     ]
+     ],
+     "goto": "kevin_vs_end"
     },
     {
      "text": "再说吧。今晚不想聊这个。",
-     "next": "kevin_vs_end",
-     "effects": []
+     "effects": [],
+     "goto": "kevin_vs_end"
     }
    ],
    "requires": [

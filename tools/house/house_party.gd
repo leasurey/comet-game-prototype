@@ -266,9 +266,10 @@ func _build_door_panels(parent: Node, mat: Material) -> void:
 			Vector3(-0.82, FLOOR_Y + 1.03, 0.15),
 			Vector3(1.50, 2.05, 0.09), "left", mat)
 	# 侧门：铰链在右侧，门向左开
+	# 侧门在东墙(x=6.7)，绕 Y 旋转 90° 使门面朝 ±X
 	geom.door(parent, "SideDoorGeo",
-			Vector3(OUT_X - 0.20, FLOOR_Y + 1.03, 2.55),
-			Vector3(1.10, 2.05, 0.09), "right", mat)
+			Vector3(OUT_X - 0.12, FLOOR_Y + 1.03, 2.55),
+			Vector3(1.10, 2.05, 0.09), "right", mat, null, 95.0, -90.0)
 	# 后门（推拉门）：简化为平板（无铰链，滑动门暂不做动画）
 	geom.box(parent, "PatioDoorPanel", Vector3(1.70, 2.05, 0.06),
 			Vector3(-4.0, FLOOR_Y + 1.03, OUT_Z1 - 0.12), mat)
@@ -316,7 +317,7 @@ func _build_hotspots(parent: Node) -> void:
 	# yaw=-90° 面朝 +X，yaw=180° 面朝 +Z。
 	_add_exit(parent, "FrontDoor", Vector3(0.0, FLOOR_Y + 0.95, 0.0),
 			"前门", "house_exterior",
-			Vector3(0.0, 0.05, -2.60), 0.0)
+			Vector3(0.0, 0.05, -2.60), 0.0, "FrontDoorGeoController")
 
 	_add_exit(parent, "SideDoor", Vector3(OUT_X - 0.15, FLOOR_Y + 0.95, 2.0),
 			"侧门", "house_exterior",
@@ -363,7 +364,7 @@ func _build_hotspots(parent: Node) -> void:
 
 func _add_exit(parent: Node, node_name: String, pos: Vector3,
 		display_name: String, target: String,
-		spawn_pos: Vector3, spawn_yaw_deg: float) -> void:
+		spawn_pos: Vector3, spawn_yaw_deg: float, door_node: String = "") -> void:
 	var spot := Area3D.new()
 	spot.name = node_name
 	spot.set_script(load("res://core/hotspot.gd"))
@@ -374,6 +375,8 @@ func _add_exit(parent: Node, node_name: String, pos: Vector3,
 	spot.use_target_spawn = true
 	spot.target_spawn = spawn_pos
 	spot.target_yaw_deg = spawn_yaw_deg
+	if not door_node.is_empty():
+		spot.door_name = door_node
 	_col(spot, Vector3(1.2, 2.2, 0.8))
 	parent.add_child(spot)
 

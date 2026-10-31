@@ -213,7 +213,7 @@ func spawn_all(container: Node) -> void:
 	container.add_to_group(NAV_SOURCE_GROUP)
 
 
-	for id in _characters.keys():
+	for id in to_spawn:
 		_spawn_one(str(id), container)
 	for id in _npcs.keys():
 		(_npcs[id] as NPC).set_current_world(_current_world_id)

@@ -47,6 +47,10 @@ signal focus_changed(hotspot: Hotspot, focused: bool)
 @export var target_spawn: Vector3 = Vector3.ZERO
 @export var target_yaw_deg: float = 0.0
 
+## 关联的门控制器节点名（三级：门热点 → 门控制器 → 过槛切换）。
+## 非空时，exit 热点不再直接传送，而是开门等待玩家实际跨过门槛。
+@export var door_name: String = ""
+
 var _focused: bool = false
 var _shape_ready: bool = false
 

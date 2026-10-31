@@ -77,7 +77,7 @@ func get_entry_nodes_for(speaker_id: String, npc_context: Dictionary = {}) -> Ar
 	var goto_targets := {}
 	for nid in _nodes.keys():
 		for r in (_nodes[nid] as Dictionary).get("replies", []):
-			var g: Variant = (r as Dictionary).get("goto", null)
+			var g: Variant = (r as Dictionary).get("goto", (r as Dictionary).get("next", null))
 			if g != null:
 				goto_targets[str(g)] = true
 	var out: Array = []

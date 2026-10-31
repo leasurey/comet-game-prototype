@@ -37,6 +37,7 @@ var _started := false
 ## 旧签名与所有既有调用（含测试、go_back、读档）保持完全不变。
 var _pending_spawn: Variant = null
 var _pending_yaw_deg: float = 0.0
+var _door_target: String = ""  # 过门后要切换到的地点
 
 ## 对话会话状态（P7 正式对话 UI）。
 ## _dlg_topic_nodes  = 当前话题列表对应的节点；_dlg_replies = 当前台词的回复分支。
@@ -478,7 +479,9 @@ func _on_dialogue_topic_chosen(index: int) -> void:
 func _on_dialogue_reply_chosen(index: int) -> void:
 	if index < 0 or index >= _dlg_replies.size():
 		return
-	var goto_id: Variant = (_dlg_replies[index] as Dictionary).get("goto", null)
+	var _reply: Dictionary = _dlg_replies[index]
+	# 统一协议：goto 为准，兼容旧数据的 next 键
+	var goto_id: Variant = _reply.get("goto", _reply.get("next", null))
 	if goto_id == null:
 		_close_dialogue()
 		return
@@ -545,13 +548,31 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 			if spot.target_location.is_empty():
 				_notify("这里走不通。")
 				return
-			# 门级落点：热点自带出现位置与朝向。没有则清空挂起值，
-			# 保证「从非门热点 / 程序化切换」仍走地点 spawn。
+			# 记录门级落点（供过槛后切换使用）
 			if spot.use_target_spawn:
 				_pending_spawn = spot.target_spawn
 				_pending_yaw_deg = spot.target_yaw_deg
 			else:
 				_pending_spawn = null
+			# 若关联了门控器：开门，等待玩家实际跨过门槛（不立即传送）
+			print("[DBG-EXIT] name=", spot.name, " door=", spot.door_name)
+			if not spot.door_name.is_empty():
+				var dc := _find_door_controller(spot.door_name)
+				if dc != null:
+					dc.set_target_location(spot.target_location)
+					dc.set_player(GameServices.player_controller)
+					if spot.use_target_spawn:
+						dc.set_outside_ref(spot.target_spawn)
+					_door_target = spot.target_location
+					print("[DBG-EXIT] dc=", dc, " has_open=", dc.has_method("try_open") if dc else "null")
+					if not dc.is_open():
+						dc.try_open()
+						_notify("门开了。走过去吧。")
+					else:
+						dc.try_close()
+						_notify("门关上了。")
+					return
+			# 无门控器的旧路径：直接切换（保留兼容）
 			var label := GameServices.scene_manager.get_exit_label(
 				GameServices.get_current_location_id(), spot.target_location
 			)
@@ -651,6 +672,8 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 
 	# 本场景新建的 portal 需要重新连接（旧实例的连接已随实例销毁）
 	_connect_portals(GameServices.scene_manager.get_current_instance())
+	# 门控制器也需要重连（每次进场景都是新实例）
+	_connect_doors(GameServices.scene_manager.get_current_instance())
 
 	# P7：在住宅里生成 NPC 并烘焙导航（其他地点不生成，避免角色出现在街上）
 	if GameServices.npc_manager != null:
@@ -673,6 +696,37 @@ func _connect_portals(root_node: Node) -> void:
 			var portal := c as AutoPortal
 			if not portal.player_entered.is_connected(_on_portal_entered):
 				portal.player_entered.connect(_on_portal_entered)
+
+
+## 找到当前场景里的门控制器（按节点名）
+func _find_door_controller(door_node: String) -> Node:
+	var root := GameServices.scene_manager.get_current_instance()
+	if root == null:
+		return null
+	for c in _collect_nodes(root):
+		if c.name == door_node and c.has_method("try_open"):
+			return c
+	return null
+
+
+## 连接本场景内所有门控制器的过槛信号
+func _connect_doors(root_node: Node) -> void:
+	if root_node == null:
+		return
+	for c in _collect_nodes(root_node):
+		if c.has_method("try_open") and c.has_signal("player_crossed_threshold"):
+			if not c.player_crossed_threshold.is_connected(_on_door_crossed):
+				c.player_crossed_threshold.connect(_on_door_crossed)
+			c.set_player(GameServices.player_controller)
+
+
+## 玩家跨过门槛 → 执行地点切换
+func _on_door_crossed() -> void:
+	if _door_target.is_empty():
+		return
+	var target := _door_target
+	_door_target = ""
+	GameServices.go_to(target)
 
 
 func _collect_nodes(n: Node) -> Array:

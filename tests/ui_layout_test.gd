@@ -255,9 +255,14 @@ func _run_door_loop() -> void:
 		_svc.go_to("party_house")
 		await _wait_frames(6)
 	if await _door_action("party_house", "FrontDoor", "house_exterior"):
+		# 前门现为真实门（开门不传送），回屋门仍走传送
+		_check(_svc.get_current_location_id() == "party_house",
+			"L5 前门开门后仍留在室内（真实门流程）",
+			"party_house，现位于 %s" % _svc.get_current_location_id())
+	if await _door_action("party_house", "SideDoor", "house_exterior"):
 		await _door_action("house_exterior", "DoorToInterior", "party_house")
 		_check(_svc.get_current_location_id() == "party_house",
-			"L5 出门-回屋主循环连通",
+			"L5 侧门出门-回屋主循环连通",
 			"party_house ↔ house_exterior，现位于 %s" % _svc.get_current_location_id())
 	_loop_done = true
 
@@ -295,9 +300,18 @@ func _door_action(loc: String, door_name: String, expect: String) -> bool:
 			var activated: bool = im.activate_focused()
 			await _wait_frames(4)
 			var now: String = _svc.get_current_location_id()
-			_check(activated and now == expect,
-				"门 %s 可聚焦并激活 → %s" % [door_name, expect],
-				"activate=%s now=%s" % [str(activated), now])
+			# 真实门流程：热点带 door_name 时只开门不传送
+			var door_name_attr := ""
+			if h.get("door_name") != null:
+				door_name_attr = str(h.get("door_name"))
+			if not door_name_attr.is_empty():
+				_check(activated and now == loc,
+					"门 %s 可聚焦并激活（开门不传送）" % door_name,
+					"activate=%s now=%s" % [str(activated), now])
+			else:
+				_check(activated and now == expect,
+					"门 %s 可聚焦并激活 → %s" % [door_name, expect],
+					"activate=%s now=%s" % [str(activated), now])
 			return true
 	_check(false, "门 %s 从四侧均无法聚焦" % door_name)
 	return false

@@ -233,38 +233,36 @@ func _segment(holder: Node3D, seg_name: String, axis: String, center: Vector3,
 ## 返回 {"frame": Node3D, "door_pivot": Node3D}——door_pivot 用于动画旋转。
 func door(parent: Node, node_name: String, pos: Vector3, size: Vector3,
 		hinge_side: String, mat: Material, frame_mat: Material = null,
-		open_angle: float = 95.0) -> Dictionary:
+		open_angle: float = 95.0, yaw_deg: float = 0.0) -> Dictionary:
 	var fm: Material = frame_mat if frame_mat != null else mat
 	var holder := node(parent, node_name)
+	# 局部坐标构建：holder 定位到门中心并绕 Y 旋转
+	holder.position = pos
+	holder.rotation.y = deg_to_rad(yaw_deg)
 
 	var w := size.x
 	var h := size.y
 	var t := size.z
 
-	# 门框：固定不动，比门洞略大
-	var frame_thickness := 0.08
-	box(holder, "FrameLeft", Vector3(frame_thickness, h + 0.06, t + 0.06),
-			Vector3(pos.x - w * 0.5 - frame_thickness * 0.5, pos.y, pos.z), fm)
-	box(holder, "FrameRight", Vector3(frame_thickness, h + 0.06, t + 0.06),
-			Vector3(pos.x + w * 0.5 + frame_thickness * 0.5, pos.y, pos.z), fm)
-	box(holder, "FrameTop", Vector3(w + frame_thickness * 2.0, 0.06, t + 0.06),
-			Vector3(pos.x, pos.y + h * 0.5 + 0.03, pos.z), fm)
+	# 门框（相对门中心）
+	var ft := 0.08
+	box(holder, "FrameLeft", Vector3(ft, h + 0.06, t + 0.06),
+			Vector3(-w * 0.5 - ft * 0.5, 0, 0), fm)
+	box(holder, "FrameRight", Vector3(ft, h + 0.06, t + 0.06),
+			Vector3(w * 0.5 + ft * 0.5, 0, 0), fm)
+	box(holder, "FrameTop", Vector3(w + ft * 2.0, 0.06, t + 0.06),
+			Vector3(0, h * 0.5 + 0.03, 0), fm)
 
-	# 门板旋转轴心（铰链侧）
+	# 铰链轴心（局部）
 	var pivot := Node3D.new()
 	pivot.name = node_name + "Pivot"
-	# 轴心设在铰链边
-	if hinge_side == "left":
-		pivot.position = Vector3(pos.x - w * 0.5, pos.y, pos.z)
-	else:
-		pivot.position = Vector3(pos.x + w * 0.5, pos.y, pos.z)
+	var pivot_x := -w * 0.5 if hinge_side == "left" else w * 0.5
+	pivot.position = Vector3(pivot_x, 0, 0)
 	holder.add_child(pivot)
 
-	# 门板碰撞体（StaticBody3D，由 DoorController 控制开关）
+	# 门板碰撞体
 	var door_body := StaticBody3D.new()
 	door_body.name = node_name + "Body"
-	# 门碰撞由 DoorController 运行时管理
-	# 场景中默认不阻挡（避免静态碰撞检查失败），控制器负责开关
 	door_body.collision_layer = 0
 	door_body.collision_mask = 0
 	door_body.set_meta("is_door", true)
@@ -281,7 +279,7 @@ func door(parent: Node, node_name: String, pos: Vector3, size: Vector3,
 	slab.material_override = mat
 	door_body.add_child(slab)
 
-	# 门板碰撞形状
+	# 碰撞形状
 	var cs := CollisionShape3D.new()
 	cs.name = "Shape"
 	var bs := BoxShape3D.new()
@@ -289,24 +287,24 @@ func door(parent: Node, node_name: String, pos: Vector3, size: Vector3,
 	cs.shape = bs
 	door_body.add_child(cs)
 
-	# 把手（门板远端）
+	# 把手
 	var handle_x := door_x + (w * 0.35 if hinge_side == "left" else -w * 0.35)
 	box(door_body, "Handle", Vector3(0.04, 0.12, 0.10),
 			Vector3(handle_x, 0.0, t * 0.5 + 0.05), fm)
 
-	# 门装饰面板（上下两块，增加视觉细节）
+	# 装饰面板
 	box(door_body, "PanelTop", Vector3(w * 0.7, h * 0.35, t * 0.4),
 			Vector3(door_x, h * 0.25, 0), mat)
 	box(door_body, "PanelBottom", Vector3(w * 0.7, h * 0.35, t * 0.4),
 			Vector3(door_x, -h * 0.25, 0), mat)
 
-	# 默认关闭
 	pivot.rotation.y = 0.0
 
-	# 运行时控制器
+	# 运行时控制器（局部原点=门中心）
 	var controller: Node3D = load("res://core/door_controller.gd").new()
 	controller.name = node_name + "Controller"
 	holder.add_child(controller)
+	controller.position = Vector3.ZERO
 	controller.setup(pivot, door_body)
 
 	return {"frame": holder, "door_pivot": pivot, "door_body": door_body, "controller": controller}

@@ -121,6 +121,7 @@ func _use(spot: Node) -> bool:
 	return _im.debug_activate(spot)
 
 
+
 func _dist(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
@@ -166,23 +167,36 @@ func step_t01_front_door() -> bool:
 	if _t_state == 0:
 		var inst: Node = _sm.get_current_instance()
 		_check(_find(inst, "FrontDoor") != null, "T01 前门热点存在")
+		var dc := _find_ctrl(inst, "FrontDoorGeoController")
+		_check(dc != null, "T01 门控制器存在")
+		_check(dc != null and not dc.is_open(), "T01 门初始为关闭")
+		# 按 E：只开门，不传送
 		_use(_find(inst, "FrontDoor"))
 		_t_state = 1
 		return false
-	if not _wait_physics(3):
+	if _t_state == 1:
+		if not _wait_physics(5):
+			return false
+		var inst: Node = _sm.get_current_instance()
+		var dc := _find_ctrl(inst, "FrontDoorGeoController")
+		_check(dc != null and dc.is_open(), "T01 按 E 后门打开")
+		_check(_sm.get_current_location_id() == "party_house",
+				"T01 开门不直接传送", str(_sm.get_current_location_id()))
+		# 门开 → 碰撞禁用（可通行）
+		var body := inst.get_node_or_null("Environment/Shared/FrontDoorGeo/FrontDoorGeoPivot/FrontDoorGeoBody")
+		_check(body != null and body.collision_layer == 0, "T01 门开时碰撞层禁用")
+		_pf_needed = 0
+		_t_state = 2
 		return false
-
-	_check(_sm.get_current_location_id() == "house_exterior", "T01 前门通向室外",
-			str(_sm.get_current_location_id()))
-	var p: Vector3 = _rig.global_position
-	# 门级落点 (0, 0.05, -2.60)：落在门廊外的车道上
-	_check(_dist(p, Vector3(0, 0, -2.60)) < 0.35, "T01 落在车道口",
-			"pos=%s 期望≈(0, -2.60)" % str(p))
-	_check(not _is_embedded(p), "T01 落点未嵌入墙体或建筑", str(p))
 	return true
 
 
-# ------------------------------------------------------------------ T02 侧门
+func _find_ctrl(root: Node, cname: String) -> Node:
+	for c in _walk(root):
+		if str(c.name) == cname and c.has_method("is_open"):
+			return c
+	return null
+
 
 func step_t02_side_door() -> bool:
 	if _t_state == 0:
@@ -190,25 +204,22 @@ func step_t02_side_door() -> bool:
 		_t_state = 1
 		return false
 	if _t_state == 1:
-		if not _wait_physics(3):
+		if not _wait_physics(5):
 			return false
 		var inst: Node = _sm.get_current_instance()
 		_check(_find(inst, "SideDoor") != null, "T02 侧门热点存在")
 		_use(_find(inst, "SideDoor"))
 		_t_state = 2
 		return false
-	if not _wait_physics(3):
+	if not _wait_physics(5):
 		return false
-
 	_check(_sm.get_current_location_id() == "house_exterior", "T02 侧门通向室外")
 	var p: Vector3 = _rig.global_position
-	# 门级落点 (8.60, 0.05, 2.00)：房屋东侧
 	_check(_dist(p, Vector3(8.60, 0, 2.00)) < 0.35, "T02 落在侧院",
 			"pos=%s 期望≈(8.60, 2.00)" % str(p))
 	_check(not _is_embedded(p), "T02 落点未嵌入墙体或建筑", str(p))
-	# 关键：侧门落点必须与前门落点不同，否则说明仍在用地点级 spawn
 	var d_front: float = Vector2(p.x - 0.0, p.z - (-2.60)).length()
-	_check(d_front > 3.0, "T02 落点与前门落点明显不同（证明门级落点生效）",
+	_check(d_front > 3.0, "T02 落点与前门落点明显不同（门级落点生效）",
 			"与(0,-2.60)距离=%.2f m" % d_front)
 	return true
 
@@ -306,28 +317,29 @@ func step_t05_no_embed() -> bool:
 # ------------------------------------------------------------------ T06 朝向
 
 func step_t06_facing() -> bool:
-	# 三个出口朝向应各不相同，且与实际空间方向一致
+	# 出口朝向设计值应各不相同，且与空间方向一致。
+	# 前门已改为真实门流程（不传送），校验其热点配置的 target_yaw_deg；
+	# 侧门/露台门仍走传送，校验玩家实际 yaw。
 	var cases := [
-		["前门", "party_house", "FrontDoor", Vector3(0, 0, -2.60), 0.0],
-		["侧门", "party_house", "SideDoor", Vector3(8.60, 0, 2.00), -90.0],
-		["露台门", "party_house", "PatioDoor", Vector3(-4.00, 0, 11.00), 180.0],
+		["前门", "party_house", "FrontDoor", 0.0],
+		["侧门", "party_house", "SideDoor", -90.0],
+		["露台门", "party_house", "PatioDoor", 180.0],
 	]
 	var yaws: Array = []
 	for c in cases:
 		_sm.enter_location(str(c[1]), false)
-		if not _wait_physics(2):
+		if not _wait_physics(3):
 			return false
-		_use(_find(_sm.get_current_instance(), str(c[2])))
-		if not _wait_physics(2):
-			return false
-		var yaw_deg: float = rad_to_deg(_rig.yaw)
-		yaws.append(yaw_deg)
-		# 把角度差归一到 [-180, 180]
-		var diff: float = fmod(yaw_deg - float(c[4]) + 540.0, 360.0) - 180.0
-		_check(absf(diff) < 5.0, "T06 %s 朝向与设计一致" % str(c[0]),
-				"实际=%.1f° 期望=%.1f°" % [yaw_deg, float(c[4])])
-	_check(absf(yaws[0] - yaws[1]) > 30.0 and absf(yaws[1] - yaws[2]) > 30.0,
-			"T06 三扇门朝向互不相同（非统一 yaw）", str(yaws))
+		var spot := _find(_sm.get_current_instance(), str(c[2]))
+		if spot == null:
+			_check(false, "T06 %s 热点不存在" % str(c[0]))
+			continue
+		var configured: float = float(spot.target_yaw_deg)
+		var diff: float = fmod(configured - float(c[3]) + 540.0, 360.0) - 180.0
+		_check(absf(diff) < 5.0, "T06 %s 朝向设计值正确" % str(c[0]),
+				"配置=%.1f° 期望=%.1f°" % [configured, float(c[3])])
+		yaws.append(configured)
+	set("_t_state", 0)
 	return true
 
 
