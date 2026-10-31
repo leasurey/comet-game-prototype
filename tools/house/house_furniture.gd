@@ -48,7 +48,9 @@ func populate(parent: Node) -> void:
 	_study(parent, m_wood, m_metal)
 	_foyer(parent, m_cab)
 	_small_props(parent)
-	_lighting(parent)
+	# 注意：这里不再添加灯光。房屋已由 house_lighting.gd 提供
+	# 双世界灯光（α 供电 / β 停电，共 9 盏变体灯）。
+	# 早期在此另加 6 盏常亮灯会导致场景共 15 盏灯、画面严重过曝。
 
 
 # ------------------------------------------------------------------ 客厅
@@ -211,43 +213,3 @@ func _small_props(parent: Node) -> void:
 
 	# ---- 门旁小物件（玄关）
 	geom.box(h, "UmbrellaStand", Vector3(0.12, 0.40, 0.12), Vector3(0.60, FLOOR + 0.20, 0.80), m_vase)
-
-
-# ------------------------------------------------------------------ 灯光
-
-## 室内暖光照明（P6 灯光）。
-## 每个房间 1-2 个 OmniLight3D，色温偏暖（烛光色系），
-## 性能友好：无阴影（Radeon 530 低配），range 合理控制。
-func _lighting(parent: Node) -> void:
-	var lights := geom.node(parent, "Lighting")
-
-	# 客厅主灯
-	_omni(lights, "LivingLight", Vector3(-4.5, 2.3, 6.5),
-			Color(1.0, 0.88, 0.72), 4.5, 8.0)
-	# 餐厅吊灯
-	_omni(lights, "DiningLight", Vector3(1.3, 2.3, 6.5),
-			Color(1.0, 0.85, 0.65), 4.0, 7.0)
-	# 厨房灯
-	_omni(lights, "KitchenLight", Vector3(5.5, 2.3, 5.0),
-			Color(1.0, 0.92, 0.80), 3.5, 6.0)
-	# 书房灯
-	_omni(lights, "StudyLight", Vector3(-5.0, 2.3, 1.5),
-			Color(1.0, 0.88, 0.75), 3.0, 5.5)
-	# 玄关灯（较暗）
-	_omni(lights, "FoyerLight", Vector3(-1.0, 2.3, 1.5),
-			Color(1.0, 0.85, 0.70), 2.5, 4.5)
-	# 壁炉暖光（模拟火焰）
-	_omni(lights, "FireplaceGlow", Vector3(-6.2, 0.8, 7.2),
-			Color(1.0, 0.65, 0.35), 2.0, 3.5)
-
-
-func _omni(parent: Node3D, light_name: String, pos: Vector3,
-		color: Color, energy: float, range_val: float) -> void:
-	var l := OmniLight3D.new()
-	l.name = light_name
-	l.position = pos
-	l.light_color = color
-	l.light_energy = energy
-	l.omni_range = range_val
-	l.shadow_enabled = false  # 低配性能：关闭阴影
-	parent.add_child(l)

@@ -64,6 +64,9 @@ var _hair_color: Color = Color(0.25, 0.18, 0.12)
 var _shirt_color: Color = Color(0.35, 0.45, 0.65)
 var _pants_color: Color = Color(0.25, 0.25, 0.30)
 var _body_mesh: Node3D = null
+var _model: Node3D = null          # GLB 模型实例（null = 程序化占位体）
+var _anim: AnimationPlayer = null   # 模型自带动画播放器
+var _anim_name: String = ""         # 当前动画片段名
 
 var state: String = STATE_IDLE
 var _target: Vector3 = Vector3.ZERO
@@ -113,6 +116,12 @@ var wander_callback: Callable = Callable()
 ## NPC 之间的动态避让由 _separation_push() 分离转向负责（见下方常量区）。
 const NPC_LAYER := 4
 const ENV_LAYER := 1
+
+## Blender 模型目录与朝向修正（详见 _try_load_model）
+const MODEL_DIR := "res://assets/models/characters/"
+const MODEL_YAW_FIX := PI
+## 行走动画的设计参考速度（m/s），用于按实际速度缩放播放速率
+const WALK_ANIM_REF_SPEED := 1.5
 
 func _ready() -> void:
 	collision_layer = NPC_LAYER
@@ -171,10 +180,128 @@ func setup_appearance(skin: Color, hair: Color, shirt: Color, pants: Color) -> v
 	_pants_color = pants
 
 
-## 构建可见人物模型（P2 NPC 人形体）。
-## 用基本几何体（盒/球/胶囊）组装低多边形人形——
-## 不依赖外部模型资源，在目标低配机上开销可忽略。
+## 构建可见人物模型。
+## 优先加载 Blender 生成的 GLB（带骨架 + 6 段动画）；
+## 缺失时回退到程序化几何体（降级，仅保证不空场）。
 func _build_body() -> void:
+	if _body_mesh != null:
+		return
+	if _try_load_model():
+		return
+	push_warning("NPC %s 缺少 GLB 模型，回退程序化占位体" % character_id)
+	_build_procedural_body()
+
+
+## 尝试加载 assets/models/characters/<id>.glb。成功返回 true。
+func _try_load_model() -> bool:
+	if character_id.is_empty():
+		return false
+	var path := MODEL_DIR + character_id + ".glb"
+	if not ResourceLoader.exists(path):
+		return false
+	var packed: Resource = load(path)
+	if packed == null or not (packed is PackedScene):
+		return false
+	var inst: Node = (packed as PackedScene).instantiate()
+	if inst == null:
+		return false
+	var model := inst as Node3D
+	if model == null:
+		inst.queue_free()
+		return false
+	model.name = "BodyMesh"
+	# Blender 中角色面向 +Y，glTF 导出后为 -Z；Godot NPC 的 +Z 为朝向轴，
+	# 因此整体旋转 180°，使模型正面与 NPC 前进方向一致。
+	model.rotation.y = MODEL_YAW_FIX
+	add_child(model)
+	_body_mesh = model
+	_model = model
+	_anim = _find_anim_player(model)
+	_setup_animations()
+	return true
+
+
+func _find_anim_player(n: Node) -> AnimationPlayer:
+	var ap := n as AnimationPlayer
+	if ap != null:
+		return ap
+	for c in n.get_children():
+		var r := _find_anim_player(c)
+		if r != null:
+			return r
+	return null
+
+
+## 配置动画：idle/walk/talk 循环，sit/stand_up/turn 单次。
+func _setup_animations() -> void:
+	if _anim == null:
+		return
+	for n in ["idle", "walk", "talk"]:
+		if _anim.has_animation(n):
+			var a := _anim.get_animation(n)
+			if a != null:
+				a.loop_mode = Animation.LOOP_LINEAR
+	for n in ["sit", "stand_up", "turn"]:
+		if _anim.has_animation(n):
+			var a := _anim.get_animation(n)
+			if a != null:
+				a.loop_mode = Animation.LOOP_NONE
+	_play_anim("idle", 0.0)
+
+
+func _play_anim(anim_name: String, blend: float = 0.25) -> void:
+	if _anim == null:
+		return
+	if _anim_name == anim_name:
+		return
+	if not _anim.has_animation(anim_name):
+		return
+	_anim_name = anim_name
+	_anim.play(anim_name, blend)
+
+
+## 状态 → 动画片段映射。
+func _sync_anim_to_state() -> void:
+	match state:
+		STATE_WALKING:
+			_play_anim("walk", 0.2)
+		STATE_TALKING:
+			_play_anim("talk", 0.25)
+		_:
+			_play_anim("idle", 0.3)
+
+
+## 让行走动画速度与位移速度匹配，减少脚底打滑。
+func _sync_walk_speed() -> void:
+	if _anim == null or _anim_name != "walk":
+		return
+	var planar := Vector2(velocity.x, velocity.z).length()
+	_anim.speed_scale = clampf(planar / WALK_ANIM_REF_SPEED, 0.55, 1.7)
+
+
+## 供外部（如落座交互）调用的坐姿切换。
+func sit_down(anchor: Vector3, face_yaw: float) -> void:
+	stop_moving()
+	global_position = anchor
+	rotation.y = face_yaw
+	state = "sitting"
+	state_changed.emit(state)
+	if _anim != null and _anim.has_animation("sit"):
+		_anim_name = "sit"
+		_anim.play("sit", 0.2)
+
+
+func stand_up() -> void:
+	if _anim != null and _anim.has_animation("stand_up"):
+		_anim_name = "stand_up"
+		_anim.play("stand_up", 0.2)
+	state = STATE_IDLE
+	state_changed.emit(state)
+	_play_anim("idle", 0.2)
+
+
+## 程序化占位体（降级用，非最终资产）。
+func _build_procedural_body() -> void:
 	if _body_mesh != null:
 		return
 	_body_mesh = Node3D.new()
@@ -481,6 +608,7 @@ func _set_state(s: String) -> void:
 		return
 	state = s
 	state_changed.emit(s)
+	_sync_anim_to_state()
 
 
 func _physics_process(delta: float) -> void:
@@ -529,6 +657,7 @@ func _physics_process(delta: float) -> void:
 			rotation.y = lerp_angle(rotation.y, want2, TURN_SPEED * delta)
 
 	move_and_slide()
+	_sync_walk_speed()
 
 
 ## 邻近 NPC 分离推力（动态避让）。

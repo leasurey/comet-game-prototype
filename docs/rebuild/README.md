@@ -48,3 +48,12 @@ REBUILD_BLUEPRINT.md          ← 总蓝图（先读这个）
 3. CHARACTER_DESIGN.md / DIALOGUE_DESIGN.md — 人物与对话
 4. STORY_DESIGN.md / OPENING_DESIGN.md — 剧情与序章
 5. ART_ASSET_*.md — 美术管线（了解现状限制）
+
+
+---
+
+## 美术管线（已执行，非计划）
+
+- `ART_ASSET_PIPELINE.md`：Blender → Godot 实际流程、踩坑记录、模型真实完成度
+- `ART_ASSET_REGISTER.md`：资源授权登记（当前无第三方 3D 资产；音频来源待核）
+- `../art/README.md`：角色检查图与游戏内截图说明
