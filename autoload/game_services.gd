@@ -317,6 +317,8 @@ func _on_world_changed(from_id: String, to_id: String, reason_id: String) -> voi
 		npc_manager.update_world(to_id)
 	if event_bus != null:
 		event_bus.world_changed.emit(from_id, to_id, reason_id)
+	if GameLogger != null:
+		GameLogger.log_world_switch(from_id, to_id, reason_id)
 	if audio_manager != null:
 		audio_manager.play_reality_shift()
 
@@ -560,6 +562,8 @@ func save_game() -> bool:
 	var result := save_manager.save(payload)
 	var ok := bool(result.get("ok", false))
 	save_completed.emit(ok, result.get("error", "") if not ok else "已保存进度")
+	if GameLogger != null:
+		GameLogger.log_save("save", ok)
 	return ok
 
 

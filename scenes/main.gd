@@ -41,6 +41,9 @@ var _pending_yaw_deg: float = 0.0
 ## 对话会话状态（P7 正式对话 UI）。
 ## _dlg_topic_nodes  = 当前话题列表对应的节点；_dlg_replies = 当前台词的回复分支。
 var _dlg_npc: NPC = null
+var _last_location: String = ""
+var _log_state_timer: float = 0.0
+const LOG_STATE_INTERVAL := 30.0
 var _dlg_topic_nodes: Array = []
 var _dlg_replies: Array = []
 
@@ -263,6 +266,11 @@ func _refresh_ui_state() -> void:
 
 
 func _process(_delta: float) -> void:
+	# 定期记录游戏状态快照（供 AI 诊断）
+	_log_state_timer += _delta
+	if _log_state_timer >= LOG_STATE_INTERVAL and GameLogger != null:
+		_log_state_timer = 0.0
+		GameLogger.log_state(GameServices)
 	# P7：驱动 NPC 的导航烘焙时序与状态推进
 	if GameServices.npc_manager != null:
 		GameServices.npc_manager.tick()
@@ -398,6 +406,8 @@ func _show_dialogue_node(node_id: String) -> void:
 	if GameServices.dialogue_manager == null or _ui == null:
 		return
 	var ctx := _build_npc_context(_dlg_npc) if _dlg_npc != null else {}
+	if GameLogger != null and _dlg_npc != null:
+		GameLogger.log_dialogue(_dlg_npc.display_name, node_id)
 	var heard: Dictionary = GameServices.dialogue_manager.hear(
 			node_id,
 			GameServices.world_manager.get_current_world_id(),
@@ -424,6 +434,8 @@ func _show_dialogue_node(node_id: String) -> void:
 				"node_id": node_id,
 				"speaker": str(heard.get("speaker", "")),
 			}, GameServices.world_manager, errs)
+			if GameLogger != null:
+				GameLogger.log_event("event_fired", {"event_id": str(eid), "source": "dialogue"})
 			for e in errs:
 				push_warning("对话事件 %s: %s" % [str(eid), str(e)])
 	# NPC 记忆与对话进度（批次 3）
@@ -541,6 +553,8 @@ func _on_hotspot_activated(spot: Hotspot) -> void:
 		"examine":
 			if GameServices.audio_manager != null:
 				GameServices.audio_manager.play_examine()
+			if GameLogger != null:
+				GameLogger.log_interaction(spot.name, "examine", spot.examine_text.substr(0, 60))
 			# P6：亲眼检查过物品，玩家才「知道」它。
 			if GameServices.cognition != null and not spot.name.is_empty():
 				var fid := "fact_inspected_%s" % spot.name
@@ -599,6 +613,11 @@ func _on_location_entered(location_id: String, display_name: String) -> void:
 		GameServices.audio_manager.set_ambience(indoor)
 	if _ui != null:
 		_ui.set_location_name(display_name)
+	if GameLogger != null:
+		GameLogger.log_location_change(_last_location, location_id)
+	_last_location = location_id
+	if GameLogger != null:
+		GameLogger.log_location_change(_last_location, location_id)
 		_ui.set_back_enabled(GameServices.scene_manager.can_go_back())
 		_ui.set_focus_text("")
 
