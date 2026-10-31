@@ -48,6 +48,10 @@ const STATE_IDLE := "idle"
 const STATE_WALKING := "walking"
 const STATE_TALKING := "talking"
 
+## 行为模式（自主行为用）
+const BEHAVIOR_IDLE := "idle"
+const BEHAVIOR_WANDER := "wander"
+
 var character_id: String = ""
 var display_name: String = ""
 var home_room: String = ""
@@ -57,6 +61,31 @@ var _target: Vector3 = Vector3.ZERO
 var _has_target := false
 var _look_at: Vector3 = Vector3.ZERO
 var _has_look := false
+
+# ---------------------------------------------------------------- 人物系统（批次 3）
+
+## 记忆条目：{tick, kind, content, about, world}。追加式、有序、入档。
+## kind: "dialogue" | "event" | "observation" | "player_action"
+## world: 记忆发生时的现实 id（空 = 跨现实通用记忆）
+var memory: Array = []
+
+## NPC 知道的事实 id 集合（与玩家认知平行但独立——NPC 只知道自己经历的）。
+var known_facts: Array = []
+
+## 已说过的对话节点 id（对话连续性：同问题二问给不同回答）。
+var said_nodes: Array = []
+
+## 人际关系：{target_id: {"trust": float(-1..1), "familiarity": float(0..1)}}
+## target_id 可以是 "player" 或另一个 NPC id。
+var relationships: Dictionary = {}
+
+## 行为模式（自主游荡由 _wander_timer 驱动）
+var behavior: String = BEHAVIOR_IDLE
+var _wander_timer: float = 0.0
+## 游荡间隔（秒）。不同角色可通过 setup_personality 调整。
+var wander_interval: float = 10.0
+var _wander_rooms: Array = []   # 可游荡的房间 id 列表（NPCManager 注入）
+var _current_world: String = ""  # 当前现实（记忆归档用）
 
 @onready var _agent: NavigationAgent3D = null
 @onready var _body: CollisionShape3D = null
@@ -103,6 +132,105 @@ func setup(id: String, name_text: String, room: String) -> void:
 	display_name = name_text
 	home_room = room
 	name = "NPC_%s" % id
+
+
+## 根据 characters.json 的 traits 调整行为参数。
+## 例如 traits 含 "restless" → 游荡更频繁；"homebody" → 更少出门。
+func setup_personality(traits: Array) -> void:
+	if traits.has("restless"):
+		wander_interval = 5.0
+	elif traits.has("homebody"):
+		wander_interval = 18.0
+	else:
+		wander_interval = 10.0
+
+
+## 注入可游荡房间 id 列表（NPCManager 从 characters.json 的 rooms 读取）。
+func set_wander_rooms(rooms: Array) -> void:
+	_wander_rooms = rooms.duplicate()
+
+
+## 更新当前现实 id（记忆归档用）。
+func set_current_world(world_id: String) -> void:
+	_current_world = world_id
+
+
+# ---------------------------------------------------------------- 记忆
+
+## 记录一条记忆。kind: "dialogue" | "event" | "observation" | "player_action"
+## about: 关于谁（"player" 或 NPC id 或 ""）
+func remember(kind: String, content: String, about: String = "") -> void:
+	memory.append({
+		"tick": 0,   # 由外部填入时间
+		"kind": kind,
+		"content": content,
+		"about": about,
+		"world": _current_world,
+	})
+	# 记忆上限 60 条——防止无限制增长影响序列化效率
+	if memory.size() > 60:
+		memory.pop_front()
+
+
+## 获取记忆（可按现实过滤）。world_id 为空 = 全部记忆。
+func get_memory(world_id: String = "") -> Array:
+	if world_id.is_empty():
+		return memory.duplicate(true)
+	var out: Array = []
+	for m in memory:
+		# 空 world 的记忆是跨现实通用的，总是可见
+		if str((m as Dictionary).get("world", "")) == world_id \
+				or str((m as Dictionary).get("world", "")).is_empty():
+			out.append(m)
+	return out
+
+
+## NPC 是否知道某个事实。
+func knows_fact(fact_id: String) -> bool:
+	return known_facts.has(fact_id)
+
+
+## 授予 NPC 一条事实。返回 true = 新学到。
+func learn_fact(fact_id: String) -> bool:
+	if known_facts.has(fact_id):
+		return false
+	known_facts.append(fact_id)
+	return true
+
+
+## 某段对话是否已经说过。
+func has_said(node_id: String) -> bool:
+	return said_nodes.has(node_id)
+
+
+## 标记某段对话已经说过。
+func mark_said(node_id: String) -> void:
+	if not said_nodes.has(node_id):
+		said_nodes.append(node_id)
+
+
+# ---------------------------------------------------------------- 人际关系
+
+## 获取与某对象的关系数据。返回 {"trust": float, "familiarity": float}
+func get_relationship(target_id: String) -> Dictionary:
+	if not relationships.has(target_id):
+		return {"trust": 0.0, "familiarity": 0.0}
+	return (relationships[target_id] as Dictionary).duplicate(true)
+
+
+## 获取信任度（-1 ~ 1）。0 = 中性。
+func get_trust(target_id: String) -> float:
+	var r := get_relationship(target_id)
+	return float(r.get("trust", 0.0))
+
+
+## 调整关系。trust_delta: -0.5~+0.5, familiarity_delta: 0~+0.5
+func adjust_relationship(target_id: String, trust_delta: float, familiarity_delta: float = 0.0) -> void:
+	if not relationships.has(target_id):
+		relationships[target_id] = {"trust": 0.0, "familiarity": 0.0}
+	var r: Dictionary = relationships[target_id]
+	r["trust"] = clampf(float(r.get("trust", 0.0)) + trust_delta, -1.0, 1.0)
+	r["familiarity"] = clampf(float(r.get("familiarity", 0.0)) + familiarity_delta, 0.0, 1.0)
 
 
 func get_state() -> String:
@@ -170,6 +298,9 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y = 0.0
 
+	# 自主行为：游荡决策（不干涉说话状态和正在执行的外部指令）
+	_process_autonomy(delta)
+
 	if state == STATE_WALKING and _has_target and _agent != null:
 		var next := _agent.get_next_path_position()
 		var dir := next - global_position
@@ -235,6 +366,36 @@ func _separation_push() -> Vector3:
 	return push
 
 
+# ---------------------------------------------------------------- 自主行为
+
+## 自主行为驱动：空闲时游荡到 home 区域内随机房间。
+## 说话 / 被外部派目标时自动暂停，不干扰外部指令。
+func _process_autonomy(delta: float) -> void:
+	# 说话中或正在走路 → 自主行为挂起
+	if state != STATE_IDLE:
+		return
+	# 没有可游荡房间 → 不动
+	if _wander_rooms.is_empty():
+		return
+	_wander_timer += delta
+	if _wander_timer < wander_interval:
+		return
+	_wander_timer = 0.0
+	# 随机选一个房间（排除当前 home，避免在原地打转）
+	var candidates: Array = []
+	for r in _wander_rooms:
+		if str(r) != home_room:
+			candidates.append(str(r))
+	if candidates.is_empty():
+		return
+	var pick: String = str(candidates[randi() % candidates.size()])
+	# 交给 NPCManager 的游荡回调（可解析房间坐标 + 吸附 navmesh）
+	if get_parent() != null and get_parent().has_method("npc_wander_to"):
+		get_parent().npc_wander_to(character_id, pick)
+	# 标记行为意图（入档用）
+	behavior = BEHAVIOR_WANDER
+
+
 # ---------------------------------------------------------------- 存档
 
 ## 世界坐标。离树后（SceneManager 摘下旧实例后才轮到 NPCManager 快照）
@@ -258,9 +419,14 @@ func serialize() -> Dictionary:
 		"position": [wp.x, wp.y, wp.z],
 		"rotation_y": rotation.y,
 		"state": state,
-		# 行走目标一并入档（CT-004）：否则「带着目标离场/存档」的 NPC
-		# 恢复后会站在原地丢掉正在执行的行为。
 		"target": null,
+		# 人物系统（批次 3）
+		"memory": memory.duplicate(true),
+		"known_facts": known_facts.duplicate(),
+		"said_nodes": said_nodes.duplicate(),
+		"relationships": relationships.duplicate(true),
+		"behavior": behavior,
+		"wander_timer": _wander_timer,
 	}
 	if _has_target:
 		rec["target"] = [_target.x, _target.y, _target.z]
@@ -273,15 +439,21 @@ func restore(data: Dictionary) -> void:
 		global_position = Vector3(float((pos as Array)[0]), float((pos as Array)[1]),
 				float((pos as Array)[2]))
 	rotation.y = float(data.get("rotation_y", 0.0))
+	# 人物系统恢复
+	memory = (data.get("memory", []) as Array).duplicate(true)
+	known_facts = (data.get("known_facts", []) as Array).duplicate()
+	said_nodes = (data.get("said_nodes", []) as Array).duplicate()
+	var rel_raw: Variant = data.get("relationships", null)
+	if typeof(rel_raw) == TYPE_DICTIONARY:
+		relationships = (rel_raw as Dictionary).duplicate(true)
+	behavior = str(data.get("behavior", BEHAVIOR_IDLE))
+	_wander_timer = float(data.get("wander_timer", 0.0))
 	var tg: Variant = data.get("target", null)
 	if typeof(tg) == TYPE_ARRAY and (tg as Array).size() >= 3:
-		# 续接行走目标。map 未同步时 agent 查不到路径是暂时的，
-		# NPCManager 在导航就绪后会重发目标（tick 的 nav_ready 分支）。
 		move_to(Vector3(float((tg as Array)[0]), float((tg as Array)[1]),
 				float((tg as Array)[2])))
 	else:
 		_has_target = false
 		_set_state(str(data.get("state", STATE_IDLE)))
 		if state == STATE_WALKING:
-			# 有状态无目标是坏快照（旧档无 target 字段时可能出现），归一为 idle
 			_set_state(STATE_IDLE)

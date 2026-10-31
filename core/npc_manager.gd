@@ -58,6 +58,9 @@ var _pf_mark := 0
 var _session_states: Dictionary = {}
 var _pending_container: Node = null
 
+## 当前现实 id（NPC 记忆归档用，由 GameServices 在世界切换时更新）。
+var _current_world_id: String = ""
+
 ## NPC 逻辑属性（事件 effects 的 npc_state 写入此处）。
 ## 与实体分离：实体销毁后属性仍在（会话快照机制），入档一并保存。
 ## 键为 NPC id，值为任意字典（behavior/room/mood 等）。
@@ -82,6 +85,14 @@ func get_npc_attrs(npc_id: String) -> Dictionary:
 	if not _npc_attrs.has(npc_id):
 		return {}
 	return (_npc_attrs[npc_id] as Dictionary).duplicate(true)
+
+
+## 更新当前现实 id 并同步到所有在场 NPC（记忆归档用）。
+func update_world(world_id: String) -> void:
+	_current_world_id = world_id
+	for id in _npcs.keys():
+		if is_instance_valid(_npcs[id]) and _npcs[id] is NPC:
+			(_npcs[id] as NPC).set_current_world(world_id)
 
 
 func set_cognition(cog) -> void:
@@ -180,6 +191,8 @@ func spawn_all(container: Node) -> void:
 
 	for id in _characters.keys():
 		_spawn_one(str(id), container)
+	for id in _npcs.keys():
+		(_npcs[id] as NPC).set_current_world(_current_world_id)
 
 	# 会话快照优先于配置出生点（CT-004）：离场前的位置/行为/目标继续。
 	for id in _npcs.keys():
@@ -199,6 +212,9 @@ func _spawn_one(id: String, container: Node) -> void:
 	var info: Dictionary = _characters[id]
 	var npc := NPC.new()
 	npc.setup(id, str(info.get("name", id)), str(info.get("home", "")))
+	# 人物系统：注入行为参数与可游荡房间
+	npc.setup_personality(info.get("traits", []) as Array)
+	npc.set_wander_rooms(_rooms.keys())
 	# 行为 → 事件（CT-021）：NPC 到达目标时交给上层求值 npc_arrived 事件
 	npc.arrived.connect(_on_npc_arrived.bind(id))
 	container.add_child(npc)
@@ -332,6 +348,18 @@ func send_to_point(npc_id: String, point: Vector3) -> bool:
 	_npc_target_room.erase(npc_id)  # 无房间语义
 	npc.move_to(_snap_to_nav(Vector3(point.x, FLOOR_Y, point.z)))
 	return true
+
+
+## NPC 自主游荡回调（NPC._process_autonomy 调用）。
+## 解析房间坐标并派目标，等价于 send_to_room 但不覆盖 _npc_target_room
+## （自主游荡不是"被派任务"，到达后不触发 npc_arrived 事件）。
+func npc_wander_to(npc_id: String, room_id: String) -> void:
+	if not _nav_ready:
+		return
+	var npc := get_npc(npc_id)
+	if npc == null:
+		return
+	npc.move_to(_snap_to_nav(_room_position(room_id)))
 
 
 ## NPC 到达行走目标 → 转发为 npc_arrived 信号（供事件系统求值）。

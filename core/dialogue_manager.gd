@@ -54,13 +54,15 @@ func has_node(node_id: String) -> bool:
 
 
 ## 玩家此刻能对某个 NPC 说的话（经过认知闸门过滤）。
-func get_available_for(speaker_id: String) -> Array:
+## npc_context 可选：{"npc_knows": [...], "relationships": {target: {trust, familiarity}}, "said_nodes": [...]}
+## 提供后额外检查 npc_knows / relationship_at_least / said / not_said 条件。
+func get_available_for(speaker_id: String, npc_context: Dictionary = {}) -> Array:
 	var out: Array = []
 	for nid in _nodes.keys():
 		var n: Dictionary = _nodes[nid]
 		if str(n.get("speaker", "")) != speaker_id:
 			continue
-		if not _requirements_met(n.get("requires", [])):
+		if not _requirements_met(n.get("requires", []), npc_context):
 			continue
 		out.append(n.duplicate(true))
 	return out
@@ -71,7 +73,7 @@ func get_available_for(speaker_id: String) -> Array:
 ## 判定：当前可用（requires 已满足）**且不被任何节点的 replies.goto 引用**。
 ## 被 goto 引用的节点是分支应答，只能沿对话树走到——
 ## 若也列进话题列表，玩家会看到「同一句话既是话题又是回答」的重复入口。
-func get_entry_nodes_for(speaker_id: String) -> Array:
+func get_entry_nodes_for(speaker_id: String, npc_context: Dictionary = {}) -> Array:
 	var goto_targets := {}
 	for nid in _nodes.keys():
 		for r in (_nodes[nid] as Dictionary).get("replies", []):
@@ -79,7 +81,7 @@ func get_entry_nodes_for(speaker_id: String) -> Array:
 			if g != null:
 				goto_targets[str(g)] = true
 	var out: Array = []
-	for n in get_available_for(speaker_id):
+	for n in get_available_for(speaker_id, npc_context):
 		if not goto_targets.has(str(n.get("id", ""))):
 			out.append(n)
 	return out
@@ -93,14 +95,14 @@ func get_node(node_id: String) -> Dictionary:
 
 
 ## 玩家"听到"某段对话：登记认知并返回这段的内容。
-## 返回值含 grants 实际生效了哪些（已知的不重复授予），
-## 以及 fires 列出的待触发事件 id（由调用方转给 EventManager）。
-func hear(node_id: String, world_id: String = "", tick: int = -1) -> Dictionary:
+## 返回值含 grants 实际生效了哪些、fires 待触发事件、teaches_npc NPC 学到什么。
+func hear(node_id: String, world_id: String = "", tick: int = -1,
+		npc_context: Dictionary = {}) -> Dictionary:
 	if not _nodes.has(node_id):
-		return {"ok": false, "error": "对话节点不存在: %s" % node_id, "granted": [], "fired": []}
+		return {"ok": false, "error": "对话节点不存在: %s" % node_id, "granted": [], "fired": [], "teaches_npc": []}
 	var n: Dictionary = _nodes[node_id]
-	if not _requirements_met(n.get("requires", [])):
-		return {"ok": false, "error": "前置认知未满足", "granted": [], "fired": []}
+	if not _requirements_met(n.get("requires", []), npc_context):
+		return {"ok": false, "error": "前置条件未满足", "granted": [], "fired": [], "teaches_npc": []}
 
 	var granted: Array = []
 	var speaker := str(n.get("speaker", ""))
@@ -108,10 +110,13 @@ func hear(node_id: String, world_id: String = "", tick: int = -1) -> Dictionary:
 		if _cognition != null:
 			if _cognition.learn(str(fid), "dialogue", speaker, world_id, tick):
 				granted.append(str(fid))
-	# fires：这段对话点火的事件 id 列表（调用方负责向 EventManager 求值）
 	var fired: Array = []
 	for eid in (n.get("fires", []) as Array):
 		fired.append(str(eid))
+	# teaches_npc：这段对话让 NPC 学到什么（调用方负责写入 NPC.known_facts）
+	var teaches_npc: Array = []
+	for fid in (n.get("teaches_npc", []) as Array):
+		teaches_npc.append(str(fid))
 	return {
 		"ok": true,
 		"error": "",
@@ -121,20 +126,87 @@ func hear(node_id: String, world_id: String = "", tick: int = -1) -> Dictionary:
 		"replies": (n.get("replies", []) as Array).duplicate(true),
 		"granted": granted,
 		"fired": fired,
+		"teaches_npc": teaches_npc,
 	}
 
 
-## 判断前置条件是否满足。空条件 = 无条件可用。
-func _requirements_met(requires: Variant) -> bool:
-	if typeof(requires) != TYPE_ARRAY:
+## 判断前置条件是否满足。
+## 格式一（兼容旧档）：数组 = 全部为玩家已知事实 id。
+## 格式二（批次 3）：对象 {"player_knows": [...], "npc_knows": [...],
+##   "relationship_at_least": {"target": "player", "trust": 0.3},
+##   "said": [...], "not_said": [...]}
+func _requirements_met(requires: Variant, npc_context: Dictionary = {}) -> bool:
+	if requires == null:
 		return true
-	if (requires as Array).is_empty():
-		return true
-	if _cognition == null:
-		return false
-	for fid in (requires as Array):
-		if not _cognition.knows(str(fid)):
+	# 旧格式：数组
+	if typeof(requires) == TYPE_ARRAY:
+		if (requires as Array).is_empty():
+			return true
+		if _cognition == null:
 			return false
+		for fid in (requires as Array):
+			if not _cognition.knows(str(fid)):
+				return false
+		return true
+	# 新格式：对象
+	if typeof(requires) != TYPE_DICTIONARY:
+		return true
+	var req: Dictionary = requires
+	if req.is_empty():
+		return true
+
+	# player_knows：玩家认知
+	var pk: Variant = req.get("player_knows", [])
+	if typeof(pk) == TYPE_ARRAY and not (pk as Array).is_empty():
+		if _cognition == null:
+			return false
+		for fid in (pk as Array):
+			if not _cognition.knows(str(fid)):
+				return false
+
+	# npc_knows：NPC 认知
+	var nk: Variant = req.get("npc_knows", [])
+	if typeof(nk) == TYPE_ARRAY and not (nk as Array).is_empty():
+		var npc_facts: Variant = npc_context.get("npc_knows", [])
+		if typeof(npc_facts) != TYPE_ARRAY:
+			return false
+		for fid in (nk as Array):
+			if not (npc_facts as Array).has(str(fid)):
+				return false
+
+	# relationship_at_least: {"target": "player", "trust": 0.3}
+	var rel_req: Variant = req.get("relationship_at_least", null)
+	if typeof(rel_req) == TYPE_DICTIONARY:
+		var target := str((rel_req as Dictionary).get("target", "player"))
+		var min_trust := float((rel_req as Dictionary).get("trust", 0.0))
+		var rels: Variant = npc_context.get("relationships", {})
+		if typeof(rels) != TYPE_DICTIONARY:
+			return false
+		var rel: Variant = (rels as Dictionary).get(target, null)
+		if typeof(rel) != TYPE_DICTIONARY:
+			return false
+		if float((rel as Dictionary).get("trust", 0.0)) < min_trust:
+			return false
+
+	# said: 对话节点已说过
+	var said_req: Variant = req.get("said", [])
+	if typeof(said_req) == TYPE_ARRAY and not (said_req as Array).is_empty():
+		var said: Variant = npc_context.get("said_nodes", [])
+		if typeof(said) != TYPE_ARRAY:
+			return false
+		for nid in (said_req as Array):
+			if not (said as Array).has(str(nid)):
+				return false
+
+	# not_said: 对话节点未说过
+	var ns_req: Variant = req.get("not_said", [])
+	if typeof(ns_req) == TYPE_ARRAY and not (ns_req as Array).is_empty():
+		var said2: Variant = npc_context.get("said_nodes", [])
+		if typeof(said2) == TYPE_ARRAY:
+			for nid in (ns_req as Array):
+				if (said2 as Array).has(str(nid)):
+					return false
+
 	return true
 
 

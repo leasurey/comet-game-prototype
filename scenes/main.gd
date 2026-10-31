@@ -338,12 +338,23 @@ func _try_interact() -> void:
 	_notify("这里没有什么可以互动的。", 2.0)
 
 
-## 与某个 NPC 开始对话：摆出话题列表（认知闸门过滤后的入口节点）。
-## 之后由对话面板的点击驱动 _show_dialogue_node 的分支推进。
+## 构建对话闸门所需的 NPC 上下文（批次 3）。
+func _build_npc_context(npc: NPC) -> Dictionary:
+	if npc == null:
+		return {}
+	return {
+		"npc_knows": npc.known_facts.duplicate(),
+		"relationships": npc.relationships.duplicate(true),
+		"said_nodes": npc.said_nodes.duplicate(),
+	}
+
+
+## 与某个 NPC 开始对话：摆出话题列表（认知闸门 + NPC 状态过滤后的入口节点）。
 func _start_dialogue(npc: NPC) -> void:
 	if npc == null or GameServices.dialogue_manager == null or _ui == null:
 		return
-	var entries: Array = GameServices.dialogue_manager.get_entry_nodes_for(npc.character_id)
+	var ctx := _build_npc_context(npc)
+	var entries: Array = GameServices.dialogue_manager.get_entry_nodes_for(npc.character_id, ctx)
 	if entries.is_empty():
 		_notify("%s 现在没什么可说的。" % npc.display_name, 3.0)
 		return
@@ -366,14 +377,15 @@ func _start_dialogue(npc: NPC) -> void:
 	_ui.show_dialogue_topics(npc.display_name, labels)
 
 
-## 推进到某个对话节点：听取（授予认知）→ 展示台词与回复分支。
+## 推进到某个对话节点：听取（授予认知 + 记忆 + 对话进度）→ 展示台词与回复分支。
 func _show_dialogue_node(node_id: String) -> void:
 	if GameServices.dialogue_manager == null or _ui == null:
 		return
+	var ctx := _build_npc_context(_dlg_npc) if _dlg_npc != null else {}
 	var heard: Dictionary = GameServices.dialogue_manager.hear(
 			node_id,
 			GameServices.world_manager.get_current_world_id(),
-			GameServices.get_tick())
+			GameServices.get_tick(), ctx)
 	if not bool(heard.get("ok", false)):
 		_notify(str(heard.get("error", "对话失败")), 3.0)
 		_close_dialogue()
@@ -398,6 +410,15 @@ func _show_dialogue_node(node_id: String) -> void:
 			}, GameServices.world_manager, errs)
 			for e in errs:
 				push_warning("对话事件 %s: %s" % [str(eid), str(e)])
+	# NPC 记忆与对话进度（批次 3）
+	if _dlg_npc != null:
+		_dlg_npc.mark_said(node_id)
+		_dlg_npc.remember("dialogue", str(heard.get("text", "")), "player")
+		# teaches_npc：NPC 从这段对话学到新事实
+		for fid in (heard.get("teaches_npc", []) as Array):
+			_dlg_npc.learn_fact(str(fid))
+		# 对话建立熟悉度（每次交谈 +0.05）
+		_dlg_npc.adjust_relationship("player", 0.0, 0.05)
 	_dlg_replies = (heard.get("replies", []) as Array).duplicate(true)
 	var reply_labels: Array = []
 	for r in _dlg_replies:

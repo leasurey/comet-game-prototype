@@ -313,6 +313,8 @@ func _on_player_footstep() -> void:
 
 
 func _on_world_changed(from_id: String, to_id: String, reason_id: String) -> void:
+	if npc_manager != null:
+		npc_manager.update_world(to_id)
 	if event_bus != null:
 		event_bus.world_changed.emit(from_id, to_id, reason_id)
 	if audio_manager != null:
@@ -383,6 +385,7 @@ func new_game(seed_value: int = -1) -> bool:
 	# world_manager / event_manager 被重建，注入与连线必须重做
 	_inject_services()
 	_wire_signals()
+	npc_manager.update_world(world_manager.get_current_world_id())
 
 	# 会话状态必须归零，否则「重新开始」会继承上一局：
 	# 返回栈留着→一按返回就退回上局地点；访问记录留着→依赖 visited 的事件条件被污染；
