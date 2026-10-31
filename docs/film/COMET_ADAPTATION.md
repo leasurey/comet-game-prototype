@@ -1,13 +1,13 @@
 # COMET 改编分析
 
-> **证据标注说明**：本文档中旧标签（[A]/[B]/[C] 等）为历史版本遗留。
+> **证据标注说明**：本文档中旧标签（[FILM|HIGH|CONFIRMED]/[INTERVIEW|MEDIUM|CONFIRMED]/[INFERENCE|LOW|HYPOTHESIS] 等）为历史版本遗留。
 > 三维证据体系见 [EVIDENCE_FRAMEWORK.md](EVIDENCE_FRAMEWORK.md)。争议结论已用三维标签更新（见 OPEN_QUESTIONS.md）。
 > 旧标签不可机械映射——使用时请根据来源类型和证据强度自行判断。
 
 
 > **⚠️ 第二轮修订（2026-11-01）**：本文档所有"游戏可以扩展"、"多结局"、"玩家选择"等原创设计
 > 均为**研究建议**，标记为【待用户确认】。研究者不能替用户决定最终剧情。
-> 电影原作事实 [A]、研究推断 [C]、游戏原创设计 [D·待用户确认]、用户最终决定 必须分开。
+> 电影原作事实 [FILM|HIGH|CONFIRMED]、研究推断 [INFERENCE|LOW|HYPOTHESIS]、游戏原创设计 [D·待用户确认]、用户最终决定 必须分开。
 
 > **核心原则**：COMET 是《Coherence》的互动改编。
 > 所有设计的出发点是"原作如何表达"，然后才是"游戏如何转化"。
@@ -18,15 +18,15 @@
 ## 一、原电影事实 vs 游戏核心设定
 
 ### 必须保留的原作核心（A 级事实）
-1. 聚会之夜 + 彗星经过 [A]
-2. 手机/电力异常作为第一信号 [A]
-3. 黑暗区域 = 随机现实穿越 [A]
-4. 8 人 + 复杂人际关系（含秘密） [A]
-5. 随机物品盒 + 编号照片作为验证机制 [A]
-6. 信息差与信任崩溃 [A]
-7. Emily 的核心动机：职业遗憾 + 情感不安全感 [A]
-8. Emily 的最终选择：暴力替换另一个自己 [A]
-9. 结尾电话：悬念保留 [A]
+1. 聚会之夜 + 彗星经过 [FILM|HIGH|CONFIRMED]
+2. 手机/电力异常作为第一信号 [FILM|HIGH|CONFIRMED]
+3. 黑暗区域 = 现实穿越（目的地随机性为推断 [INFERENCE|LOW|HYPOTHESIS]）
+4. 8 人 + 复杂人际关系（含秘密） [FILM|HIGH|CONFIRMED]
+5. 随机物品盒 + 编号照片作为验证机制 [FILM|HIGH|CONFIRMED]
+6. 信息差与信任崩溃 [FILM|HIGH|CONFIRMED]
+7. Emily 的核心动机：职业遗憾 + 情感不安全感 [FILM|HIGH|CONFIRMED]
+8. Emily 的最终选择：暴力替换另一个自己 [FILM|HIGH|CONFIRMED]
+9. 结尾电话：悬念保留 [FILM|HIGH|CONFIRMED]
 
 ### 游戏可以扩展的【待用户确认】
 - 更多可探索空间 [D·待用户确认]
@@ -164,7 +164,7 @@
 | 每个人物为什么这样行动？ | 见 CHARACTERS.md | A+C |
 | 不同人物知道什么？ | 见 NARRATIVE_ANALYSIS.md | A |
 | 不同现实有什么关系？ | 见 REALITY_RULES.md | A+C |
-| 黑暗区域有什么性质？ | 随机穿越、安全、不可控 | A |
+| 黑暗区域有什么性质？ | 穿越到不同现实；安全性/随机性未确认 [NONE|NONE|UNVERIFIED] | 见 U11/U12 |
 | 哪些是明确事实？ | 见各文档的证据标记 | A |
 | 哪些只是猜测？ | 见 C/D 级标记 | C+D |
 | 哪些事件必须保留？ | 见"必须保留"列表 | A |

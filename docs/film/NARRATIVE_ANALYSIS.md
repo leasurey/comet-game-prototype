@@ -1,6 +1,6 @@
 # 悬念、信息差与叙事结构分析
 
-> **证据标注说明**：本文档中旧标签（[A]/[B]/[C] 等）为历史版本遗留。
+> **证据标注说明**：本文档中旧标签（[FILM|HIGH|CONFIRMED]/[INTERVIEW|MEDIUM|CONFIRMED]/[INFERENCE|LOW|HYPOTHESIS] 等）为历史版本遗留。
 > 三维证据体系见 [EVIDENCE_FRAMEWORK.md](EVIDENCE_FRAMEWORK.md)。争议结论已用三维标签更新（见 OPEN_QUESTIONS.md）。
 > 旧标签不可机械映射——使用时请根据来源类型和证据强度自行判断。
 

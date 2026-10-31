@@ -1,6 +1,6 @@
 # 人物关系图与秘密
 
-> **证据标注说明**：本文档中旧标签（[A]/[B]/[C] 等）为历史版本遗留。
+> **证据标注说明**：本文档中旧标签（[FILM|HIGH|CONFIRMED]/[INTERVIEW|MEDIUM|CONFIRMED]/[INFERENCE|LOW|HYPOTHESIS] 等）为历史版本遗留。
 > 三维证据体系见 [EVIDENCE_FRAMEWORK.md](EVIDENCE_FRAMEWORK.md)。争议结论已用三维标签更新（见 OPEN_QUESTIONS.md）。
 > 旧标签不可机械映射——使用时请根据来源类型和证据强度自行判断。
 
@@ -26,21 +26,21 @@
 
 ## 秘密与谎言
 
-### 秘密 #1：Mike 和 Beth 的婚外情 [A]
+### 秘密 #1：Mike 和 Beth 的婚外情 [FILM|HIGH|CONFIRMED]
 - **当事人**：Mike、Beth
 - **知情人**：无（被勒索信揭露后公开）
-- **Hugh 不知道** [A]
-- **Lee 不知道** [A]
+- **Hugh 不知道** [FILM|HIGH|CONFIRMED]
+- **Lee 不知道** [FILM|HIGH|CONFIRMED]
 - **情感影响**：信任崩溃时这成为引爆点
 - **游戏价值**：★★★★★（可作为对话选项/揭露事件）
 
-### 秘密 #2：Em 的职业遗憾 [A]
+### 秘密 #2：Em 的职业遗憾 [FILM|HIGH|CONFIRMED]
 - **当事人**：Em
 - **知情人**：Kevin 部分了解
 - **情感影响**：驱动 Em 的"如果当初"心理
 - **游戏价值**：★★★★（核心人物动机）
 
-### 秘密 #3：Laurie 想赢回 Kevin [A]
+### 秘密 #3：Laurie 想赢回 Kevin [FILM|HIGH|CONFIRMED]
 - **当事人**：Laurie
 - **知情人**：Em 感觉到了
 - **情感影响**：Em 的不安全感
@@ -48,15 +48,15 @@
 
 ## 信任崩溃时间线
 
-1. **初始信任**：8 人相互信任（虽然有暗流） [A]
-2. **碎杯子**：第一次"不对劲" [A]
-3. **Hugh 的盒子**：确认异常 [A]
-4. **红荧光棒**：确认多重现实 [A]
-5. **Hugh/Amir 被替换**：**信任不可逆地崩溃** [A]
-6. **Kevin 被替换**：Em 连爱人都无法信任 [A]
-7. **勒索信**：又一个秘密暴露 [A]
-8. **另一个 Mike 破门**：暴力升级 [A]
-9. **Em 离开**：群体解体 [A]
+1. **初始信任**：8 人相互信任（虽然有暗流） [FILM|HIGH|CONFIRMED]
+2. **碎杯子**：第一次"不对劲" [FILM|HIGH|CONFIRMED]
+3. **Hugh 的盒子**：确认异常 [FILM|HIGH|CONFIRMED]
+4. **红荧光棒**：确认多重现实 [FILM|HIGH|CONFIRMED]
+5. **Hugh/Amir 被替换**：**信任不可逆地崩溃** [FILM|HIGH|CONFIRMED]
+6. **Kevin 被替换**：Em 连爱人都无法信任 [FILM|HIGH|CONFIRMED]
+7. **勒索信**：又一个秘密暴露 [FILM|HIGH|CONFIRMED]
+8. **另一个 Mike 破门**：暴力升级 [FILM|HIGH|CONFIRMED]
+9. **Em 离开**：群体解体 [FILM|HIGH|CONFIRMED]
 
 ## 不同现实中的关系差异
 

@@ -23,7 +23,7 @@ Screen Anarchy 和 Ride The Wave Media 为不同时间的不同采访，可作�
 | A2 366 Weird Movies | https://366weirdmovies.com/interview-james-ward-byrkit-coherence/ | 预先规划结构、角色卡、自由行动、长镜头即兴 | 回忆不能替代原片 |
 | A3 Movie Mom | https://moviemom.com/interview-james-ward-byrkit-coherence/ | 5 晚客厅、角色卡、线索结构预先规划 | 与 A1/A2 内容重叠，不独立计数 |
 | A4 The Dissolve | https://thedissolve.com/features/emerging/633-how-james-ward-byrkit-constructed-coherence/ | 预先规划结构、角色卡、自然对话、日常空间 | 制作访谈 |
-| A5 Screen Anarchy | screenanarchy.com/amp/2014/06/... | 手机/戒指/照片/花瓶="身份凭据"、荧光棒颜色创作意图 | 创作意图≠可靠规则 |
+| A5 Screen Anarchy | https://screenanarchy.com/amp/2014/06/interview-go-into-the-heart-of-darkness-with-coherence-writer-director-james-ward-byrkit.html | 导演将手机/戒指/照片/花瓶描述为"身份凭据"；荧光棒颜色为创作意图 [待核验：具体引文是否逐字准确] | 创作意图≠电影世界规则 |
 | A6 Ride The Wave Media | ridethewave.media/coherence-james-ward-byrkitt-on-improv-sci-fi/ | 保留书籍花瓶、道具="小型棋子" | 较新访谈，需交叉核验 |
 
 ## B. 公开对白文本
@@ -38,7 +38,7 @@ Screen Anarchy 和 Ride The Wave Media 为不同时间的不同采访，可作�
 | 来源 | URL | 可支持的结论 | 使用限制 |
 |---|---|---|---|
 | C1 Taylor Holmes | https://taylorholmes.com/2015/06/19/movie-coherence-explained-and-interview-with-director-james-ward-byrkit/ | 一种现实编号/归属解释模型 | 影迷模型，非官方编号 |
-| C2 Complex | complex.com/pop-culture/... | 多层线索、演员局部信息、日常物件叙事 | 影评≠事实 |
+| C2 Complex | https://www.complex.com/pop-culture/a/matt-barone/interview-coherence-director-james-ward-byrkit | 多层线索、演员局部信息、日常物件叙事 | 影评≠事实 |
 
 ## D. 重要结论溯源
 
