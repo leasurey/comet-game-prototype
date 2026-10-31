@@ -260,12 +260,18 @@ func _build_inner_walls(parent: Node, mat: Material) -> void:
 ## 门板只是视觉占位，不带碰撞（碰撞由墙体洞口两侧的实墙负责）。
 ## 位置刻意避开通行带，避免挡住唯一通路。
 func _build_door_panels(parent: Node, mat: Material) -> void:
-	# 前门：贴在前墙内侧，向屋内开 90°，贴在洞口西侧墙上
-	geom.box(parent, "FrontDoorPanel", Vector3(0.09, 2.05, 1.50),
-			Vector3(-0.82, FLOOR_Y + 1.03, 0.30), mat)
-	# 侧门：贴在东墙内侧
-	geom.box(parent, "SideDoorPanel", Vector3(0.09, 2.05, 1.10),
-			Vector3(OUT_X - 0.20, FLOOR_Y + 1.03, 2.68), mat)
+	# 前门：铰链在左侧（从屋内看），门向右开进屋
+	# 注意：几何节点名不能与热点名冲突（热点叫 "FrontDoor"，几何叫 "FrontDoorGeo"）
+	geom.door(parent, "FrontDoorGeo",
+			Vector3(-0.82, FLOOR_Y + 1.03, 0.15),
+			Vector3(1.50, 2.05, 0.09), "left", mat)
+	# 侧门：铰链在右侧，门向左开
+	geom.door(parent, "SideDoorGeo",
+			Vector3(OUT_X - 0.20, FLOOR_Y + 1.03, 2.55),
+			Vector3(1.10, 2.05, 0.09), "right", mat)
+	# 后门（推拉门）：简化为平板（无铰链，滑动门暂不做动画）
+	geom.box(parent, "PatioDoorPanel", Vector3(1.70, 2.05, 0.06),
+			Vector3(-4.0, FLOOR_Y + 1.03, OUT_Z1 - 0.12), mat)
 
 
 # ------------------------------------------------------------------ 室外过渡区

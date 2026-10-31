@@ -224,6 +224,15 @@ func _spawn_one(id: String, container: Node) -> void:
 	var info: Dictionary = _characters[id]
 	var npc := NPC.new()
 	npc.setup(id, str(info.get("name", id)), str(info.get("home", "")))
+	# 人物外观（P2）：从 characters.json 的 appearance 读取
+	var app: Variant = info.get("appearance", null)
+	if typeof(app) == TYPE_DICTIONARY:
+		var a: Dictionary = app
+		npc.setup_appearance(
+				Color(a.get("skin", [0.85, 0.72, 0.62])[0], a.get("skin", [0.85, 0.72, 0.62])[1], a.get("skin", [0.85, 0.72, 0.62])[2]),
+				Color(a.get("hair", [0.25, 0.18, 0.12])[0], a.get("hair", [0.25, 0.18, 0.12])[1], a.get("hair", [0.25, 0.18, 0.12])[2]),
+				Color(a.get("shirt", [0.35, 0.45, 0.65])[0], a.get("shirt", [0.35, 0.45, 0.65])[1], a.get("shirt", [0.35, 0.45, 0.65])[2]),
+				Color(a.get("pants", [0.25, 0.25, 0.30])[0], a.get("pants", [0.25, 0.25, 0.30])[1], a.get("pants", [0.25, 0.25, 0.30])[2]))
 	# 人物系统：注入行为参数与可游荡房间 + 游荡回调（P0-1：显式注入）
 	npc.setup_personality(info.get("traits", []) as Array)
 	npc.set_wander_rooms(_rooms.keys())

@@ -57,6 +57,14 @@ var character_id: String = ""
 var display_name: String = ""
 var home_room: String = ""
 
+## 人物外观：不同角色不同肤色/发色/服色（P2 NPC 人物模型）。
+## 在 setup_appearance 中配置，_build_body 中实例化。
+var _skin_color: Color = Color(0.85, 0.72, 0.62)
+var _hair_color: Color = Color(0.25, 0.18, 0.12)
+var _shirt_color: Color = Color(0.35, 0.45, 0.65)
+var _pants_color: Color = Color(0.25, 0.25, 0.30)
+var _body_mesh: Node3D = null
+
 var state: String = STATE_IDLE
 var _target: Vector3 = Vector3.ZERO
 var _has_target := false
@@ -110,6 +118,7 @@ func _ready() -> void:
 	collision_layer = NPC_LAYER
 	collision_mask = ENV_LAYER
 	add_to_group(GROUP_NPCS)
+	_build_body()
 	# 碰撞体：比玩家略小，留出避让余量
 	_body = CollisionShape3D.new()
 	_body.name = "Body"
@@ -152,6 +161,107 @@ func setup_personality(traits: Array) -> void:
 ## 注入可游荡房间 id 列表（NPCManager 从 characters.json 的 rooms 读取）。
 func set_wander_rooms(rooms: Array) -> void:
 	_wander_rooms = rooms.duplicate()
+
+
+## 配置人物外观（P2）。每名 NPC 独立的肤色/发色/服色。
+func setup_appearance(skin: Color, hair: Color, shirt: Color, pants: Color) -> void:
+	_skin_color = skin
+	_hair_color = hair
+	_shirt_color = shirt
+	_pants_color = pants
+
+
+## 构建可见人物模型（P2 NPC 人形体）。
+## 用基本几何体（盒/球/胶囊）组装低多边形人形——
+## 不依赖外部模型资源，在目标低配机上开销可忽略。
+func _build_body() -> void:
+	if _body_mesh != null:
+		return
+	_body_mesh = Node3D.new()
+	_body_mesh.name = "BodyMesh"
+	add_child(_body_mesh)
+
+	var skin_mat := StandardMaterial3D.new()
+	skin_mat.albedo_color = _skin_color
+	skin_mat.roughness = 0.7
+
+	var hair_mat := StandardMaterial3D.new()
+	hair_mat.albedo_color = _hair_color
+	hair_mat.roughness = 0.8
+
+	var shirt_mat := StandardMaterial3D.new()
+	shirt_mat.albedo_color = _shirt_color
+	shirt_mat.roughness = 0.85
+
+	var pants_mat := StandardMaterial3D.new()
+	pants_mat.albedo_color = _pants_color
+	pants_mat.roughness = 0.85
+
+	# 躯干（上衣）
+	_add_box(_body_mesh, "Torso", Vector3(0.38, 0.55, 0.22),
+			Vector3(0, 1.15, 0), shirt_mat)
+	# 骨盆（裤子）
+	_add_box(_body_mesh, "Pelvis", Vector3(0.36, 0.18, 0.22),
+			Vector3(0, 0.82, 0), pants_mat)
+	# 头（皮肤）
+	_add_sphere(_body_mesh, "Head", 0.13, Vector3(0, 1.55, 0), skin_mat)
+	# 头发（略大半球盖在头顶）
+	_add_sphere(_body_mesh, "Hair", 0.14, Vector3(0, 1.58, 0), hair_mat)
+	# 颈
+	_add_box(_body_mesh, "Neck", Vector3(0.10, 0.10, 0.10),
+			Vector3(0, 1.42, 0), skin_mat)
+	# 左臂（上臂 + 前臂）
+	_add_box(_body_mesh, "ArmLUpper", Vector3(0.10, 0.32, 0.10),
+			Vector3(-0.27, 1.15, 0), shirt_mat)
+	_add_box(_body_mesh, "ArmLLower", Vector3(0.09, 0.28, 0.09),
+			Vector3(-0.27, 0.83, 0.03), skin_mat)
+	# 右臂
+	_add_box(_body_mesh, "ArmRUpper", Vector3(0.10, 0.32, 0.10),
+			Vector3(0.27, 1.15, 0), shirt_mat)
+	_add_box(_body_mesh, "ArmRLower", Vector3(0.09, 0.28, 0.09),
+			Vector3(0.27, 0.83, 0.03), skin_mat)
+	# 左腿（大腿 + 小腿）
+	_add_box(_body_mesh, "LegLUpper", Vector3(0.12, 0.38, 0.12),
+			Vector3(-0.11, 0.56, 0), pants_mat)
+	_add_box(_body_mesh, "LegLLower", Vector3(0.11, 0.38, 0.11),
+			Vector3(-0.11, 0.22, 0), pants_mat)
+	# 右腿
+	_add_box(_body_mesh, "LegRUpper", Vector3(0.12, 0.38, 0.12),
+			Vector3(0.11, 0.56, 0), pants_mat)
+	_add_box(_body_mesh, "LegRLower", Vector3(0.11, 0.38, 0.11),
+			Vector3(0.11, 0.22, 0), pants_mat)
+	# 脚
+	_add_box(_body_mesh, "FootL", Vector3(0.10, 0.06, 0.22),
+			Vector3(-0.11, 0.03, 0.04), pants_mat)
+	_add_box(_body_mesh, "FootR", Vector3(0.10, 0.06, 0.22),
+			Vector3(0.11, 0.03, 0.04), pants_mat)
+
+
+func _add_box(parent: Node3D, box_name: String, size: Vector3, pos: Vector3,
+		mat: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = box_name
+	var bm := BoxMesh.new()
+	bm.size = size
+	mi.mesh = bm
+	mi.position = pos
+	mi.material_override = mat
+	parent.add_child(mi)
+	return mi
+
+
+func _add_sphere(parent: Node3D, sph_name: String, radius: float, pos: Vector3,
+		mat: Material) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = sph_name
+	var sm := SphereMesh.new()
+	sm.radius = radius
+	sm.height = radius * 2.0
+	mi.mesh = sm
+	mi.position = pos
+	mi.material_override = mat
+	parent.add_child(mi)
+	return mi
 
 
 ## 更新当前现实 id（记忆归档用）。

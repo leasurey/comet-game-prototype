@@ -217,6 +217,65 @@ func _segment(holder: Node3D, seg_name: String, axis: String, center: Vector3,
 				Vector3(center.x, y, center.z + mid), mat)
 
 
+# ------------------------------------------------------------------ 门体
+
+## 生成带铰链的真实门体（门板 + 门框 + 把手）。
+##
+## 门板以铰链侧（hinge_side="left"|"right"）为旋转轴心，
+## 通过 Node3D pivot 实现开合动画。门框固定不动。
+##
+## 参数：
+##   pos       门洞中心位置（世界坐标）
+##   size      门板尺寸 (width, height, thickness)
+##   hinge_side "left" = 左侧铰链（门向右开），"right" = 右侧铰链（门向左开）
+##   open_angle 开启角度（度），默认 95°
+##
+## 返回 {"frame": Node3D, "door_pivot": Node3D}——door_pivot 用于动画旋转。
+func door(parent: Node, node_name: String, pos: Vector3, size: Vector3,
+		hinge_side: String, mat: Material, frame_mat: Material = null,
+		open_angle: float = 95.0) -> Dictionary:
+	var fm: Material = frame_mat if frame_mat != null else mat
+	var holder := node(parent, node_name)
+
+	var w := size.x
+	var h := size.y
+	var t := size.z
+
+	# 门框：固定不动，比门洞略大
+	var frame_thickness := 0.08
+	box(holder, "FrameLeft", Vector3(frame_thickness, h + 0.06, t + 0.06),
+			Vector3(pos.x - w * 0.5 - frame_thickness * 0.5, pos.y, pos.z), fm)
+	box(holder, "FrameRight", Vector3(frame_thickness, h + 0.06, t + 0.06),
+			Vector3(pos.x + w * 0.5 + frame_thickness * 0.5, pos.y, pos.z), fm)
+	box(holder, "FrameTop", Vector3(w + frame_thickness * 2.0, 0.06, t + 0.06),
+			Vector3(pos.x, pos.y + h * 0.5 + 0.03, pos.z), fm)
+
+	# 门板旋转轴心（铰链侧）
+	var pivot := Node3D.new()
+	pivot.name = node_name + "Pivot"
+	# 轴心设在铰链边
+	if hinge_side == "left":
+		pivot.position = Vector3(pos.x - w * 0.5, pos.y, pos.z)
+	else:
+		pivot.position = Vector3(pos.x + w * 0.5, pos.y, pos.z)
+	holder.add_child(pivot)
+
+	# 门板（挂在轴心下，偏移量 = 半个门宽）
+	var door_x := (w * 0.5) if hinge_side == "left" else (-w * 0.5)
+	box(pivot, "DoorSlab", Vector3(w, h, t),
+			Vector3(door_x, 0, 0), mat)
+
+	# 把手（门板远端）
+	var handle_x := door_x + (w * 0.35 if hinge_side == "left" else -w * 0.35)
+	box(pivot, "Handle", Vector3(0.04, 0.12, 0.10),
+			Vector3(handle_x, 0.0, t * 0.5 + 0.05), fm)
+
+	# 默认关闭
+	pivot.rotation.y = 0.0
+
+	return {"frame": holder, "door_pivot": pivot}
+
+
 # ------------------------------------------------------------------ 房间外壳
 
 ## 按矩形房间生成四面墙（可分别指定是否有洞口）。
