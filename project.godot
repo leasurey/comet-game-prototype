@@ -21,19 +21,11 @@ config/icon="res://assets/icon.svg"
 
 GameServices="*res://autoload/game_services.gd"
 
-[debug]
-
-; 警告必须开启：全局关闭等于把"未使用变量/未定义符号"这类线索全部藏起来。
-; 确需豁免的位置用 @warning_ignore 局部标注，而不是一刀切关掉。
-gdscript/warnings/enable=true
-
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-; 小窗口下 HUD 用等比缩放，避免固定 offset 的控件在 640x360 时互相重叠
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 
 [physics]
 

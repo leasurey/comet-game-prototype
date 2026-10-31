@@ -42,6 +42,9 @@ var save_manager: SaveManager = null
 var scene_manager: SceneManager = null
 var interaction_manager: InteractionManager = null
 
+# 玩家设置（灵敏度/音量/分辨率）。与游戏存档分离：删档不会重置玩家偏好。
+var settings: SettingsManager = null
+
 # L0 核心服务：时钟、随机、信号总线。三者都不含业务规则，可被任意层使用。
 var time_service: TimeService = null
 var rng_service: RngService = null
@@ -74,6 +77,10 @@ func _process(_delta: float) -> void:
 func _bootstrap() -> void:
 	var errors: Array = []
 	_ensure_input_actions()
+
+	# 设置先于一切加载：玩家的灵敏度/帧率偏好应在第一帧就生效。
+	settings = SettingsManager.new()
+	settings.load_settings()
 
 	time_service = TimeService.new()
 	time_service.configure(DEFAULT_MINUTES_PER_TICK, START_CLOCK_MINUTES)

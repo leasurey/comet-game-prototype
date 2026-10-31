@@ -7,9 +7,13 @@
 ## 输入约定（鼠标捕获式第一人称）：
 ##   鼠标移动          → 直接转动视角（捕获状态下，无须按住任何键）
 ##   E 键 / 鼠标左键   → 与屏幕中心所指的热点交互
-##   ESC               → 释放鼠标、显示系统光标（此时可操作 UI）
+##   ESC               → 打开暂停菜单（暂停世界、释放鼠标）；菜单中再按 ESC 返回游戏
 ##   Q 键              → 退出游戏
 ##   鼠标释放后点击画面 → 重新捕获鼠标（这次点击只用于恢复捕获，不触发交互）
+##
+## 启动流程：
+##   真实窗口 → 主菜单（新游戏 / 继续 / 设置 / 退出），由玩家选择后才进入世界
+##   headless → 直接自动开局，保持既有测试的装配路径不变
 ##
 ## 所有输入判定放在 _unhandled_input：
 ##   UI 控件会先消费掉落在自己身上的事件，因此点击 HUD 按钮不会被当成场景交互，
@@ -17,9 +21,13 @@
 
 extends Node3D
 
+## 暂停时必须继续接收输入（否则 ESC 关不掉菜单）。
+## 世界节点仍是默认 PAUSABLE，`get_tree().paused` 会一并挡住移动与交互。
+
 @onready var _location_container: Node3D = $LocationContainer
 @onready var _camera_rig = $CameraRig
 @onready var _ui = $HUD
+@onready var _menu = $HUD/Menu
 
 var _started := false
 
@@ -32,6 +40,7 @@ var _pending_yaw_deg: float = 0.0
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	randomize()
 
 	if GameServices == null:
@@ -85,12 +94,40 @@ func _bind_services() -> void:
 		if _ui.has_signal("new_game_confirmed"):
 			_ui.new_game_confirmed.connect(_on_new_game_confirmed)
 
+	# 主菜单 / 暂停 / 设置。
+	# MenuController 不碰全局单例，服务引用在这里注入。
+	if _menu != null:
+		_menu.setup(GameServices.settings, GameServices)
+		_menu.new_game_requested.connect(_on_menu_new_game)
+		_menu.continue_requested.connect(_on_menu_continue)
+		_menu.resume_requested.connect(_on_menu_resume)
+		_menu.main_menu_requested.connect(_on_menu_main)
+		_menu.quit_requested.connect(_on_quit_requested)
+
+	# 玩家偏好（灵敏度/反转）在绑定到玩家的那一刻就生效。
+	if GameServices.settings != null:
+		GameServices.settings.apply(_camera_rig, false)
+
 
 func _start_flow() -> void:
 	if _started:
 		return
 	_started = true
 
+	# headless（自动化测试）保持原来的自动开局路径，既有断言的装配时序不变。
+	# 真实窗口走主菜单，由玩家决定新游戏还是继续。
+	if DisplayServer.get_name() == "headless":
+		_auto_start()
+		return
+
+	if _menu != null:
+		_menu.show_main(GameServices.has_save())
+	if _ui != null:
+		_ui.set_message("选择「开始新游戏」或「继续游戏」进入。", 8.0)
+
+
+## 测试与 headless 用的自动开局。
+func _auto_start() -> void:
 	if GameServices.has_save():
 		var ok := GameServices.continue_game()
 		if not ok:
@@ -112,7 +149,76 @@ func _start_flow() -> void:
 	await get_tree().process_frame
 	_capture_mouse()
 	if _ui != null:
-		_ui.set_message("移动鼠标环视 · E 交互 · ESC 释放鼠标 · Q 退出", 7.0)
+		_ui.set_message("移动鼠标环视 · E 交互 · ESC 暂停 · Q 退出", 7.0)
+
+
+# ---------------------------------------------------------------- 主菜单动作
+
+func _on_menu_new_game() -> void:
+	# 有存档时先确认再删，避免「点错一下就没了」。
+	if GameServices.has_save():
+		if _ui != null:
+			_ui.show_confirm("开始新游戏会覆盖当前进度，确定吗？", _on_menu_new_game_confirmed)
+		return
+	_on_menu_new_game_confirmed()
+
+
+func _on_menu_new_game_confirmed() -> void:
+	GameServices.delete_save()
+	GameServices.new_game()
+	_enter_world_from_menu("屋子里很安静。屏幕上映着一小段没有声音的画面。")
+
+
+func _on_menu_continue() -> void:
+	if GameServices.continue_game():
+		_enter_world_from_menu("你回到了上次离开的地方。")
+	else:
+		if _ui != null:
+			_ui.set_message("存档读取失败，已开始新的观察。", 5.0)
+		GameServices.new_game()
+		_enter_world_from_menu("存档已损坏，已开始新的观察。")
+
+
+func _enter_world_from_menu(greeting: String) -> void:
+	if _menu != null:
+		_menu.hide_menu()
+	get_tree().paused = false
+	_refresh_ui_state()
+	if _ui != null:
+		_ui.set_message(greeting, 5.0)
+	await get_tree().process_frame
+	_capture_mouse()
+	if _ui != null:
+		_ui.set_message("移动鼠标环视 · E 交互 · ESC 暂停 · Q 退出", 7.0)
+
+
+func _on_menu_resume() -> void:
+	_close_pause()
+
+
+func _on_menu_main() -> void:
+	# 回主菜单 = 暂停世界但不销毁进度；玩家可继续或开新局。
+	if _menu != null:
+		_menu.show_main(GameServices.has_save())
+	_release_mouse()
+	get_tree().paused = true
+
+
+func _open_pause() -> void:
+	if _menu == null:
+		_release_mouse()
+		return
+	_menu.show_pause()
+	_release_mouse()
+	get_tree().paused = true
+
+
+func _close_pause() -> void:
+	if _menu != null:
+		_menu.hide_menu()
+	get_tree().paused = false
+	await get_tree().process_frame
+	_capture_mouse()
 
 
 func _on_bootstrap_failed(reason: String) -> void:
@@ -136,14 +242,22 @@ func _unhandled_input(event: InputEvent) -> void:
 		var key := event as InputEventKey
 		if key.pressed and not key.echo:
 			if key.keycode == KEY_ESCAPE:
-				# ESC 专职释放鼠标；退出改由 Q 键负责
-				_release_mouse()
+				# ESC = 暂停菜单开关。菜单开着时它是「返回游戏」，
+				# 关着时它是「暂停」。世界被暂停后不再响应移动与交互。
+				if _is_menu_open():
+					_close_pause()
+				else:
+					_open_pause()
 				get_viewport().set_input_as_handled()
 				return
 			if key.keycode == KEY_Q:
 				_on_quit_requested()
 				get_viewport().set_input_as_handled()
 				return
+
+	# 菜单开着时，世界输入全部屏蔽（暂停/主菜单/设置都不该触发交互）。
+	if _is_menu_open():
+		return
 
 	# ---- 交互键 E ----
 	if event.is_action_pressed(GameServices.ACTION_INTERACT):
@@ -169,6 +283,10 @@ func _try_interact() -> void:
 		return
 	if not GameServices.interaction_manager.activate_focused():
 		_notify("这里没有什么可以互动的。", 2.0)
+
+
+func _is_menu_open() -> bool:
+	return _menu != null and _menu.is_open()
 
 
 func _is_mouse_captured() -> bool:

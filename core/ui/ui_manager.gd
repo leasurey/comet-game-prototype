@@ -40,6 +40,8 @@ var _reticle: Control = null
 var _back_button: Button = null
 var _overlay_root: Control = null
 var _confirm_root: Control = null
+var _confirm_label: Label = null
+var _confirm_callback: Callable = Callable()
 var _root: Control = null
 
 
@@ -257,6 +259,7 @@ func _build_confirm() -> void:
 	label.add_theme_font_size_override("font_size", 17)
 	label.add_theme_color_override("font_color", COLOR_TEXT)
 	box.add_child(label)
+	_confirm_label = label
 
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -269,7 +272,12 @@ func _build_confirm() -> void:
 	yes.custom_minimum_size = Vector2(140, 34)
 	yes.pressed.connect(func() -> void:
 		hide_confirm()
-		new_game_confirmed.emit())
+		if _confirm_callback.is_valid():
+			var cb := _confirm_callback
+			_confirm_callback = Callable()
+			cb.call()
+		else:
+			new_game_confirmed.emit())
 	row.add_child(yes)
 
 	var no := Button.new()
@@ -283,8 +291,18 @@ func _build_confirm() -> void:
 
 
 func ask_new_game() -> void:
-	if _confirm_root != null:
-		_confirm_root.visible = true
+	show_confirm("重新开始会清除当前存档，确定吗？", Callable())
+
+
+## 通用确认框：调用方给文案与「确定」回调。
+## callback 为空时回退到发出 new_game_confirmed（保持旧调用方语义不变）。
+func show_confirm(text: String, on_yes: Callable) -> void:
+	if _confirm_root == null:
+		return
+	if _confirm_label != null:
+		_confirm_label.text = text
+	_confirm_callback = on_yes
+	_confirm_root.visible = true
 
 
 func hide_confirm() -> void:
