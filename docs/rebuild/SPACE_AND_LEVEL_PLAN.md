@@ -1,100 +1,128 @@
 # 空间与关卡重建方案
 
-> 核心问题：当前场景是 BoxMesh 灰盒，需要重建为电影写实住宅。
-> 电影中住宅的实际布局未完整展示，以下方案标注哪些是电影确认、哪些是原创补充。
+> **三类标注**：
+> - `FILM_CONFIRMED`：电影画面/对白明确支持
+> - `INFERENCE`：资料推断，允许修正
+> - `GAME_LAYOUT`：为可玩性/连续性的原创设计
 
 ---
 
-## 一、住宅空间规划
+## 一、住宅空间连接方案（GAME_LAYOUT）
 
-### 客厅/餐厅（主空间）[FILM|HIGH|CONFIRMED 存在]
+电影展示了住宅的多个房间，但**完整布局未确认**。以下为游戏空间方案：
 
-**用途**：聚会主场景、8 人餐桌、大部分剧情发生
-**连接**：↔ 厨房（开放式）↔ 走廊 ↔ 前门 ↔ 后院
-**家具**：
-- 长餐桌（8 人位）+ 椅子 8 把 [FILM|HIGH|CONFIRMED]
-- 沙发 [FILM|HIGH|CONFIRMED]
-- 茶几 [INFERENCE|MEDIUM]
-- 壁炉 [INFERENCE|MEDIUM]
-- 地毯 [INFERENCE|MEDIUM]
-- 酒柜/餐边柜 [DESIGN|PENDING_USER]
+```
+         [后院/露台]
+              |
+   [书房]—[走廊]—[浴室]
+     |       |       |
+   [客厅/餐厅]———[厨房]
+              |
+          [前门]
+              |
+         [门廊]——[车道]
+              |
+          [街道]——[黑暗区域]——[亮灯房]
+```
 
-**剧情道具**：盒子、照片、骰子、荧光棒、蜡烛、杯子
-**NPC 活动**：晚餐、讨论、争论、验证盒创建
-**现实差异**：餐桌布置、灯光氛围、个别家具位置 [DESIGN|PENDING_USER]
+### 房间连接与通行
 
-### 厨房 [FILM|HIGH|CONFIRMED 存在]
+| 房间 | 门/出口 | 通向 | 电影依据 |
+|---|---|---|---|
+| 客厅/餐厅 | 前门 | 门廊 | FILM_CONFIRMED（前门存在）|
+| 客厅/餐厅 | 后门（推拉） | 后院/露台 | FILM_CONFIRMED |
+| 客厅/餐厅 | 侧门 | 侧院/车道 | FILM_CONFIRMED |
+| 客厅/餐厅 | 开放式 | 厨房 | INFERENCE（开放连接为游戏设计）|
+| 客厅/餐厅 | 门洞 | 走廊 | INFERENCE |
+| 走廊 | 门 ×2 | 浴室/书房 | INFERENCE |
+| 厨房 | 无独立出口 | — | INFERENCE |
 
-**用途**：备餐、Beth 的草药、部分对话
-**连接**：↔ 客厅/餐厅
-**家具**：操作台、冰箱、水槽、吊柜 [INFERENCE|MEDIUM]
-**道具**：杯子、盘子、瓶子、烤箱手套 [FILM|HIGH|CONFIRMED]
+**GAME_LAYOUT 标注**：
+- 厨房与客厅的开放式连接 [GAME_LAYOUT]
+- 走廊宽度 1.2m [GAME_LAYOUT]
+- 书房位置（走廊尽头）[GAME_LAYOUT]
+- 浴室位置（走廊旁）[GAME_LAYOUT]
 
-### 走廊 [FILM|HIGH|CONFIRMED 存在]
+## 二、房间详细设计
 
-**用途**：连接房间、Laurie 和 Kevin 的私密对话、Beth 目击
-**连接**：↔ 客厅 ↔ 卧室 ↔ 浴室
-**注意**：走廊是重要的信息差场景——Beth 从走廊看到客厅
+### 客厅/餐厅 [FILM_CONFIRMED 存在]
 
-### 浴室 [FILM|HIGH|CONFIRMED 存在]
-
-**用途**：Em 最终制服另一个自己的地点
-**连接**：↔ 走廊
-**家具**：浴缸、洗手台 [INFERENCE|MEDIUM]
-
-### 书房/办公区 [FILM|HIGH|CONFIRMED 存在]
-
-**用途**：Hugh 查物理书、部分讨论
-**连接**：↔ 走廊或客厅
-**家具**：书桌、书架、笔记本电脑 [INFERENCE|MEDIUM]
-**道具**：物理书（Gravitation）[FILM|HIGH|CONFIRMED]
-
-### 前门 [FILM|HIGH|CONFIRMED]
-
-**用途**：主要出入口、便条钉在门上
-**设计**：需要真实门体+门框+铰链动画 [DESIGN|PENDING_USER]
-**通过**：按 E 开门→走出去（不是点击热点传送）
-
-### 侧门 [FILM|HIGH|CONFIRMED]
-
-**用途**：Hugh 和 Amir 外出的门
-**连接**：↔ 侧院/车道
-
-### 露台/后院 [FILM|HIGH|CONFIRMED]
-
-**用途**：看彗星、Em 的车、最终冲突
-**连接**：↔ 客厅
-**室外**：车道、Em 的车
-
----
-
-## 二、家具摆放规范
-
-| 规范 | 要求 | 当前状态 |
+**家具** [混合标注]：
+| 家具 | 标注 | 说明 |
 |---|---|---|
-| 椅子与桌子 | 每把椅子对应桌面一个座位 | ❌ 不对应 |
-| 门在墙开口 | 门框必须与门洞对齐 | ❌ 有错位 |
-| 门开合方向 | 向内开，不挡通道 | ❌ 无动画 |
-| 家具碰撞 | 视觉=碰撞，不穿模 | ❌ 有偏差 |
-| 通行宽度 | 主通道 ≥ 0.8m | ✅ |
-| 桌面高度 | 餐桌 0.75m、茶几 0.4m | ❌ 不精确 |
+| 长餐桌（8 人位） | FILM_CONFIRMED | 电影明确展示 |
+| 椅子 8 把 | FILM_CONFIRMED | 对应 8 人 |
+| 沙发 | FILM_CONFIRMED | 电影展示 |
+| 壁炉 | INFERENCE | 对白提及 |
+| 地毯 | INFERENCE | 视觉推断 |
+| 茶几 | INFERENCE | 常见搭配 |
+| 酒柜 | GAME_LAYOUT | 游戏补充 |
 
-## 三、室外空间
+**通行路线** [GAME_LAYOUT]：
+- 主通道：前门→餐桌→厨房（宽 1.2m）
+- 副通道：餐桌→走廊（宽 0.9m）
+- 椅子间距：0.5m（可拉开坐下）
 
-- 房屋外立面（与内部空间对应）[DESIGN]
-- 门廊（前门外）[FILM|HIGH|CONFIRMED]
-- 车道 + Em 的车 [FILM|HIGH|CONFIRMED]
-- 街道（柏油路面、路缘）[DESIGN]
-- 邻近住宅（至少 3 栋可见）[DESIGN]
-- 远处亮灯的房子 [FILM|HIGH|CONFIRMED]
-- 路灯（不工作——停电）[FILM|HIGH|CONFIRMED]
-- 黑暗区域（房屋之间的浓密黑暗）[FILM|HIGH|CONFIRMED]
+### 厨房 [FILM_CONFIRMED 存在]
 
-## 四、空间连续性
+**连接**：开放式连客厅 [GAME_LAYOUT]
+**家具** [INFERENCE]：操作台、冰箱、水槽、吊柜
+**道具** [FILM_CONFIRMED]：杯子、盘子、烤箱手套
 
-| 检查项 | 要求 | 实现方式 |
+### 走廊 [FILM_CONFIRMED 存在]
+
+**功能**：连接客厅→浴室/书房；Beth 目击场景
+**宽度**：1.2m [GAME_LAYOUT]
+**门**：浴室门 + 书房门 [INFERENCE]
+
+### 浴室 [FILM_CONFIRMED 存在]
+
+**功能**：Em 最终冲突场景
+**家具** [INFERENCE]：浴缸、洗手台
+**门**：向内开 [GAME_LAYOUT]
+
+### 书房 [FILM_CONFIRMED 存在]
+
+**功能**：Hugh 查物理书
+**家具** [INFERENCE]：书桌、书架、笔记本电脑
+**道具** [FILM_CONFIRMED]：物理书
+
+## 三、家具摆放与通行规范
+
+| 规范 | 要求 | 标注 |
 |---|---|---|
-| 室内→室外 | 走过门洞自然过渡 | AutoPortal 无缝切换 |
-| 街道→黑暗区域 | 渐变过渡 | 体积雾+光照衰减 |
-| 穿越黑暗→另一现实 | 环境渐变 | 光照+音效+变体切换 |
-| 玩家状态保持 | 坐标/朝向/速度连续 | WorldManager 已验证 |
+| 椅子↔桌面 | 每椅对一个座位，间距 0.5m | GAME_LAYOUT |
+| 门在墙开口 | 门框中心=门洞中心 | GAME_LAYOUT |
+| 门开合 | 向内开，不挡主通道 | GAME_LAYOUT |
+| 碰撞=视觉 | CollisionShape=Mesh 尺寸 | GAME_LAYOUT |
+| 主通道 ≥ 0.8m | 确保玩家通行 | GAME_LAYOUT |
+| 餐桌高 0.75m | 标准人体工学 | GAME_LAYOUT |
+
+## 四、室外连续路线（GAME_LAYOUT）
+
+```
+室内(前门) → 门廊(2m) → 车道(3m) → 街道(6m宽) → 邻居住宅
+                                  ↓
+                           黑暗区域(浓密黑暗)
+                                  ↓
+                          另一现实的亮灯房
+```
+
+**标注**：
+- 房屋间距离 [INFERENCE]（从画面估算）
+- 黑暗区域范围 [GAME_LAYOUT]（游戏设计）
+- 邻居住宅位置 [GAME_LAYOUT]
+
+## 五、现实差异设计
+
+| 差异类型 | α 现实 | β 现实 | γ 现实 | 标注 |
+|---|---|---|---|---|
+| 灯光色温 | 暖黄 | 偏冷 | 更暗 | GAME_LAYOUT |
+| 餐桌布置 | 整齐 | 有些乱 | 更乱 | GAME_LAYOUT |
+| 家具位置 | 标准 | 沙发偏移 | 椅子歪 | GAME_LAYOUT |
+| 道具状态 | 杯子完整 | 杯子碎了 | 多了物品 | GAME_LAYOUT |
+| 窗外光 | 正常 | 偏绿 | 偏红 | GAME_LAYOUT |
+| 空间细节 | 无异常 | 照片内容变 | 物品位置变 | GAME_LAYOUT |
+| NPC 状态 | 正常 | 紧张 | 恐惧 | GAME_LAYOUT |
+
+**注意** [INFERENCE]：电影展示了现实差异，但具体差异内容为游戏设计。
