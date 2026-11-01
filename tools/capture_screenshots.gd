@@ -47,7 +47,7 @@ func _yaw_to(from: Vector3, to: Vector3) -> float:
 
 
 func _build_shot_list() -> void:
-	var foyer := Vector3(-0.9, 0.20, 2.30)
+	var foyer := Vector3(0.55, 0.20, 3.05)
 	var living_pos := Vector3(-2.55, 0.20, 5.10)
 	var dining_pos := Vector3(1.30, 0.20, 3.95)
 	var kitchen_pos := Vector3(3.85, 0.20, 6.55)
@@ -55,7 +55,7 @@ func _build_shot_list() -> void:
 
 	_shots = [
 		{"file": "01_foyer_to_living", "pos": foyer,
-			"look": Vector3(-2.2, 1.5, 6.2), "pitch": 3.0},
+			"look": Vector3(-1.6, 1.45, 7.4), "pitch": 2.0},
 		{"file": "02_living_room", "pos": living_pos,
 			"look": Vector3(-5.2, 1.2, 6.9), "pitch": 6.0},
 		{"file": "03_dining_table", "pos": dining_pos,
@@ -71,6 +71,9 @@ func _build_shot_list() -> void:
 
 func _process(_d: float) -> bool:
 	if _idx >= _shots.size():
+		var dc := RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME)
+		var objs := RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME)
+		print("[PERF] draw_calls=%d objects=%d" % [dc, objs])
 		print("[DONE] saved=%d failed=%d" % [_saved, _failed])
 		quit(0 if _failed == 0 else 1)
 		return true

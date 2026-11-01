@@ -58,45 +58,63 @@ func populate(parent: Node) -> void:
 func _living(parent: Node, m_fabric: Material, m_wood: Material,
 		m_stone: Material, m_wood2: Material, m_screen: Material) -> void:
 	var h := geom.node(parent, "FurnitureLiving")
+	var m_handle := geom.mat("f_handle", Color(0.63, 0.61, 0.57), 0.36, 0.80)
+	var m_shade := geom.mat("f_shade", Color(0.88, 0.80, 0.64), 0.95)
+	var m_bulb := geom.mat("f_bulb", Color(1.00, 0.94, 0.78), 0.35,
+		0.0, Color(1.0, 0.90, 0.70), 1.4)
+	var m_art := geom.mat("f_art", Color(0.30, 0.35, 0.42), 0.90)
+	var m_rug := geom.mat("f_rug", Color(0.34, 0.30, 0.29), 0.99)
 
-	# 电视柜：贴北墙 z=9.20，占 x -6.35 ~ -4.75
+	# 电视柜 + 电视：贴北墙（墙内表面 z=9.30），占 x -6.35 ~ -4.75
 	# 刻意西移：露台推拉门在 x=-4.0，电视柜若放 -5.0~-3.4 会正好堵死通往露台的路。
-	props.cabinet(h, "TVCabinet", Vector3(-5.55, FLOOR, 8.975),
-			Vector3(1.60, 0.45, 0.45), 0.0, m_wood)
-	props.cabinet(h, "TV", Vector3(-5.55, FLOOR + 0.45, 8.98),
-			Vector3(1.05, 0.62, 0.09), 0.0, m_screen)
+	props.tv_cabinet(h, "TVCabinet", Vector3(-5.55, FLOOR, 8.98),
+			Vector3(1.60, 0.52, 0.45), 0.0, m_wood, m_handle)
+	props.tv(h, "TV", Vector3(-5.55, FLOOR + 0.93, 9.06), 1.06, 0.60, 0.0,
+			m_screen, m_screen)
 
-	# 三人沙发：面朝北（看电视），靠背在南侧。占 x -5.60~-3.50，z 4.875~5.825
+	# 三人沙发：面朝北（看电视），靠背在南侧
 	props.sofa(h, "Sofa3", Vector3(-4.55, FLOOR, 5.35), 2.10, PI, m_fabric)
 
-	# 咖啡桌：x -5.30~-4.10，z 6.20~6.90
-	props.table(h, "CoffeeTable", Vector3(-4.70, FLOOR, 6.55),
+	# 咖啡桌
+	props.coffee_table(h, "CoffeeTable", Vector3(-4.70, FLOOR, 6.55),
 			Vector3(1.20, 0.40, 0.70), 0.0, m_wood2)
 
-	# 地毯：无碰撞装饰
+	# 地毯（纯装饰，无碰撞）
 	props.rug(h, "LivingRug", Vector3(-4.70, FLOOR, 6.30),
-			Vector2(3.40, 2.80), 0.0, m_stone)
+			Vector2(3.40, 2.80), 0.0, m_rug)
 
-	# 壁炉：贴西墙 x=-6.50，凸出 0.44
-	props.cabinet(h, "Fireplace", Vector3(-6.28, FLOOR, 7.20),
-			Vector3(0.44, 1.15, 1.60), 0.0, m_stone)
+	# 壁炉：贴西墙（墙内表面 x=-6.60），正面朝东（+X）
+	props.fireplace(h, "Fireplace", Vector3(-6.34, FLOOR, 7.20), 1.60, -PI * 0.5,
+			m_stone,
+			geom.mat("f_firebox", Color(0.07, 0.06, 0.055), 0.98),
+			geom.mat("f_hearth", Color(0.40, 0.38, 0.36), 0.86))
+
+	# 落地灯：沙发与壁炉之间的角落，不挡主通道
+	props.floor_lamp(h, "FloorLamp", Vector3(-3.30, FLOOR, 7.85), 1.45,
+			m_shade, m_handle, m_bulb)
+
+	# 西墙挂画（正对沙发）
+	props.wall_art(h, "WallArtW", Vector3(-6.56, FLOOR + 1.55, 6.20),
+			Vector2(0.80, 1.05), -PI * 0.5, m_wood2, m_art)
 
 
 # ------------------------------------------------------------------ 餐厅
 
-## 餐桌沿 Z 向摆放（修正 3），并整体东移 0.70。
-## 东移的原因：玄关洞口在 x=0，正对餐厅。餐桌若居中摆放，西侧餐椅会正好挡在
-## 玩家进屋的正前方（实测 x=0 处 z=5.04~5.20 被挡）。
-## 东移后整体占 x 0.25~2.40，z 4.63~8.33：
-##   正前方 x -0.30~0.30 空出，东侧余 2.40~3.40 = 1.00，北侧余 0.87
+## 餐桌沿 Z 向摆放，整体东移 0.70。
+## 东移原因：玄关洞口在 x=0，正对餐厅。餐桌若居中，西侧餐椅会挡在玩家进屋正前方。
+## 东移后整体占 x 0.25~2.40，z 4.63~8.33：正前方 x -0.30~0.30 空出，
+## 东侧余 1.00，北侧余 0.87。
 func _dining(parent: Node, mat: Material) -> void:
 	var h := geom.node(parent, "FurnitureDining")
+	var m_handle := geom.mat("f_handle", Color(0.63, 0.61, 0.57), 0.36, 0.80)
 
 	var table_cx := 1.325
 	var table_cz := 6.48
 	props.table(h, "DiningTable", Vector3(table_cx, FLOOR, table_cz),
 			Vector3(1.05, 0.75, 2.60), 0.0, mat)
 
+	# 椅子朝向：正面(-Z) 必须转向餐桌。
+	# 西侧 → 朝东(+X) 需 -90°；东侧 → 朝西(-X) 需 +90°；南侧 → 朝北(+Z) 需 180°；北侧 → 朝南 = 0°。
 	var seat_z: Array = [5.68, 6.48, 7.28]
 	var i := 0
 	for z in seat_z:
@@ -107,109 +125,183 @@ func _dining(parent: Node, mat: Material) -> void:
 	props.chair(h, "ChairS", Vector3(table_cx, FLOOR, 4.855), PI, mat)
 	props.chair(h, "ChairN", Vector3(table_cx, FLOOR, 8.105), 0.0, mat)
 
+	# 餐桌上方吊灯（视觉件，实际照明由 house_lighting 提供）
+	geom.cyl(h, "PendantCord", 0.008, 0.55, Vector3(table_cx, 2.45, table_cz),
+			geom.mat("f_cord", Color(0.10, 0.10, 0.10), 0.7))
+	geom.cyl(h, "PendantShade", 0.22, 0.16, Vector3(table_cx, 2.10, table_cz),
+			geom.mat("f_pendant", Color(0.82, 0.74, 0.58), 0.9))
+
+	# 北墙挂画
+	props.wall_art(h, "WallArtN", Vector3(1.325, FLOOR + 1.60, 9.26),
+			Vector2(1.10, 0.72), PI, geom.mat("f_art2", Color(0.22, 0.19, 0.17), 0.9),
+			geom.mat("f_art3", Color(0.52, 0.44, 0.36), 0.9))
+
 
 # ------------------------------------------------------------------ 厨房
 
-## 北段（x 3.40~6.50 / z 3.86~9.20）：L 台面沿北墙与东墙，通道 2.50 m。
-## 南段（x 3.50~6.50 / z 0.20~3.74）：岛台贴东墙，西侧留 1.25 m 通道。
-##
-## 3.10 m 宽的北段若同时塞台面(0.6) + 通道(1.4) + 岛台(0.9) 只剩 0.20 m 余量，
-## 因此岛台放到更宽的南段，避免制造过不去的窄缝。这是刻意的取舍，非遗漏。
+## 北段（x 3.40~6.50 / z 3.86~9.20）：L 形台面沿北墙与东墙。
+## 南段（x 3.50~6.50 / z 0.20~3.74）：岛台贴东墙，西侧留通道。
 func _kitchen(parent: Node, m_cab: Material, m_stone: Material, m_metal: Material) -> void:
 	var h := geom.node(parent, "FurnitureKitchen")
+	var m_handle := geom.mat("f_handle", Color(0.63, 0.61, 0.57), 0.36, 0.80)
+	var m_burner := geom.mat("f_burner", Color(0.13, 0.13, 0.14), 0.55)
+	var m_basin := geom.mat("f_basin", Color(0.42, 0.44, 0.46), 0.30, 0.65)
+	var m_screen := geom.mat("f_screen", Color(0.10, 0.11, 0.13), 0.30, 0.10)
 
-	props.cabinet(h, "CounterNorth", Vector3(5.35, FLOOR, 8.90),
-			Vector3(2.30, 0.90, 0.60), 0.0, m_cab)
-	props.cabinet(h, "CounterEast", Vector3(6.20, FLOOR, 6.23),
-			Vector3(0.60, 0.90, 4.74), 0.0, m_cab)
-	props.fridge(h, "Fridge", Vector3(3.80, FLOOR, 8.85), 0.0, m_metal)
+	# 北墙台面：贴北墙（内表面 z=9.30），正面朝南
+	props.base_cabinet(h, "CounterNorth", Vector3(5.35, FLOOR, 8.96),
+			Vector3(2.30, 0.92, 0.62), 0.0, m_cab, m_stone, m_handle, 4)
 
-	# 岛台（厨房南段，贴东墙并贴南墙）：x 4.75~6.35，z 0.20~1.10
-	# 两次修正的由来：侧门开在东墙 z=2.00，岛台最初占 z 1.40~2.30 直接横在通道上；
-	# 南移到 z 1.00~1.90 后，玩家通行带（z 1.70~2.30）仍与岛台北边重叠。
-	# 最终贴南墙放置，z 1.10~3.74 整段让开，侧门通道彻底畅通。
+	# 东墙台面：贴东墙（内表面 x=6.60），正面朝西
+	props.base_cabinet(h, "CounterEast", Vector3(6.27, FLOOR, 6.23),
+			Vector3(4.74, 0.92, 0.62), PI * 0.5, m_cab, m_stone, m_handle, 6)
+
+	# 北墙吊柜
+	props.upper_cabinet(h, "UpperNorth", Vector3(5.35, FLOOR + 1.52, 9.14),
+			Vector3(2.30, 0.66, 0.34), 0.0, m_cab, m_handle, 3)
+
+	# 灶台（嵌在北墙台面上）
+	props.stove(h, "Stove", Vector3(4.62, FLOOR, 8.94), 0.62, 0.0,
+			m_cab, m_stone, m_metal, m_burner)
+
+	# 水槽（嵌在北墙台面东侧）
+	props.sink(h, "Sink", Vector3(5.98, FLOOR, 8.96), 0.52, 0.42, 0.92, 0.0,
+			m_metal, m_basin)
+
+	# 冰箱：靠北墙西端
+	props.fridge(h, "Fridge", Vector3(3.80, FLOOR, 8.92), 0.0, m_metal, m_handle)
+
+	# 岛台（厨房南段，贴南墙）：
+	# 侧门开在东墙 z=2.00，岛台若占 z 1.40~2.30 会横在通道上；最终贴南墙放置。
 	props.island(h, "Island", Vector3(5.55, FLOOR, 0.65),
-			Vector3(1.60, 0.92, 0.90), 0.0, m_cab, m_stone)
+			Vector3(1.60, 0.92, 0.90), 0.0, m_cab, m_stone, m_handle)
 
 
 # ------------------------------------------------------------------ 书房
 
 func _study(parent: Node, mat: Material, m_metal: Material) -> void:
 	var h := geom.node(parent, "FurnitureStudy")
+	var m_handle := geom.mat("f_handle", Color(0.63, 0.61, 0.57), 0.36, 0.80)
+	var m_screen := geom.mat("f_screen", Color(0.10, 0.11, 0.13), 0.30, 0.10)
 
-	# 书桌：贴西墙，占 x -6.30~-4.70，z 0.70~1.70
-	props.table(h, "Desk", Vector3(-5.50, FLOOR, 1.20),
-			Vector3(0.80, 0.75, 1.00), 0.0, mat)
-	props.cabinet(h, "Laptop", Vector3(-5.50, FLOOR + 0.75, 1.20),
-			Vector3(0.34, 0.03, 0.24), 0.0, m_metal)
+	# 书桌：南侧靠南墙一带，桌面 1.40 × 0.68
+	props.desk(h, "Desk", Vector3(-5.10, FLOOR, 1.15), 0.0, mat, m_handle)
+	props.laptop(h, "Laptop", Vector3(-5.10, FLOOR + 0.75, 1.15), 0.0, m_metal, m_screen)
 
-	# 书架：贴南墙 z=0.20
-	props.cabinet(h, "Bookshelf", Vector3(-4.10, FLOOR, 0.42),
-			Vector3(1.60, 1.80, 0.36), 0.0, mat)
+	# 书架：贴南墙（内表面 z=0.30），背面朝墙 → 旋转 180°
+	var book_mats: Array = [
+		geom.mat("f_book1", Color(0.42, 0.20, 0.16), 0.86),
+		geom.mat("f_book2", Color(0.20, 0.28, 0.40), 0.86),
+		geom.mat("f_book3", Color(0.26, 0.32, 0.24), 0.86),
+		geom.mat("f_book4", Color(0.52, 0.44, 0.30), 0.86),
+		geom.mat("f_book5", Color(0.30, 0.26, 0.30), 0.86),
+	]
+	props.bookshelf(h, "Bookshelf", Vector3(-4.10, FLOOR, 0.52),
+			Vector3(1.60, 1.80, 0.36), PI, mat, book_mats)
+
+	# 台灯
+	props.floor_lamp(h, "DeskLamp", Vector3(-5.82, FLOOR + 0.75, 0.90), 0.34,
+			geom.mat("f_shade", Color(0.88, 0.80, 0.64), 0.95), m_metal,
+			geom.mat("f_bulb", Color(1.00, 0.94, 0.78), 0.35,
+				0.0, Color(1.0, 0.90, 0.70), 1.4))
 
 
 # ------------------------------------------------------------------ 玄关与卫生间
 
 func _foyer(parent: Node, mat: Material) -> void:
 	var h := geom.node(parent, "FurnitureFoyer")
+	var m_handle := geom.mat("f_handle", Color(0.63, 0.61, 0.57), 0.36, 0.80)
+	var m_porcelain := geom.mat("f_porcelain", Color(0.86, 0.86, 0.84), 0.28)
+	var m_top := geom.mat("f_bath_top", Color(0.55, 0.54, 0.52), 0.55)
+	var m_mirror := geom.mat("f_mirror", Color(0.62, 0.66, 0.70), 0.10, 0.85)
 
+	# 鞋柜：贴玄关南侧
 	props.cabinet(h, "ShoeCabinet", Vector3(-0.92, FLOOR, 0.80),
 			Vector3(0.36, 0.95, 1.00), 0.0, mat)
 
-	props.cabinet(h, "Vanity", Vector3(-2.62, FLOOR, 0.95),
-			Vector3(0.50, 0.85, 1.00), 0.0, mat)
-	props.cabinet(h, "Toilet", Vector3(-2.62, FLOOR, 3.20),
-			Vector3(0.48, 0.42, 0.60), 0.0, mat)
+	# 洗手台：贴卫生间西墙，正面朝东
+	props.vanity(h, "Vanity", Vector3(-2.60, FLOOR, 0.95), -PI * 0.5,
+			mat, m_top, m_handle, m_mirror)
+
+	# 马桶：贴卫生间西墙，正面朝东
+	props.toilet(h, "Toilet", Vector3(-2.62, FLOOR, 3.20), -PI * 0.5,
+			m_porcelain, m_handle)
+
 
 # ------------------------------------------------------------------ 生活小道具
 
 ## 杯子、盘子、书籍、装饰物等桌面杂物。
-## 让灰盒场景有生活痕迹——不是随机堆放，而是按住宅逻辑摆放。
+## 让场景有生活痕迹——不是随机堆放，而是按住宅逻辑摆放。
 func _small_props(parent: Node) -> void:
 	var h := geom.node(parent, "SmallProps")
 
-	# 材质
-	var m_cup := geom.mat("cup", Color(0.92, 0.90, 0.85), 0.4)
-	var m_plate := geom.mat("plate", Color(0.88, 0.86, 0.82), 0.3)
-	var m_book := geom.mat("book", Color(0.55, 0.30, 0.20), 0.7)
-	var m_book2 := geom.mat("book2", Color(0.25, 0.35, 0.55), 0.7)
-	var m_glass := geom.mat("glass", Color(0.75, 0.85, 0.90), 0.1, 0.3)
-	var m_candle := geom.mat("candle", Color(0.95, 0.88, 0.70), 0.6)
-	var m_flower := geom.mat("flower", Color(0.85, 0.45, 0.55), 0.6)
-	var m_vase := geom.mat("vase", Color(0.55, 0.65, 0.60), 0.3)
+	var m_cup := geom.mat("p_cup", Color(0.92, 0.90, 0.85), 0.40)
+	var m_plate := geom.mat("p_plate", Color(0.88, 0.86, 0.82), 0.30)
+	var m_book := geom.mat("p_book", Color(0.55, 0.30, 0.20), 0.70)
+	var m_book2 := geom.mat("p_book2", Color(0.25, 0.35, 0.55), 0.70)
+	var m_glass := geom.mat("p_glass", Color(0.75, 0.85, 0.90), 0.10, 0.30)
+	var m_candle := geom.mat("p_candle", Color(0.95, 0.88, 0.70), 0.60)
+	var m_flower := geom.mat("p_flower", Color(0.85, 0.45, 0.55), 0.60)
+	var m_vase := geom.mat("p_vase", Color(0.55, 0.65, 0.60), 0.30)
+	var m_cloth := geom.mat("p_cloth", Color(0.78, 0.74, 0.68), 0.95)
 
-	# ---- 餐厅桌面（table_cx=1.325, table_cz=6.48, 桌面 y≈0.95）
-	var tbl_y := FLOOR + 0.77  # 桌面顶
-	# 三个杯子（不同位置）
-	geom.box(h, "Cup1", Vector3(0.08, 0.10, 0.08), Vector3(1.1, tbl_y + 0.05, 6.2), m_cup)
-	geom.box(h, "Cup2", Vector3(0.08, 0.10, 0.08), Vector3(1.6, tbl_y + 0.05, 6.7), m_cup)
-	geom.box(h, "Cup3", Vector3(0.08, 0.10, 0.08), Vector3(1.4, tbl_y + 0.05, 6.4), m_cup)
-	# 两个盘子
-	geom.box(h, "Plate1", Vector3(0.22, 0.02, 0.22), Vector3(1.0, tbl_y + 0.01, 6.5), m_plate)
-	geom.box(h, "Plate2", Vector3(0.22, 0.02, 0.22), Vector3(1.7, tbl_y + 0.01, 6.3), m_plate)
+	# ---- 餐桌桌面（桌面顶 y = FLOOR + 0.75）
+	var tbl_y := FLOOR + 0.75
+	# 桌旗
+	geom.box(h, "TableRunner", Vector3(0.34, 0.006, 2.10),
+		Vector3(1.325, tbl_y + 0.003, 6.48), m_cloth)
+	# 杯子（每人一位，分东西两侧）
+	var cup_spots: Array = [
+		Vector3(0.78, 0, 5.72), Vector3(0.78, 0, 6.52), Vector3(0.78, 0, 7.32),
+		Vector3(1.87, 0, 5.72), Vector3(1.87, 0, 6.52), Vector3(1.87, 0, 7.32),
+	]
+	var ci := 0
+	for p in cup_spots:
+		geom.box(h, "Cup%d" % ci, Vector3(0.075, 0.095, 0.075),
+			Vector3(p.x, tbl_y + 0.048, p.z), m_cup)
+		ci += 1
+	# 盘子
+	geom.box(h, "Plate1", Vector3(0.22, 0.015, 0.22), Vector3(1.02, tbl_y + 0.008, 5.95), m_plate)
+	geom.box(h, "Plate2", Vector3(0.22, 0.015, 0.22), Vector3(1.62, tbl_y + 0.008, 7.05), m_plate)
+	geom.box(h, "Plate3", Vector3(0.22, 0.015, 0.22), Vector3(1.02, tbl_y + 0.008, 7.10), m_plate)
 	# 玻璃杯
-	geom.box(h, "Glass1", Vector3(0.06, 0.12, 0.06), Vector3(1.5, tbl_y + 0.06, 6.1), m_glass)
+	geom.box(h, "Glass1", Vector3(0.06, 0.115, 0.06), Vector3(1.52, tbl_y + 0.058, 5.80), m_glass)
+	# 花瓶 + 花
+	geom.box(h, "Vase", Vector3(0.10, 0.17, 0.10), Vector3(1.325, tbl_y + 0.085, 6.48), m_vase)
+	geom.box(h, "Flower", Vector3(0.15, 0.11, 0.15), Vector3(1.325, tbl_y + 0.22, 6.48), m_flower)
+	# 蜡烛
+	geom.box(h, "TableCandle", Vector3(0.05, 0.09, 0.05),
+		Vector3(1.325, tbl_y + 0.045, 5.45), m_candle)
 
-	# ---- 客厅茶几（x≈-4.70, z≈6.55, 顶面 y≈FLOOR+0.38）
+	# ---- 茶几（桌面顶 y = FLOOR + 0.40）
 	var ct_y := FLOOR + 0.40
 	geom.box(h, "Book1", Vector3(0.16, 0.03, 0.22), Vector3(-4.90, ct_y + 0.015, 6.45), m_book, 0.3)
 	geom.box(h, "Book2", Vector3(0.15, 0.025, 0.20), Vector3(-4.88, ct_y + 0.042, 6.47), m_book2, 0.15)
 	geom.box(h, "Candle", Vector3(0.06, 0.10, 0.06), Vector3(-4.55, ct_y + 0.05, 6.65), m_candle)
+	geom.box(h, "Coaster", Vector3(0.10, 0.008, 0.10), Vector3(-4.42, ct_y + 0.004, 6.35), m_cloth)
+	geom.box(h, "Mug", Vector3(0.07, 0.09, 0.07), Vector3(-4.42, ct_y + 0.049, 6.35), m_cup)
 
-	# ---- 厨房台面（CounterNorth y≈FLOOR+0.90）
-	var kn_y := FLOOR + 0.91
-	geom.box(h, "KitchenGlass1", Vector3(0.07, 0.12, 0.07), Vector3(5.1, kn_y + 0.06, 8.7), m_glass)
-	geom.box(h, "KitchenPlate1", Vector3(0.24, 0.02, 0.24), Vector3(5.5, kn_y + 0.01, 8.9), m_plate)
-	geom.box(h, "KitchenBowl", Vector3(0.14, 0.06, 0.14), Vector3(5.8, kn_y + 0.03, 8.8), m_cup)
+	# ---- 厨房台面（台面顶 y = FLOOR + 0.92）
+	var kn_y := FLOOR + 0.92
+	geom.box(h, "KitchenGlass1", Vector3(0.07, 0.12, 0.07), Vector3(5.35, kn_y + 0.06, 9.02), m_glass)
+	geom.box(h, "KitchenPlate1", Vector3(0.24, 0.02, 0.24), Vector3(5.62, kn_y + 0.01, 8.98), m_plate)
+	geom.box(h, "KitchenBowl", Vector3(0.14, 0.06, 0.14), Vector3(5.30, kn_y + 0.03, 8.86), m_cup)
+	# 砧板
+	geom.box(h, "CuttingBoard", Vector3(0.34, 0.025, 0.24), Vector3(5.05, kn_y + 0.013, 8.90), m_book)
 
-	# ---- 书房桌面（Desk y≈FLOOR+0.75）
-	var dt_y := FLOOR + 0.77
-	geom.box(h, "DeskBook1", Vector3(0.14, 0.03, 0.20), Vector3(-5.80, dt_y + 0.015, 1.05), m_book, 0.2)
-	geom.box(h, "DeskPen", Vector3(0.015, 0.015, 0.14), Vector3(-5.35, dt_y + 0.008, 1.30), m_cup, 0.5)
+	# ---- 书房桌面（桌面顶 y = FLOOR + 0.75）
+	var dt_y := FLOOR + 0.75
+	geom.box(h, "DeskBook1", Vector3(0.14, 0.03, 0.20), Vector3(-4.72, dt_y + 0.015, 1.28), m_book, 0.2)
+	geom.box(h, "DeskPen", Vector3(0.012, 0.012, 0.14), Vector3(-4.95, dt_y + 0.006, 1.42), m_cup, 0.5)
+	geom.box(h, "DeskMug", Vector3(0.07, 0.09, 0.07), Vector3(-5.52, dt_y + 0.045, 1.42), m_cup)
 
-	# ---- 花瓶（餐桌上，聚会感）
-	geom.box(h, "Vase", Vector3(0.10, 0.16, 0.10), Vector3(1.325, tbl_y + 0.08, 6.48), m_vase)
-	geom.box(h, "Flower", Vector3(0.14, 0.10, 0.14), Vector3(1.325, tbl_y + 0.21, 6.48), m_flower)
-
-	# ---- 门旁小物件（玄关）
+	# ---- 玄关：伞架 + 钥匙盘
 	geom.box(h, "UmbrellaStand", Vector3(0.12, 0.40, 0.12), Vector3(0.60, FLOOR + 0.20, 0.80), m_vase)
+	geom.box(h, "KeyTray", Vector3(0.16, 0.02, 0.12), Vector3(-0.92, FLOOR + 0.96, 0.80), m_cloth)
+	geom.box(h, "Keys", Vector3(0.05, 0.01, 0.03), Vector3(-0.94, FLOOR + 0.975, 0.80), m_book)
+
+	# ---- 壁炉台摆件
+	geom.box(h, "MantelPhoto", Vector3(0.16, 0.20, 0.02),
+		Vector3(-6.34, FLOOR + 1.35, 6.62), m_book2)
+	geom.box(h, "MantelCandle", Vector3(0.05, 0.12, 0.05),
+		Vector3(-6.34, FLOOR + 1.31, 7.70), m_candle)

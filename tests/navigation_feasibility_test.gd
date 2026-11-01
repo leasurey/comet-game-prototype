@@ -31,6 +31,7 @@ var _inst: Node3D = null
 var _region: NavigationRegion3D = null
 var _mesh: NavigationMesh = null
 var _pf_mark := 0
+var _rebakes := 0
 
 
 func _initialize() -> void:
@@ -61,6 +62,14 @@ func _process(_d: float) -> bool:
 	if _phase == 1:
 		# 烘焙后必须等 NavigationServer 同步（按物理帧，渲染帧在 headless 下不计时）。
 		if Engine.get_physics_frames() - _pf_mark < 12:
+			return false
+		# 房屋几何较多时烘焙耗时更长，12 帧同步窗口内可能还没出多边形。
+		# 此时重烘一次（与 NPCManager.tick() 的重试策略一致），
+		# 而不是放宽断言——连通性要求保持不变。
+		if _mesh != null and _mesh.get_polygon_count() == 0 and _rebakes < 2:
+			_rebakes += 1
+			_bake()
+			_pf_mark = Engine.get_physics_frames()
 			return false
 		_verify()
 		return true
