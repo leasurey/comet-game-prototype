@@ -39,6 +39,20 @@ const W3_X := 3.44
 const SOUTH_N := 3.74
 const SOUTH_Z_MID := 1.97
 
+## ---- 西翼（按电影考据新增）----
+## 电影只确认「走廊连接主空间与卧室/浴室」（FILM_LOCATIONS.md），
+## 具体尺寸与门位是 GAME_LAYOUT 原创设计，不是电影户型复刻。
+## 主卧、浴室、洗衣房都开向同一条南北走廊，走廊从主空间西侧进入。
+const WING_MIN_X := -11.2      # 西翼外墙面
+const WING_WALL_X := -8.05     # 走廊与房间之间的隔墙
+const HALL_MAX_X := -6.70      # 走廊东侧（与主空间/书房之间）
+const WING_Z0 := 0.20
+const WING_Z1 := 9.20
+const WING_SPLIT_LAUNDRY := 2.52   # 洗衣房 / 浴室
+const WING_SPLIT_BED := 4.98       # 浴室 / 主卧
+const WING_W := OUT_X - WING_MIN_X  # 17.9 新房宽
+const WING_CX := (OUT_X + WING_MIN_X) * 0.5  # -2.25 新房中心线
+
 const SPAWN := Vector3(0.0, FLOOR_Y + 0.05, 1.60)
 
 var geom: HouseGeom = null
@@ -69,6 +83,7 @@ func build(root: Node3D) -> Dictionary:
 	_build_floor_and_ceiling(shared, floor_mat, ceil_mat)
 	_build_outer_walls(shared, wall_mat)
 	_build_inner_walls(shared, wall_mat)
+	_build_wing_walls(shared, wall_mat)
 	_build_door_panels(shared, door_mat)
 	_build_outdoor(shared, floor_mat)
 
@@ -85,6 +100,11 @@ func build(root: Node3D) -> Dictionary:
 	light.omni(va, "DiningLamp", Vector3(1.30, 2.55, 6.60), Color(1.0, 0.90, 0.74), 2.0, 9.0)
 	light.omni(va, "KitchenLamp", Vector3(5.00, 2.55, 6.60), Color(1.0, 0.94, 0.82), 1.8, 9.0)
 	light.omni(va, "FoyerLamp", Vector3(0.00, 2.50, 1.50), Color(1.0, 0.88, 0.70), 1.2, 7.0)
+
+	# 西翼照明：走廊 / 主卧 / 浴室（名字前缀被序章停电逻辑识别）
+	light.omni(va, "HallLamp", Vector3(-7.40, 2.55, 6.20), Color(1.0, 0.88, 0.72), 1.6, 8.0)
+	light.omni(va, "BedLamp", Vector3(-9.60, 1.40, 6.80), Color(1.0, 0.84, 0.66), 1.4, 6.5)
+	light.omni(va, "BathLamp", Vector3(-9.60, 2.45, 3.70), Color(1.0, 0.92, 0.80), 1.2, 5.5)
 
 	# beta：全屋停电。只留餐桌上一支蜡烛，用来让玩家察觉「这里已经不是原来那栋房子」。
 	light.omni(vb, "Candle", Vector3(1.325, 1.00, 6.48), Color(1.0, 0.72, 0.40), 0.9, 5.0)
@@ -112,13 +132,13 @@ func build(root: Node3D) -> Dictionary:
 # ------------------------------------------------------------------ 地板与天花
 
 func _build_floor_and_ceiling(parent: Node, floor_mat: Material, ceil_mat: Material) -> void:
-	var w := OUT_X * 2.0
+	var w := WING_W
 	# 地板：顶面 y = 0.20
 	geom.solid(parent, "Floor", Vector3(w, 0.2, OUT_D),
-			Vector3(0, FLOOR_Y - 0.1, OUT_Z_MID), floor_mat)
+			Vector3(WING_CX, FLOOR_Y - 0.1, OUT_Z_MID), floor_mat)
 	# 天花板：底面 y = 0.20 + 2.7 = 2.90
 	geom.solid(parent, "Ceiling", Vector3(w, 0.2, OUT_D),
-			Vector3(0, FLOOR_Y + WALL_H + 0.1, OUT_Z_MID), ceil_mat)
+			Vector3(WING_CX, FLOOR_Y + WALL_H + 0.1, OUT_Z_MID), ceil_mat)
 
 
 # ------------------------------------------------------------------ 外墙
@@ -127,31 +147,33 @@ func _build_outer_walls(parent: Node, mat: Material) -> void:
 	# 前墙（-Z，前门所在）：门洞 1.60，中心 x=0
 	geom.wall_with_opening(parent, "WallFront", {
 		"axis": "x",
-		"center": Vector3(0, 0, OUT_Z0),
-		"length": OUT_X * 2.0,
+		"center": Vector3(WING_CX, 0, OUT_Z0),
+		"length": WING_W,
 		"thickness": WALL_T_OUT,
 		"corner_trim": WALL_T_OUT * 0.5,
 		"height": WALL_H,
 		"base_y": FLOOR_Y,
-		"opening": {"offset": 0.0, "width": 1.6, "height": 2.1, "bottom": 0.0},
+		# 前门仍在 x=0，相对新墙心的偏移 = 0 - (-2.25)
+		"opening": {"offset": -WING_CX, "width": 1.6, "height": 2.1, "bottom": 0.0},
 	}, mat)
 
 	# 后墙（+Z）：露台推拉门 1.80，中心 x=-4.0
 	geom.wall_with_opening(parent, "WallBack", {
 		"axis": "x",
-		"center": Vector3(0, 0, OUT_Z1),
-		"length": OUT_X * 2.0,
+		"center": Vector3(WING_CX, 0, OUT_Z1),
+		"length": WING_W,
 		"thickness": WALL_T_OUT,
 		"corner_trim": WALL_T_OUT * 0.5,
 		"height": WALL_H,
 		"base_y": FLOOR_Y,
-		"opening": {"offset": -4.0, "width": 1.8, "height": 2.1, "bottom": 0.0},
+		# 露台门仍在 x=-4.0
+		"opening": {"offset": -4.0 - WING_CX, "width": 1.8, "height": 2.1, "bottom": 0.0},
 	}, mat)
 
-	# 西墙（-X）：无洞口
+	# 西墙（-X）：无洞口（移到西翼外墙）
 	geom.wall_with_opening(parent, "WallWest", {
 		"axis": "z",
-		"center": Vector3(-OUT_X, 0, OUT_Z_MID),
+		"center": Vector3(WING_MIN_X, 0, OUT_Z_MID),
 		"length": OUT_D,
 		"thickness": WALL_T_OUT,
 		"corner_trim": WALL_T_OUT * 0.5,
@@ -170,6 +192,75 @@ func _build_outer_walls(parent: Node, mat: Material) -> void:
 		"height": WALL_H,
 		"base_y": FLOOR_Y,
 		"opening": {"offset": -2.70, "width": 1.2, "height": 2.1, "bottom": 0.0},
+	}, mat)
+
+
+# ------------------------------------------------------------------ 西翼内墙
+
+## 西翼：一条南北走廊（x -8.05 ~ -6.70），西侧依次是
+##   洗衣房 z 0.20~2.52 / 浴室 2.52~4.98 / 主卧 4.98~9.20
+## 走廊从主空间西侧进入（x=-6.70 墙上开 1.1 m 门洞）。
+##
+## 依据：电影确认「走廊连接主空间与卧室/浴室」，但未展示具体户型，
+## 因此房间尺寸、门的位置全部是 GAME_LAYOUT 原创设计。
+func _build_wing_walls(parent: Node, mat: Material) -> void:
+	# 走廊东墙（原外墙位置，现为内墙）：z 全程，北端开一个门洞通主空间
+	geom.wall_with_opening(parent, "HallEastWall", {
+		"axis": "z",
+		"center": Vector3(HALL_MAX_X, 0, OUT_Z_MID),
+		"length": OUT_D,
+		"thickness": WALL_T_IN,
+		"height": WALL_H,
+		"base_y": FLOOR_Y,
+		# 门洞中心 z=8.50，墙心 z=4.70
+		"opening": {"offset": 3.80, "width": 1.10, "height": 2.10, "bottom": 0.0},
+	}, mat)
+
+	# 走廊西墙：按门洞切成 7 段，每段最多一个洞口
+	# (z0, z1, door_width or 0)
+	var segs := [
+		[0.20, 1.10, 0.00],   # 实墙
+		[1.10, 2.00, 0.86],   # 洗衣房门
+		[2.00, 2.90, 0.00],
+		[2.90, 3.80, 0.86],   # 浴室门
+		[3.80, 7.30, 0.00],
+		[7.30, 8.40, 1.00],   # 主卧门
+		[8.40, 9.20, 0.00],
+	]
+	var i := 0
+	for sg in segs:
+		var z0 := float(sg[0])
+		var z1 := float(sg[1])
+		var dw := float(sg[2])
+		var cfg := {
+			"axis": "z",
+			"center": Vector3(WING_WALL_X, 0, (z0 + z1) * 0.5),
+			"length": z1 - z0,
+			"thickness": WALL_T_IN,
+			"height": WALL_H,
+			"base_y": FLOOR_Y,
+		}
+		if dw > 0.0:
+			cfg["opening"] = {"offset": 0.0, "width": dw, "height": 2.05, "bottom": 0.0}
+		geom.wall_with_opening(parent, "HallRoomWall%d" % i, cfg, mat)
+		i += 1
+
+	# 洗衣房 / 浴室 之间、浴室 / 主卧 之间的横墙
+	geom.wall_with_opening(parent, "WingSplitLaundry", {
+		"axis": "x",
+		"center": Vector3((WING_MIN_X + WING_WALL_X) * 0.5, 0, WING_SPLIT_LAUNDRY),
+		"length": WING_WALL_X - WING_MIN_X,
+		"thickness": WALL_T_IN,
+		"height": WALL_H,
+		"base_y": FLOOR_Y,
+	}, mat)
+	geom.wall_with_opening(parent, "WingSplitBed", {
+		"axis": "x",
+		"center": Vector3((WING_MIN_X + WING_WALL_X) * 0.5, 0, WING_SPLIT_BED),
+		"length": WING_WALL_X - WING_MIN_X,
+		"thickness": WALL_T_IN,
+		"height": WALL_H,
+		"base_y": FLOOR_Y,
 	}, mat)
 
 

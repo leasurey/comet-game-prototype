@@ -268,10 +268,11 @@ func step_p05_hotspots() -> bool:
 
 func step_p06_walls() -> bool:
 	if _t_state == 0:
-		# 起点必须避开所有家具：(-2.5, 8.5) 在客厅东北空地，
-		# 西行路径上只有西外墙。原先用 (-4.0, 6.0) 会撞在咖啡桌边角上，
-		# 玩家被 move_and_slide 沿桌边推向东侧，看起来像「没往西走」。
-		_rig.reset_to_spawn(Vector3(-2.5, FLOOR_Y + 0.05, 8.5))
+		# 起点必须避开所有家具，且**避开走廊门洞**。
+		# 地图改造后 x=-6.70 变成「主空间 / 走廊」之间的内墙，门洞在 z 7.95~9.05；
+		# 原来在 z=8.5 西行会直接从门洞走进走廊（那是正确行为，不是穿墙）。
+		# 这里改在 z=4.2（门洞以南的实墙段），验证的仍是「实墙挡人」。
+		_rig.reset_to_spawn(Vector3(-2.5, FLOOR_Y + 0.05, 4.2))
 		_rig.yaw = deg_to_rad(90.0)
 		_rig.pitch = 0.0
 		_rig._apply_rotation()
@@ -284,7 +285,8 @@ func step_p06_walls() -> bool:
 	Input.action_release("move_forward")
 	var x: float = _rig.global_position.x
 	_check(x < -5.0, "P06 向西确实移动到了墙边", "x=%.3f" % x)
-	_check(x > -6.30, "P06 向西未穿出外墙", "x=%.3f（内表面 -6.50，半径 0.32）" % x)
+	# 走廊东墙内表面 x=-6.64，玩家胶囊半径 0.32 → 应停在约 -6.32
+	_check(x > -6.45, "P06 向西未穿过走廊隔墙", "x=%.3f（墙内表面 -6.64，半径 0.32）" % x)
 	return true
 
 

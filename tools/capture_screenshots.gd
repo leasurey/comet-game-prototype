@@ -66,6 +66,13 @@ func _build_shot_list() -> void:
 			"look": Vector3(0.0, 1.2, 0.10), "pitch": 0.0},
 		{"file": "06_door_open", "pos": door_pos,
 			"look": Vector3(0.0, 1.2, 0.10), "pitch": 0.0, "open_door": true},
+		# 西翼（按电影考据新增：走廊连接主空间与卧室/浴室）
+		{"file": "12_hallway", "pos": Vector3(-7.35, 0.20, 4.60),
+			"look": Vector3(-8.05, 1.5, 8.20), "pitch": 2.0},
+		{"file": "13_bedroom", "pos": Vector3(-8.60, 0.20, 6.10),
+			"look": Vector3(-9.90, 1.0, 8.40), "pitch": 6.0},
+		{"file": "14_bathroom", "pos": Vector3(-8.55, 0.20, 3.10),
+			"look": Vector3(-10.70, 1.0, 3.90), "pitch": 4.0},
 	]
 
 

@@ -723,3 +723,83 @@ func vanity(parent: Node, node_name: String, pos: Vector3, yaw: float,
 	holder.position = pos
 	holder.rotation.y = yaw
 	return holder
+
+
+# ------------------------------------------------------------------ 卧室与洗衣
+
+## 双人床：床架 + 床垫 + 被子 + 枕头 + 床头板。床头朝局部 +Z。
+func bed(parent: Node, node_name: String, pos: Vector3, size: Vector2,
+		yaw: float, frame_mat: Material, sheet_mat: Material,
+		pillow_mat: Material) -> Node3D:
+	var holder := geom.node(parent, node_name)
+	var w := size.x      # 宽（局部 X）
+	var l := size.y      # 长（局部 Z）
+	var frame_h := 0.26
+	var matt_h := 0.20
+	var m_sheet := _tone(sheet_mat, 1.06)
+	_collider(holder, "Collider", Vector3(w, frame_h + matt_h, l),
+		Vector3(0, (frame_h + matt_h) * 0.5, 0))
+	# 床架
+	geom.box(holder, "Frame", Vector3(w, frame_h, l), Vector3(0, frame_h * 0.5, 0), frame_mat)
+	_legs(holder, "Leg", w * 0.5 - 0.10, l * 0.5 - 0.10, frame_h, 0.06, _tone(frame_mat, 0.8))
+	# 床垫
+	geom.box(holder, "Mattress", Vector3(w - 0.06, matt_h, l - 0.06),
+		Vector3(0, frame_h + matt_h * 0.5, 0), m_sheet)
+	# 被子（覆盖靠脚一端 2/3）
+	var duvet_l := l * 0.66
+	geom.box(holder, "Duvet", Vector3(w - 0.02, 0.10, duvet_l),
+		Vector3(0, frame_h + matt_h + 0.04, -l * 0.5 + duvet_l * 0.5 + 0.02), sheet_mat)
+	# 枕头两个
+	var pw := (w - 0.16) * 0.5
+	for i in 2:
+		var px := -w * 0.25 + w * 0.5 * float(i)
+		geom.box(holder, "Pillow%d" % i, Vector3(pw * 0.9, 0.12, 0.34),
+			Vector3(px + w * 0.02 * (1 if i == 0 else -1),
+				frame_h + matt_h + 0.06, l * 0.5 - 0.24), pillow_mat)
+	# 床头板
+	geom.box(holder, "Headboard", Vector3(w + 0.06, 0.72, 0.06),
+		Vector3(0, frame_h + 0.36, l * 0.5 + 0.03), _tone(frame_mat, 0.9))
+	holder.position = pos
+	holder.rotation.y = yaw
+	return holder
+
+
+## 衣柜：柜体 + 两扇长门 + 拉手。门朝局部 -Z。
+func wardrobe(parent: Node, node_name: String, pos: Vector3, size: Vector3,
+		yaw: float, mat: Material, handle_mat: Material) -> Node3D:
+	var holder := geom.node(parent, node_name)
+	_collider(holder, "Collider", size, Vector3(0, size.y * 0.5, 0))
+	geom.box(holder, "Body", size, Vector3(0, size.y * 0.5, 0), mat)
+	geom.box(holder, "Cornice", Vector3(size.x + 0.04, 0.06, size.z + 0.04),
+		Vector3(0, size.y - 0.03, 0), _tone(mat, 1.10))
+	var dw := size.x * 0.5 - 0.02
+	for i in 2:
+		var dx := -size.x * 0.25 + size.x * 0.5 * float(i)
+		geom.box(holder, "Door%d" % i, Vector3(dw, size.y - 0.14, 0.02),
+			Vector3(dx, size.y * 0.5 - 0.04, -size.z * 0.5 - 0.01), _tone(mat, 1.10))
+		var hx := dx + (dw * 0.34 if i == 0 else -dw * 0.34)
+		geom.box(holder, "Handle%d" % i, Vector3(0.02, 0.22, 0.03),
+			Vector3(hx, size.y * 0.5, -size.z * 0.5 - 0.03), handle_mat)
+	holder.position = pos
+	holder.rotation.y = yaw
+	return holder
+
+
+## 洗衣机：箱体 + 圆形舱门 + 控制面板。门朝局部 -Z。
+func washer(parent: Node, node_name: String, pos: Vector3, yaw: float,
+		mat: Material, steel_mat: Material, glass_mat: Material) -> Node3D:
+	var holder := geom.node(parent, node_name)
+	var w := 0.60
+	var h := 0.85
+	var d := 0.60
+	_collider(holder, "Collider", Vector3(w, h, d), Vector3(0, h * 0.5, 0))
+	geom.box(holder, "Body", Vector3(w, h, d), Vector3(0, h * 0.5, 0), mat)
+	geom.box(holder, "Door", Vector3(0.40, 0.40, 0.03), Vector3(0, 0.42, -d * 0.5 - 0.015), steel_mat)
+	geom.box(holder, "Glass", Vector3(0.30, 0.30, 0.02), Vector3(0, 0.42, -d * 0.5 - 0.03), glass_mat)
+	geom.box(holder, "Panel", Vector3(w - 0.06, 0.12, 0.02), Vector3(0, h - 0.10, -d * 0.5 - 0.012), _tone(steel_mat, 0.8))
+	for i in 3:
+		geom.cyl(holder, "Knob%d" % i, 0.016, 0.02,
+			Vector3(-0.16 + 0.16 * float(i), h - 0.10, -d * 0.5 - 0.03), _tone(steel_mat, 0.6))
+	holder.position = pos
+	holder.rotation.y = yaw
+	return holder

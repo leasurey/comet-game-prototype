@@ -31,7 +31,7 @@ signal blackout_started()
 const DATA_PATH := "res://data/opening.json"
 
 ## 这些名字的灯属于「市电照明」，停电时要灭
-const ELECTRIC_LIGHT_KEYS := ["LivingLamp", "DiningLamp", "KitchenLamp", "FoyerLamp", "StudyLight"]
+const ELECTRIC_LIGHT_KEYS := ["LivingLamp", "DiningLamp", "KitchenLamp", "FoyerLamp", "StudyLight", "HallLamp", "BedLamp", "BathLamp"]
 
 var _phases: Dictionary = {}
 var _current: String = ""

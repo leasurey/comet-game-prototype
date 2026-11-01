@@ -131,6 +131,11 @@ func _verify() -> void:
 		"厨房北段": Vector3(5.0, FLOOR_Y, 6.5),
 		"书房": Vector3(-4.6, FLOOR_Y, 1.6),
 		"卫生间": Vector3(-2.1, FLOOR_Y, 2.6),
+		# 西翼（按电影考据新增：走廊连接主空间与卧室/浴室）
+		"走廊": Vector3(-7.40, FLOOR_Y, 6.00),
+		"主卧": Vector3(-9.60, FLOOR_Y, 7.50),
+		"浴室": Vector3(-9.30, FLOOR_Y, 3.60),
+		"洗衣房": Vector3(-9.60, FLOOR_Y, 1.20),
 		"侧门通道": Vector3(5.0, FLOOR_Y, 2.0),
 	}
 	var foyer: Vector3 = pts["玄关"]

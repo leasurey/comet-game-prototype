@@ -47,6 +47,7 @@ func populate(parent: Node) -> void:
 	_kitchen(parent, m_cab, m_stone, m_metal)
 	_study(parent, m_wood, m_metal)
 	_foyer(parent, m_cab)
+	_wing(parent, m_wood, m_cab)
 	_small_props(parent)
 	# 注意：这里不再添加灯光。房屋已由 house_lighting.gd 提供
 	# 双世界灯光（α 供电 / β 停电，共 9 盏变体灯）。
@@ -184,9 +185,11 @@ func _study(parent: Node, mat: Material, m_metal: Material) -> void:
 	var m_handle := geom.mat("f_handle", Color(0.63, 0.61, 0.57), 0.36, 0.80)
 	var m_screen := geom.mat("f_screen", Color(0.10, 0.11, 0.13), 0.30, 0.10)
 
-	# 书桌：南侧靠南墙一带，桌面 1.40 × 0.68
-	props.desk(h, "Desk", Vector3(-5.10, FLOOR, 1.15), 0.0, mat, m_handle)
-	props.laptop(h, "Laptop", Vector3(-5.10, FLOOR + 0.75, 1.15), 0.0, m_metal, m_screen)
+	# 书桌：贴西墙纵向摆放（旋转 90°，桌面 1.40 沿 Z）。
+	# 注意：不要横放在房间中部——会把书房走道挤窄，navmesh 被 agent 半径腐蚀后
+	# 书房与卫生间的连通性会间歇性失败。
+	props.desk(h, "Desk", Vector3(-6.00, FLOOR, 1.40), PI * 0.5, mat, m_handle)
+	props.laptop(h, "Laptop", Vector3(-6.00, FLOOR + 0.75, 1.40), PI * 0.5, m_metal, m_screen)
 
 	# 书架：贴南墙（内表面 z=0.30），背面朝墙 → 旋转 180°
 	var book_mats: Array = [
@@ -200,7 +203,7 @@ func _study(parent: Node, mat: Material, m_metal: Material) -> void:
 			Vector3(1.60, 1.80, 0.36), PI, mat, book_mats)
 
 	# 台灯
-	props.floor_lamp(h, "DeskLamp", Vector3(-5.82, FLOOR + 0.75, 0.90), 0.34,
+	props.floor_lamp(h, "DeskLamp", Vector3(-6.10, FLOOR + 0.75, 2.00), 0.34,
 			geom.mat("f_shade", Color(0.88, 0.80, 0.64), 0.95), m_metal,
 			geom.mat("f_bulb", Color(1.00, 0.94, 0.78), 0.35,
 				0.0, Color(1.0, 0.90, 0.70), 1.4))
@@ -220,12 +223,62 @@ func _foyer(parent: Node, mat: Material) -> void:
 			Vector3(0.36, 0.95, 1.00), 0.0, mat)
 
 	# 洗手台：贴卫生间西墙，正面朝东
-	props.vanity(h, "Vanity", Vector3(-2.60, FLOOR, 0.95), -PI * 0.5,
+	props.vanity(h, "Vanity", Vector3(-2.60, FLOOR, 1.15), -PI * 0.5,
 			mat, m_top, m_handle, m_mirror)
 
-	# 马桶：贴卫生间西墙，正面朝东
-	props.toilet(h, "Toilet", Vector3(-2.62, FLOOR, 3.20), -PI * 0.5,
+	# 马桶：贴卫生间西墙，正面朝东。
+	# 注意：卫生间门在 z 2.40~3.60，马桶原先摆在 z=3.20 正好堵住门洞，
+	# 导致「卫生间→书房」的寻路间歇性失败。移到南端。
+	props.toilet(h, "Toilet", Vector3(-2.62, FLOOR, 0.52), -PI * 0.5,
 			m_porcelain, m_handle)
+
+
+# ------------------------------------------------------------------ 西翼（走廊/主卧/浴室/洗衣房）
+
+## 依据：电影确认「走廊连接主空间与卧室/浴室」，但未展示户型细节，
+## 房间划分与摆位均为 GAME_LAYOUT 原创设计。
+func _wing(parent: Node, m_wood: Material, m_cab: Material) -> void:
+	var h := geom.node(parent, "FurnitureWing")
+	var m_handle := geom.mat("f_handle", Color(0.63, 0.61, 0.57), 0.36, 0.80)
+	var m_sheet := geom.mat("f_sheet", Color(0.60, 0.62, 0.66), 0.96)
+	var m_pillow := geom.mat("f_pillow", Color(0.82, 0.82, 0.80), 0.96)
+	var m_porcelain := geom.mat("f_porcelain", Color(0.86, 0.86, 0.84), 0.28)
+	var m_top := geom.mat("f_bath_top", Color(0.55, 0.54, 0.52), 0.55)
+	var m_mirror := geom.mat("f_mirror", Color(0.62, 0.66, 0.70), 0.10, 0.85)
+	var m_steel := geom.mat("f_steel", Color(0.66, 0.68, 0.70), 0.32, 0.75)
+	var m_glass := geom.mat("f_glass", Color(0.55, 0.62, 0.66), 0.12, 0.20)
+
+	# ---- 主卧（x -11.14~-8.11，z 5.04~9.14）
+	# 床靠北墙，床头朝 +Z
+	props.bed(h, "Bed", Vector3(-9.70, FLOOR, 8.00), Vector2(1.65, 2.05), 0.0,
+			m_wood, m_sheet, m_pillow)
+	# 床头柜（床西侧）
+	props.nightstand(h, "Nightstand", Vector3(-10.86, FLOOR, 8.72), 0.0, m_wood, m_handle)
+	# 衣柜：贴西墙，正面朝东
+	props.wardrobe(h, "Wardrobe", Vector3(-10.84, FLOOR, 6.10),
+			Vector3(1.20, 2.00, 0.60), -PI * 0.5, m_wood, m_handle)
+	# 梳妆台/边柜（贴南墙一侧）
+	props.cabinet(h, "BedroomDresser", Vector3(-9.10, FLOOR, 5.30),
+			Vector3(1.10, 0.80, 0.42), PI, m_wood)
+
+	# ---- 浴室（x -11.14~-8.11，z 2.58~4.92）
+	props.toilet(h, "WingToilet", Vector3(-10.86, FLOOR, 3.30), -PI * 0.5,
+			m_porcelain, m_handle)
+	props.vanity(h, "WingVanity", Vector3(-10.86, FLOOR, 4.42), -PI * 0.5,
+			m_cab, m_top, m_handle, m_mirror)
+	# 浴缸（贴北墙）：箱体 + 内胆
+	geom.box(h, "BathtubBody", Vector3(1.55, 0.52, 0.72),
+		Vector3(-9.10, FLOOR + 0.26, 4.60), m_porcelain)
+	geom.box(h, "BathtubInner", Vector3(1.35, 0.20, 0.54),
+		Vector3(-9.10, FLOOR + 0.44, 4.60), geom.mat("f_tub_inner", Color(0.74, 0.74, 0.72), 0.30))
+	geom.box(h, "BathtubTap", Vector3(0.05, 0.16, 0.05),
+		Vector3(-9.80, FLOOR + 0.60, 4.35), m_steel)
+
+	# ---- 洗衣房（x -11.14~-8.11，z 0.26~2.46）
+	props.washer(h, "Washer", Vector3(-10.82, FLOOR, 0.72), -PI * 0.5,
+			m_cab, m_steel, m_glass)
+	props.cabinet(h, "LaundryCabinet", Vector3(-10.86, FLOOR, 1.95),
+			Vector3(0.45, 0.90, 0.90), -PI * 0.5, m_cab)
 
 
 # ------------------------------------------------------------------ 生活小道具
