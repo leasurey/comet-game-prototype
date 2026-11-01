@@ -1,104 +1,104 @@
 {
-  "start_location": "party_house",
-  "locations": [
+ "start_location": "party_house",
+ "locations": [
+  {
+   "id": "party_house",
+   "display_name": "聚会房屋",
+   "scene": "res://scenes/locations/party_house.tscn",
+   "ambient": "刚有人来过的房子，走廊里还留着外面的冷气。",
+   "spawn": {
+    "position": [
+     0.0,
+     0.25,
+     1.6
+    ],
+    "yaw": 180.0
+   },
+   "exits": [
     {
-      "id": "party_house",
-      "display_name": "聚会房屋",
-      "scene": "res://scenes/locations/party_house.tscn",
-      "ambient": "刚有人来过的房子，走廊里还留着外面的冷气。",
-      "spawn": {
-        "position": [
-          0.0,
-          0.25,
-          1.6
-        ],
-        "yaw": 0.0
-      },
-      "exits": [
-        {
-          "target": "house_exterior",
-          "label": "走出前门"
-        }
-      ],
-      "variants": [
-        "world_alpha",
-        "world_beta",
-        "world_gamma"
-      ]
-    },
-    {
-      "id": "living_room",
-      "display_name": "客厅",
-      "scene": "res://scenes/locations/living_room.tscn",
-      "ambient": "只开了一盏落地灯的暖色房间。",
-      "spawn": {
-        "position": [
-          1.2,
-          0.05,
-          0.8
-        ],
-        "yaw": 0.0
-      },
-      "exits": [
-        {
-          "target": "house_exterior",
-          "label": "前门"
-        }
-      ],
-      "variants": [
-        "world_alpha",
-        "world_beta",
-        "world_gamma"
-      ]
-    },
-    {
-      "id": "house_exterior",
-      "display_name": "房屋外部",
-      "scene": "res://scenes/locations/house_exterior.tscn",
-      "ambient": "门廊灯亮着，夜风很轻。",
-      "spawn": {
-        "position": [
-          0.0,
-          0.05,
-          -2.6
-        ],
-        "yaw": 0.0
-      },
-      "exits": [
-        {
-          "target": "party_house",
-          "label": "回到屋内"
-        },
-        {
-          "target": "dark_road",
-          "label": "走向那条没有灯的路"
-        }
-      ],
-      "variants": [
-        "world_alpha",
-        "world_beta",
-        "world_gamma"
-      ]
-    },
-    {
-      "id": "dark_road",
-      "display_name": "黑暗区域",
-      "scene": "res://scenes/locations/dark_road.tscn",
-      "ambient": "没有路灯的一段夜路。走进去以后，身后很快就什么都看不见了。",
-      "spawn": {
-        "position": [
-          0.0,
-          0.05,
-          4.0
-        ],
-        "yaw": 0.0
-      },
-      "exits": [],
-      "variants": [
-        "world_alpha",
-        "world_beta",
-        "world_gamma"
-      ]
+     "target": "house_exterior",
+     "label": "走出前门"
     }
-  ]
+   ],
+   "variants": [
+    "world_alpha",
+    "world_beta",
+    "world_gamma"
+   ]
+  },
+  {
+   "id": "living_room",
+   "display_name": "客厅",
+   "scene": "res://scenes/locations/living_room.tscn",
+   "ambient": "只开了一盏落地灯的暖色房间。",
+   "spawn": {
+    "position": [
+     1.2,
+     0.05,
+     0.8
+    ],
+    "yaw": 0.0
+   },
+   "exits": [
+    {
+     "target": "house_exterior",
+     "label": "前门"
+    }
+   ],
+   "variants": [
+    "world_alpha",
+    "world_beta",
+    "world_gamma"
+   ]
+  },
+  {
+   "id": "house_exterior",
+   "display_name": "房屋外部",
+   "scene": "res://scenes/locations/house_exterior.tscn",
+   "ambient": "门廊灯亮着，夜风很轻。",
+   "spawn": {
+    "position": [
+     0.0,
+     0.05,
+     -2.6
+    ],
+    "yaw": 0.0
+   },
+   "exits": [
+    {
+     "target": "party_house",
+     "label": "回到屋内"
+    },
+    {
+     "target": "dark_road",
+     "label": "走向那条没有灯的路"
+    }
+   ],
+   "variants": [
+    "world_alpha",
+    "world_beta",
+    "world_gamma"
+   ]
+  },
+  {
+   "id": "dark_road",
+   "display_name": "黑暗区域",
+   "scene": "res://scenes/locations/dark_road.tscn",
+   "ambient": "没有路灯的一段夜路。走进去以后，身后很快就什么都看不见了。",
+   "spawn": {
+    "position": [
+     0.0,
+     0.05,
+     4.0
+    ],
+    "yaw": 0.0
+   },
+   "exits": [],
+   "variants": [
+    "world_alpha",
+    "world_beta",
+    "world_gamma"
+   ]
+  }
+ ]
 }

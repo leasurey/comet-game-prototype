@@ -38,6 +38,8 @@ var _started := false
 var _pending_spawn: Variant = null
 var _pending_yaw_deg: float = 0.0
 var _door_target: String = ""  # 过门后要切换到的地点
+## 序章阶段机（数据驱动，见 data/opening.json）
+var _opening: OpeningDirector = null
 
 ## 对话会话状态（P7 正式对话 UI）。
 ## _dlg_topic_nodes  = 当前话题列表对应的节点；_dlg_replies = 当前台词的回复分支。
@@ -180,6 +182,7 @@ func _auto_start() -> void:
 	_capture_mouse()
 	if _ui != null:
 		_ui.set_message("移动鼠标环视 · E 交互 · ESC 暂停 · Q 退出", 7.0)
+	_start_opening()
 
 
 # ---------------------------------------------------------------- 主菜单动作
@@ -220,6 +223,30 @@ func _enter_world_from_menu(greeting: String) -> void:
 	_capture_mouse()
 	if _ui != null:
 		_ui.set_message("移动鼠标环视 · E 交互 · ESC 暂停 · Q 退出", 7.0)
+	# 从菜单真正进入世界时启动序章（_start_opening 内部有重复启动保护）
+	_start_opening()
+
+
+## 启动序章。每次进新局重建；读档时按存档状态恢复。
+func _start_opening() -> void:
+	if _opening == null:
+		_opening = OpeningDirector.new()
+		_opening.name = "OpeningDirector"
+		add_child(_opening)
+		_opening.setup(self)
+		if not _opening.load_data():
+			push_warning("序章数据载入失败，跳过序章")
+			_opening.queue_free()
+			_opening = null
+			return
+		_opening.phase_changed.connect(_on_opening_phase_changed)
+	_opening.start(_ui)
+
+
+func _on_opening_phase_changed(_phase_id: String, objective: String) -> void:
+	if _ui == null or objective.is_empty():
+		return
+	_ui.set_message("— %s —" % objective, 0.0)
 
 
 func _on_menu_resume() -> void:
@@ -275,6 +302,11 @@ func _process(_delta: float) -> void:
 	# P7：驱动 NPC 的导航烘焙时序与状态推进
 	if GameServices.npc_manager != null:
 		GameServices.npc_manager.tick()
+	# 序章阶段推进（依玩家实际位置与对话完成情况）
+	if _opening != null and _opening.is_running():
+		var pc = GameServices.player_controller
+		if pc != null:
+			_opening.tick(_delta, pc.global_position)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -497,6 +529,8 @@ func _close_dialogue() -> void:
 		_ui.hide_dialogue()
 	if _dlg_npc != null:
 		_dlg_npc.stop_talking()
+		if _opening != null:
+			_opening.notify_dialogue_closed(_dlg_npc.character_id)
 	_dlg_npc = null
 	_dlg_topic_nodes = []
 	_dlg_replies = []

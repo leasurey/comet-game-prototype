@@ -1,0 +1,46 @@
+{
+ "start": "p0_arrival",
+ "note": "序章 P0-P3。触发条件用区域/停留/对话，不靠测试钩子。",
+ "phases": [
+  {
+   "id": "p0_arrival",
+   "objective": "走进屋里",
+   "on_enter": [
+    {"kind": "message", "text": "门在你身后合上了。屋里有暖气，还有人在说话。"}
+   ],
+   "complete": {"kind": "enter_area", "center": [0.0, 4.60], "radius": 2.80},
+   "next": "p1_living"
+  },
+  {
+   "id": "p1_living",
+   "objective": "和 Kevin 说说话",
+   "on_enter": [
+    {"kind": "message", "text": "客厅的灯亮着。Kevin 站在沙发旁边，手里端着一杯没喝完的酒。"},
+    {"kind": "npc_greet", "npc": "kevin", "radius": 3.60,
+     "text": "Kevin 抬头看了你一眼，像是等你先开口。"}
+   ],
+   "complete": {"kind": "dialogue", "npc": "kevin"},
+   "next": "p2_dining"
+  },
+  {
+   "id": "p2_dining",
+   "objective": "看看餐桌那头",
+   "on_enter": [
+    {"kind": "message", "text": "长桌上摆了八副餐具。杯子里的水还没动过。"}
+   ],
+   "complete": {"kind": "dwell", "center": [1.33, 6.48], "radius": 3.20, "seconds": 4.0},
+   "next": "p3_blackout"
+  },
+  {
+   "id": "p3_blackout",
+   "objective": "灯灭了。门廊那边好像还亮着",
+   "on_enter": [
+    {"kind": "blackout"},
+    {"kind": "message", "text": "整栋房子的灯同时灭了。远处传来一声很轻的脆响，像是玻璃。"},
+    {"kind": "fact", "id": "obs_power_out", "source": "observe", "source_id": "opening_blackout"}
+   ],
+   "complete": {"kind": "enter_area", "center": [0.0, 1.60], "radius": 2.00},
+   "next": ""
+  }
+ ]
+}
