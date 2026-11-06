@@ -1,0 +1,70 @@
+# 人物关系图与秘密
+
+> **证据标注说明**：本文档中旧标签（[FILM|HIGH|CONFIRMED]/[INTERVIEW|MEDIUM|CONFIRMED]/[INFERENCE|LOW|HYPOTHESIS] 等）为历史版本遗留。
+> 三维证据体系见 [EVIDENCE_FRAMEWORK.md](EVIDENCE_FRAMEWORK.md)。争议结论已用三维标签更新（见 OPEN_QUESTIONS.md）。
+> 旧标签不可机械映射——使用时请根据来源类型和证据强度自行判断。
+
+
+> **⚠️ 第二轮修订**：Emily 的归属推断降为 C+（已标注支持/反对此推断的证据）。关系变化因现实而异，标记不确定性。
+
+> COMET 的 NPC 对话和行为设计必须基于此文档。
+
+---
+
+## 核心关系矩阵
+
+| | Em | Kevin | Mike | Lee | Beth | Hugh | Amir | Laurie |
+|---|---|---|---|---|---|---|---|---|
+| **Em** | — | 情侣 | 老友 | 闺蜜 | 老友 | 老友 | 老友 | 情敌 |
+| **Kevin** | 情侣 | — | 老友 | 老友 | 老友 | 老友 | 老友 | 前任 |
+| **Mike** | 老友 | 老友 | — | 夫妻 | 情人(秘密) | 老友 | 老友 | 老友 |
+| **Lee** | 闺蜜 | 老友 | 夫妻 | — | 闺蜜 | 老友 | 老友 | 老友 |
+| **Beth** | 老友 | 老友 | 情人(秘密) | 闺蜜 | — | 夫妻 | 老友 | 老友 |
+| **Hugh** | 老友 | 老友 | 老友 | 老友 | 夫妻 | — | 伙伴 | 老友 |
+| **Amir** | 老友 | 老友 | 老友 | 老友 | 老友 | 伙伴 | — | 邀请人 |
+| **Laurie** | 情敌 | 前任 | 老友 | 老友 | 老友 | 老友 | 老友 | — |
+
+## 秘密与谎言
+
+### 秘密 #1：Mike 和 Beth 的婚外情 [FILM|HIGH|CONFIRMED]
+- **当事人**：Mike、Beth
+- **知情人**：无（被勒索信揭露后公开）
+- **Hugh 不知道** [FILM|HIGH|CONFIRMED]
+- **Lee 不知道** [FILM|HIGH|CONFIRMED]
+- **情感影响**：信任崩溃时这成为引爆点
+- **游戏价值**：★★★★★（可作为对话选项/揭露事件）
+
+### 秘密 #2：Em 的职业遗憾 [FILM|HIGH|CONFIRMED]
+- **当事人**：Em
+- **知情人**：Kevin 部分了解
+- **情感影响**：驱动 Em 的"如果当初"心理
+- **游戏价值**：★★★★（核心人物动机）
+
+### 秘密 #3：Laurie 想赢回 Kevin [FILM|HIGH|CONFIRMED]
+- **当事人**：Laurie
+- **知情人**：Em 感觉到了
+- **情感影响**：Em 的不安全感
+- **游戏价值**：★★★★（关系张力）
+
+## 信任崩溃时间线
+
+1. **初始信任**：8 人相互信任（虽然有暗流） [FILM|HIGH|CONFIRMED]
+2. **碎杯子**：第一次"不对劲" [FILM|HIGH|CONFIRMED]
+3. **Hugh 的盒子**：确认异常 [FILM|HIGH|CONFIRMED]
+4. **红荧光棒**：确认多重现实 [FILM|HIGH|CONFIRMED]
+5. **Hugh/Amir 被替换**：**信任不可逆地崩溃** [FILM|HIGH|CONFIRMED]
+6. **Kevin 被替换**：Em 连爱人都无法信任 [FILM|HIGH|CONFIRMED]
+7. **勒索信**：又一个秘密暴露 [FILM|HIGH|CONFIRMED]
+8. **另一个 Mike 破门**：暴力升级 [FILM|HIGH|CONFIRMED]
+9. **Em 离开**：群体解体 [FILM|HIGH|CONFIRMED]
+
+## 不同现实中的关系差异
+
+| 现实 | 关系差异 | 证据 |
+|---|---|---|
+| 初始现实 | Em-Kevin 紧张 | A |
+| "完美"现实 | Em-Kevin 和谐 | A |
+| 暴力现实 | 群体互殴 | A |
+| 其他现实 | 各有不同（未知数量） | C |
+
+**游戏意义**：NPC 的关系状态应随现实切换而改变。同一个 Kevin 在不同现实对 Em 的态度可能不同。
