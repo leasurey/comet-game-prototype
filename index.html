@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>彗星来的那一夜 · 资料归档</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#161a21; --panel-2:#1c212b; --line:#252b36;
+    --text:#e6e9ef; --dim:#9aa4b2; --faint:#6b7686;
+    --accent:#8ab4f8; --accent-2:#c8a2ff; --warm:#e8c07a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",-apple-system,system-ui,sans-serif;
+    line-height:1.7; -webkit-font-smoothing:antialiased;
+    padding:56px 24px 96px;
+  }
+  .wrap{max-width:980px;margin:0 auto}
+  header{margin-bottom:56px}
+  .kicker{
+    font-size:12px;letter-spacing:.22em;color:var(--faint);
+    text-transform:uppercase;margin-bottom:18px;
+  }
+  h1{
+    font-size:clamp(30px,5vw,44px);font-weight:600;letter-spacing:-.01em;
+    line-height:1.25;margin-bottom:14px;
+  }
+  h1 .sub{display:block;font-size:15px;font-weight:400;color:var(--dim);margin-top:12px;letter-spacing:0}
+  .status{
+    display:inline-block;margin-top:24px;padding:8px 14px;
+    border:1px solid var(--line);border-radius:999px;
+    font-size:13px;color:var(--warm);background:rgba(232,192,122,.06);
+  }
+  .stats{display:flex;gap:36px;margin-top:36px;flex-wrap:wrap}
+  .stat b{display:block;font-size:24px;font-weight:600;color:var(--text)}
+  .stat span{font-size:12px;color:var(--faint)}
+
+  section{margin-bottom:52px}
+  .sec-head{display:flex;align-items:baseline;gap:14px;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+  .sec-head h2{font-size:17px;font-weight:600;letter-spacing:.01em}
+  .sec-head code{font-size:12px;color:var(--accent);font-family:ui-monospace,"Cascadia Code",Consolas,monospace}
+  .sec-head p{font-size:13px;color:var(--faint);margin-left:auto}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  a.card{
+    display:block;padding:16px 18px;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;
+    text-decoration:none;color:inherit;transition:.18s ease;
+  }
+  a.card:hover{background:var(--panel-2);border-color:#354052;transform:translateY(-1px)}
+  a.card .name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+  a.card .name .tag{
+    font-size:10px;font-weight:500;padding:2px 6px;border-radius:4px;
+    background:rgba(138,180,248,.12);color:var(--accent);letter-spacing:.02em;
+  }
+  a.card .desc{font-size:12.5px;color:var(--dim);line-height:1.6}
+  .wide{grid-column:1/-1}
+
+  .branch{
+    display:flex;gap:16px;padding:16px 18px;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px;margin-bottom:10px;
+    text-decoration:none;color:inherit;transition:.18s ease;
+  }
+  .branch:hover{background:var(--panel-2);border-color:#354052}
+  .branch .b-name{font-family:ui-monospace,Consolas,monospace;font-size:13px;color:var(--accent-2);min-width:250px}
+  .branch .b-desc{font-size:13px;color:var(--dim)}
+  .branch.key{border-color:#3a3428;background:rgba(232,192,122,.04)}
+
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);font-size:12px;color:var(--faint)}
+  footer p{margin-bottom:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">Coherence · 2013 · 资料归档</div>
+    <h1>彗星来的那一夜
+      <span class="sub">电影考据与叙事设计资料集</span>
+    </h1>
+    <div class="status">游戏制作已终止 · 本仓库仅作资料归档</div>
+    <div class="stats">
+      <div class="stat"><b>25</b><span>资料文件</span></div>
+      <div class="stat"><b>41</b><span>事实核对条目</span></div>
+      <div class="stat"><b>4</b><span>历史分支</span></div>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <h2>电影考据</h2><code>docs/film/</code>
+      <p>证据等级：FILM / INTERVIEW / INFERENCE</p>
+    </div>
+    <div class="grid">
+      <a class="card wide" href="docs/film/FACT_CHECK.md">
+        <div class="name">FACT_CHECK.md <span class="tag">重点</span></div>
+        <div class="desc">改编设计的事实核对表 —— 41 条逐条标注来源：【电影】14 条、可推导【延展】16 条、原创【新增】11 条，每条附出处节号。</div>
+      </a>
+      <a class="card" href="docs/film/FILM_BIBLE.md">
+        <div class="name">FILM_BIBLE.md</div>
+        <div class="desc">电影圣经：全片事实总纲</div>
+      </a>
+      <a class="card" href="docs/film/FILM_TIMELINE.md">
+        <div class="name">FILM_TIMELINE.md</div>
+        <div class="desc">逐场时间线，T 编号事件</div>
+      </a>
+      <a class="card" href="docs/film/FILM_LOCATIONS.md">
+        <div class="name">FILM_LOCATIONS.md</div>
+        <div class="desc">场景与空间考据</div>
+      </a>
+      <a class="card" href="docs/film/CHARACTERS.md">
+        <div class="name">CHARACTERS.md</div>
+        <div class="desc">人物考据：演员、关系、行为特征</div>
+      </a>
+      <a class="card" href="docs/film/RELATIONSHIPS.md">
+        <div class="name">RELATIONSHIPS.md</div>
+        <div class="desc">人物关系网络</div>
+      </a>
+      <a class="card" href="docs/film/REALITY_RULES.md">
+        <div class="name">REALITY_RULES.md <span class="tag">核心</span></div>
+        <div class="desc">现实规则 A1–A6：渗透、穿越黑暗、多层现实、人物替换、物理标记、同一事件多版本</div>
+      </a>
+      <a class="card" href="docs/film/REALITY_BRANCHES.md">
+        <div class="name">REALITY_BRANCHES.md</div>
+        <div class="desc">分支现实推演</div>
+      </a>
+      <a class="card" href="docs/film/PROPS_AND_CLUES.md">
+        <div class="name">PROPS_AND_CLUES.md <span class="tag">核心</span></div>
+        <div class="desc">道具与线索：便签、宝丽来、荧光棒、戒指、盒子、骰子</div>
+      </a>
+      <a class="card" href="docs/film/NARRATIVE_ANALYSIS.md">
+        <div class="name">NARRATIVE_ANALYSIS.md</div>
+        <div class="desc">叙事结构分析</div>
+      </a>
+      <a class="card" href="docs/film/SOURCE_EVIDENCE_MAP.md">
+        <div class="name">SOURCE_EVIDENCE_MAP.md</div>
+        <div class="desc">证据来源映射</div>
+      </a>
+      <a class="card" href="docs/film/EVIDENCE_FRAMEWORK.md">
+        <div class="name">EVIDENCE_FRAMEWORK.md</div>
+        <div class="desc">证据分级框架</div>
+      </a>
+      <a class="card" href="docs/film/CONSISTENCY_REPORT.md">
+        <div class="name">CONSISTENCY_REPORT.md</div>
+        <div class="desc">内部一致性审查</div>
+      </a>
+      <a class="card" href="docs/film/CROSS_RESEARCH_REVIEW.md">
+        <div class="name">CROSS_RESEARCH_REVIEW.md</div>
+        <div class="desc">交叉研究复核</div>
+      </a>
+      <a class="card" href="docs/film/COMET_ADAPTATION.md">
+        <div class="name">COMET_ADAPTATION.md</div>
+        <div class="desc">改编可行性评估</div>
+      </a>
+      <a class="card" href="docs/film/OPEN_QUESTIONS.md">
+        <div class="name">OPEN_QUESTIONS.md</div>
+        <div class="desc">未决问题清单</div>
+      </a>
+      <a class="card" href="docs/film/REVISION_LOG.md">
+        <div class="name">REVISION_LOG.md</div>
+        <div class="desc">考据修订记录</div>
+      </a>
+      <a class="card" href="docs/film/research/RESEARCH_PACKET.md">
+        <div class="name">research/</div>
+        <div class="desc">原始研究包与来源登记</div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>叙事资料</h2><code>docs/narrative/</code>
+      <p>事件编号 E，章节结构</p>
+    </div>
+    <div class="grid">
+      <a class="card" href="docs/narrative/NARRATIVE_EVENT_CATALOG.md">
+        <div class="name">NARRATIVE_EVENT_CATALOG.md</div>
+        <div class="desc">叙事事件目录，E 编号逐条</div>
+      </a>
+      <a class="card" href="docs/narrative/FILM_TIMELINE_AND_FACTS.md">
+        <div class="name">FILM_TIMELINE_AND_FACTS.md</div>
+        <div class="desc">时间线与事实摘要</div>
+      </a>
+      <a class="card" href="docs/narrative/CHARACTERS_AND_KNOWLEDGE.md">
+        <div class="name">CHARACTERS_AND_KNOWLEDGE.md</div>
+        <div class="desc">人物与各人掌握的信息差</div>
+      </a>
+      <a class="card" href="docs/narrative/SCENE_AND_SPACE_ATLAS.md">
+        <div class="name">SCENE_AND_SPACE_ATLAS.md</div>
+        <div class="desc">场景与空间图集</div>
+      </a>
+      <a class="card" href="docs/narrative/GAME_ADAPTATION_RULES.md">
+        <div class="name">GAME_ADAPTATION_RULES.md</div>
+        <div class="desc">改编规则：哪些设定不可动</div>
+      </a>
+      <a class="card" href="docs/narrative/CHAPTER_OUTLINE.md">
+        <div class="name">CHAPTER_OUTLINE.md</div>
+        <div class="desc">曾经规划的七章叙事结构大纲</div>
+      </a>
+      <a class="card" href="docs/narrative/OPEN_QUESTIONS.md">
+        <div class="name">OPEN_QUESTIONS.md</div>
+        <div class="desc">未决问题</div>
+      </a>
+      <a class="card" href="docs/narrative/README.md">
+        <div class="name">README.md</div>
+        <div class="desc">本目录导引</div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>历史分支</h2>
+      <p>可按需查看源码</p>
+    </div>
+    <a class="branch key" href="https://github.com/leasurey/comet-game-prototype/tree/recovery/visual-rebuild">
+      <div class="b-name">recovery/visual-rebuild</div>
+      <div class="b-desc">3D 第一人称版本：完整可运行的 Godot 工程（v0.6.0），含当时全部考据与设计文档。最后一个可玩版本。</div>
+    </a>
+    <a class="branch" href="https://github.com/leasurey/comet-game-prototype/tree/recovery/master-rebuild">
+      <div class="b-name">recovery/master-rebuild</div>
+      <div class="b-desc">重建主线历史</div>
+    </a>
+    <a class="branch" href="https://github.com/leasurey/comet-game-prototype/tree/recovery/continuity-integration">
+      <div class="b-name">recovery/continuity-integration</div>
+      <div class="b-desc">连贯性整合阶段</div>
+    </a>
+    <a class="branch" href="https://github.com/leasurey/comet-game-prototype/tree/docs/narrative-design-v1">
+      <div class="b-name">docs/narrative-design-v1</div>
+      <div class="b-desc">叙事设计的独立留档</div>
+    </a>
+  </section>
+
+  <footer>
+    <p>影片版权归原作者所有。本仓库只包含文字考据、分析笔记与设计文档，不含影片素材。</p>
+    <p>考据结论按证据等级标注；INFERENCE 级别内容属于推演，不应作为事实引用。</p>
+    <p style="margin-top:14px">归档后不再接受功能性更新 · <a href="https://github.com/leasurey/comet-game-prototype" style="color:var(--accent);text-decoration:none">GitHub 仓库</a></p>
+  </footer>
+
+</div>
+</body>
+</html>
